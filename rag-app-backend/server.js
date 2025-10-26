@@ -156,7 +156,7 @@ Answer:`;
     const res = await axios.post(
       'https://api.x.ai/v1/chat/completions',
       {
-        model: 'grok-beta',
+        model: 'grok-3',  // Updated: Deprecated 'grok-beta' → 'grok-3'
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 500,
         temperature: 0.7
