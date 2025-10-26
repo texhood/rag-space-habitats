@@ -116,7 +116,8 @@ async function retrieveRelevantChunks(question) {
   const [rows] = await conn.execute(`SELECT id, content, embedding FROM manual_chunks`);
   await conn.end();
 
-  const results = rows
+  // Initial cosine similarity (10 chunks)
+  const initialResults = rows
     .map(row => {
       const embBuffer = row.embedding;
       const aligned = Buffer.alloc(embBuffer.length);
@@ -126,19 +127,49 @@ async function retrieveRelevantChunks(question) {
       return { content: row.content, sim };
     })
     .sort((a, b) => b.sim - a.sim)
-    .slice(0, 5);
+    .slice(0, 10); // Increased to 10
 
-  return results.map(r => r.content);
+  // Rerank with Grok (if key available)
+  if (process.env.XAI_API_KEY) {
+    const rerankPrompt = `Rank these 10 chunks from the 1975 NASA Space Settlements study by relevance to the question: "${question}". Return only a numbered list 1-10 (most to least relevant), no explanation. Chunks: ${initialResults.map((r, i) => `${i+1}. ${r.content.slice(0, 100)}...`).join('\n')}`;
+    try {
+      const rerankRes = await axios.post(
+        'https://api.x.ai/v1/chat/completions',
+        {
+          model: 'grok-3',
+          messages: [{ role: 'user', content: rerankPrompt }],
+          max_tokens: 100,
+          temperature: 0.1
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      const rerankOrder = rerankRes.data.choices[0].message.content.trim().split('\n').map(line => parseInt(line.trim().match(/\d+/)?.[0]));
+      return initialResults
+        .sort((a, b) => rerankOrder.indexOf(initialResults.indexOf(a)) - rerankOrder.indexOf(initialResults.indexOf(b)))
+        .slice(0, 5)
+        .map(r => r.content);
+    } catch (e) {
+      console.warn('Rerank failed, using cosine:', e.message);
+    }
+  }
+
+  // Fallback to cosine
+  return initialResults.slice(0, 5).map(r => r.content);
 }
 
 // ---------- GENERATE ANSWER (WITH GROK API) ----------
 async function generateAnswer(question, chunks) {
   if (chunks.length === 0) {
-    return "No relevant information found in the manual.";
+    return "No relevant information found in the 1975 NASA Space Settlements study.";
   }
 
   const context = chunks.join('\n\n');
-  const prompt = `Using ONLY the following context from a NASA manual, answer the question concisely and accurately. If the context doesn't cover the question, say so.
+  const prompt = `You are an expert on the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the following chunks from that study, explain the strengths and weaknesses of the specified habitat design. Structure your answer as:
 
 Context:
 ${context}
