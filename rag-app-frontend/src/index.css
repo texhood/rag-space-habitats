@@ -1,68 +1,84 @@
 body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f5f7fa;
-    color: #333;
-  }
-  
-  .App {
-    max-width: 720px;
-    margin: 40px auto;
-    padding: 30px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.1);
-  }
-  
-  h1 {
-    text-align: center;
-    color: #1a5fb4;
-    margin-bottom: 30px;
-  }
-  
-  .input-group {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  
-  input {
-    flex: 1;
-    padding: 14px;
-    font-size: 1.1rem;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    outline: none;
-  }
-  
-  input:focus {
-    border-color: #1a5fb4;
-  }
-  
-  button {
-    padding: 14px 28px;
-    font-size: 1.1rem;
-    background: #1a5fb4;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  
-  button:hover { background: #144a8c; }
-  button:disabled { background: #aaa; cursor: not-allowed; }
-  
-  .answer {
-    margin-top: 30px;
-    padding: 20px;
-    background: #e8f4fd;
-    border-left: 5px solid #1a5fb4;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    line-height: 1.6;
-  }
-  
-  .loading {
-    color: #666;
-    font-style: italic;
-  }
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f7fa;
+  color: #333;
+}
+
+.App {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 30px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.1);
+}
+
+h1 {
+  text-align: center;
+  color: #1a5fb4;
+  margin-bottom: 30px;
+}
+
+.input-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+input {
+  flex: 1;
+  padding: 14px;
+  font-size: 1.1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+
+input:focus {
+  border-color: #1a5fb4;
+}
+
+button {
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  background: #1a5fb4;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover { background: #144a8c; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+
+.answer {
+  margin-top: 30px;
+  padding: 20px;
+  background: #e8f4fd;
+  border-left: 5px solid #1a5fb4;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.answer h2 {
+  font-size: 1.4rem;
+  color: #1a5fb4;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.answer ul {
+  margin: 0.5em 0;
+  padding-left: 20px;
+}
+
+.answer li {
+  margin-bottom: 0.5em;
+}
+
+.loading {
+  color: #666;
+  font-style: italic;
+}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import './index.css';
 
 function App() {
@@ -43,8 +44,8 @@ function App() {
 
       {answer && (
         <div className="answer">
-          <strong>Answer:</strong><br />
-          {answer}
+          <strong>Answer:</strong>
+          <ReactMarkdown>{answer}</ReactMarkdown>
         </div>
       )}
     </div>

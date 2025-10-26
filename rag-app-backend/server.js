@@ -1,4 +1,4 @@
-// server.js — WITH GROK API INTEGRATION
+// server.js — FULLY WORKING WITH GROK-3 AND FORMATTING
 require('dotenv').config();
 
 const express = require('express');
@@ -113,7 +113,12 @@ async function retrieveRelevantChunks(question) {
   const qOut = await model(question, { pooling: 'mean', normalize: true });
   const qVec = Array.from(qOut.data);
 
-  const [rows] = await conn.execute(`SELECT id, content, embedding FROM manual_chunks`);
+  // Pre-filter chunks with keywords
+  const keywords = ['cylinder', 'rotation', 'habitat', 'RPM', 'diameter'];
+  const likeClause = keywords.map(k => `content LIKE '%${k}%'`).join(' OR ');
+  const [rows] = await conn.execute(
+    `SELECT id, content, embedding FROM manual_chunks WHERE ${likeClause}`
+  );
   await conn.end();
 
   // Initial cosine similarity (10 chunks)
@@ -127,11 +132,11 @@ async function retrieveRelevantChunks(question) {
       return { content: row.content, sim };
     })
     .sort((a, b) => b.sim - a.sim)
-    .slice(0, 10); // Increased to 10
+    .slice(0, 10);
 
   // Rerank with Grok (if key available)
   if (process.env.XAI_API_KEY) {
-    const rerankPrompt = `Rank these 10 chunks from the 1975 NASA Space Settlements study by relevance to the question: "${question}". Return only a numbered list 1-10 (most to least relevant), no explanation. Chunks: ${initialResults.map((r, i) => `${i+1}. ${r.content.slice(0, 100)}...`).join('\n')}`;
+    const rerankPrompt = `Rank these 10 chunks from the 1975 NASA Space Settlements: A Design Study (NASA SP-413) by relevance to the question: "${question}". Focus on cylindrical habitats and rotation dynamics. Return only a numbered list 1-10 (most to least relevant), no explanation. Chunks: ${initialResults.map((r, i) => `${i+1}. ${r.content.slice(0, 100)}...`).join('\n')}`;
     try {
       const rerankRes = await axios.post(
         'https://api.x.ai/v1/chat/completions',
@@ -148,9 +153,9 @@ async function retrieveRelevantChunks(question) {
           }
         }
       );
-      const rerankOrder = rerankRes.data.choices[0].message.content.trim().split('\n').map(line => parseInt(line.trim().match(/\d+/)?.[0]));
+      const rerankOrder = rerankRes.data.choices[0].message.content.trim().split('\n').map(line => parseInt(line.trim().match(/\d+/)?.[0]) - 1);
       return initialResults
-        .sort((a, b) => rerankOrder.indexOf(initialResults.indexOf(a)) - rerankOrder.indexOf(initialResults.indexOf(b)))
+        .sort((a, b) => rerankOrder.indexOf(initialResults.indexOf(a)) - rerankOrder.indexOf(b))
         .slice(0, 5)
         .map(r => r.content);
     } catch (e) {
@@ -158,7 +163,6 @@ async function retrieveRelevantChunks(question) {
     }
   }
 
-  // Fallback to cosine
   return initialResults.slice(0, 5).map(r => r.content);
 }
 
@@ -169,10 +173,17 @@ async function generateAnswer(question, chunks) {
   }
 
   const context = chunks.join('\n\n');
-  const prompt = `You are an expert on the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the following chunks from that study, explain the strengths and weaknesses of the specified habitat design. Structure your answer as:
+  const prompt = `You are an expert on the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the provided chunks, analyze the specified habitat design and extrapolate for a cylindrical habitat with a 4-mile major diameter spinning at 0.95 RPM. Structure your answer as:
 
-Context:
-${context}
+1. Strengths (bullet points, cite chunks, e.g., [Chunk 1])
+2. Weaknesses (bullet points, cite chunks)
+3. Comparison to other geometries (torus, sphere) in the study
+4. Extrapolated feasibility (calculate gravity if possible, e.g., g ≈ RPM² × radius)
+
+Be concise, accurate, and cite chunk numbers. If the chunks lack specific details, infer from similar designs (e.g., ~1 RPM cylinders) and note limitations.
+
+Context chunks:
+${chunks.map((c, i) => `[Chunk ${i+1}]\n${c}`).join('\n\n')}
 
 Question: ${question}
 
@@ -187,10 +198,10 @@ Answer:`;
     const res = await axios.post(
       'https://api.x.ai/v1/chat/completions',
       {
-        model: 'grok-3',  // Updated: Deprecated 'grok-beta' → 'grok-3'
+        model: 'grok-3',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7
+        max_tokens: 2048, // Increased for full answers
+        temperature: 0.3 // Low for factual accuracy
       },
       {
         headers: {
