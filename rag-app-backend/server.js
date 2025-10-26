@@ -1,8 +1,9 @@
-// server.js — FULLY LOCAL, NO GROK, NO AXIOS
+// server.js — WITH GROK API INTEGRATION
 require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const fs = require('fs').promises;
 const pdf = require('pdf-parse');
 const mysql = require('mysql2/promise');
@@ -130,12 +131,48 @@ async function retrieveRelevantChunks(question) {
   return results.map(r => r.content);
 }
 
-// ---------- GENERATE ANSWER (LOCAL ONLY) ----------
+// ---------- GENERATE ANSWER (WITH GROK API) ----------
 async function generateAnswer(question, chunks) {
   if (chunks.length === 0) {
     return "No relevant information found in the manual.";
   }
-  return chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
+
+  const context = chunks.join('\n\n');
+  const prompt = `Using ONLY the following context from a NASA manual, answer the question concisely and accurately. If the context doesn't cover the question, say so.
+
+Context:
+${context}
+
+Question: ${question}
+
+Answer:`;
+
+  if (!process.env.XAI_API_KEY) {
+    console.warn('Grok API key not set — returning raw chunks.');
+    return chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
+  }
+
+  try {
+    const res = await axios.post(
+      'https://api.x.ai/v1/chat/completions',
+      {
+        model: 'grok-beta',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return res.data.choices[0].message.content.trim();
+  } catch (e) {
+    console.error('Grok API error:', e.response?.data || e.message);
+    return `Grok API unavailable. Raw chunks:\n\n${chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n')}`;
+  }
 }
 
 // ---------- API ----------
