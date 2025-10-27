@@ -1,10 +1,11 @@
-// server.js — FULLY WORKING WITH GROK-3 AND FORMATTING
+// server.js — FULLY WORKING WITH MULTI-PDF PROCESSING
 require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs').promises;
+const path = require('path');
+const crypto = require('crypto');
 const pdf = require('pdf-parse');
 const mysql = require('mysql2/promise');
 const { pipeline } = require('@xenova/transformers');
@@ -17,8 +18,8 @@ app.use(express.json());
 let extractor = null;
 async function getExtractor() {
   if (!extractor) {
-    console.log('Loading all-MiniLM-L6-v2 (local only)...');
-    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+    console.log('Loading all-MiniLM-L12-v2 (local only)...');
+    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L12-v2', {
       local_files_only: true
     });
     console.log('Model loaded.');
@@ -28,9 +29,14 @@ async function getExtractor() {
 
 // ---------- PDF → TEXT ----------
 async function extractTextFromPDF(pdfPath) {
-  const data = await fs.readFile(pdfPath);
-  const result = await pdf(data);
-  return result.text;
+  try {
+    const data = await fs.readFile(pdfPath);
+    const result = await pdf(data, { max: 0 }); // Disable page limit for large PDFs
+    return result.text || '';
+  } catch (e) {
+    console.error(`Error extracting ${pdfPath}:`, e.message);
+    return ''; // Fallback to empty text
+  }
 }
 
 // ---------- CHUNK TEXT ----------
@@ -53,8 +59,15 @@ async function generateEmbeddings(chunks) {
   return embeddings;
 }
 
+// ---------- HASH PDF CONTENT ----------
+function getFileHash(filePath) {
+  return fs.readFile(filePath).then(data => {
+    return crypto.createHash('md5').update(data).digest('hex');
+  });
+}
+
 // ---------- STORE IN MariaDB (BLOB) ----------
-async function storeEmbeddings(embeddings) {
+async function storeEmbeddings(embeddings, sourceFile) {
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -67,24 +80,86 @@ async function storeEmbeddings(embeddings) {
     const buffer = Buffer.from(new Float32Array(vector).buffer);
     await conn.execute(
       `INSERT INTO manual_chunks (content, embedding, metadata) VALUES (?, ?, ?)`,
-      [text, buffer, JSON.stringify({ source: 'manual' })]
+      [text, buffer, JSON.stringify({ source: sourceFile })]
     );
   }
   await conn.end();
-  console.log(`Stored ${embeddings.length} chunks in BLOB`);
+  console.log(`Stored ${embeddings.length} chunks from ${sourceFile}`);
 }
 
-// ---------- PREPROCESS MANUAL ----------
-async function preprocessManual(pdfPath) {
-  console.log('1. Extracting text...');
-  const text = await extractTextFromPDF(pdfPath);
-  console.log('2. Chunking...');
-  const chunks = chunkText(text);
-  console.log('3. Generating embeddings...');
-  const embeddings = await generateEmbeddings(chunks);
-  console.log('4. Storing in MariaDB...');
-  await storeEmbeddings(embeddings);
-  console.log('Preprocessing DONE.');
+// ---------- CHECK IF PDF PROCESSED ----------
+async function isPdfProcessed(hash) {
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 3306
+  });
+
+  const [rows] = await conn.execute(
+    `SELECT 1 FROM processed_pdfs WHERE file_hash = ?`,
+    [hash]
+  );
+  await conn.end();
+  return rows.length > 0;
+}
+
+// ---------- MARK PDF AS PROCESSED ----------
+async function markPdfProcessed(hash, filePath) {
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 3306
+  });
+
+  await conn.execute(
+    `INSERT INTO processed_pdfs (file_hash, file_path) VALUES (?, ?)`,
+    [hash, filePath]
+  );
+  await conn.end();
+}
+
+// ---------- PREPROCESS ALL PDFs ----------
+async function preprocessManual() {
+  const incomingDir = path.join(__dirname, 'documents', 'incoming');
+  const extractedDir = path.join(__dirname, 'documents', 'extracted');
+  await fs.mkdir(extractedDir, { recursive: true }); // Ensure extracted folder exists
+
+  const files = (await fs.readdir(incomingDir)).filter(f => f.endsWith('.pdf'));
+  if (files.length === 0) {
+    console.log('No PDFs found in documents/incoming');
+    return;
+  }
+
+  for (const file of files) {
+    const pdfPath = path.join(incomingDir, file);
+    const hash = await getFileHash(pdfPath);
+
+    if (await isPdfProcessed(hash)) {
+      console.log(`Skipping ${file} (already processed)`);
+      continue;
+    }
+
+    console.log(`Processing ${file}...`);
+    console.log('1. Extracting text...');
+    const text = await extractTextFromPDF(pdfPath);
+    console.log('2. Chunking...');
+    const chunks = chunkText(text);
+    console.log('3. Generating embeddings...');
+    const embeddings = await generateEmbeddings(chunks);
+    console.log('4. Storing in MariaDB...');
+    await storeEmbeddings(embeddings, file);
+    await markPdfProcessed(hash, file);
+
+    // Move to extracted
+    const newPath = path.join(extractedDir, file);
+    await fs.rename(pdfPath, newPath);
+    console.log(`Moved ${file} to documents/extracted`);
+  }
+  console.log('Preprocessing DONE for all PDFs.');
 }
 module.exports.preprocessManual = preprocessManual;
 
@@ -113,7 +188,6 @@ async function retrieveRelevantChunks(question) {
   const qOut = await model(question, { pooling: 'mean', normalize: true });
   const qVec = Array.from(qOut.data);
 
-  // Pre-filter chunks with keywords
   const keywords = ['cylinder', 'rotation', 'habitat', 'RPM', 'diameter'];
   const likeClause = keywords.map(k => `content LIKE '%${k}%'`).join(' OR ');
   const [rows] = await conn.execute(
@@ -121,20 +195,18 @@ async function retrieveRelevantChunks(question) {
   );
   await conn.end();
 
-  // Initial cosine similarity (10 chunks)
   const initialResults = rows
     .map(row => {
       const embBuffer = row.embedding;
       const aligned = Buffer.alloc(embBuffer.length);
       embBuffer.copy(aligned);
-      const embArray = Array.from(new Float32Array(aligned.buffer, aligned.byteOffset, 384));
+      const embArray = Array.from(new Float32Array(aligned.buffer, aligned.byteOffset, 768));
       const sim = cosineSimilarity(qVec, embArray);
       return { content: row.content, sim };
     })
     .sort((a, b) => b.sim - a.sim)
     .slice(0, 10);
 
-  // Rerank with Grok (if key available)
   if (process.env.XAI_API_KEY) {
     const rerankPrompt = `Rank these 10 chunks from the 1975 NASA Space Settlements: A Design Study (NASA SP-413) by relevance to the question: "${question}". Focus on cylindrical habitats and rotation dynamics. Return only a numbered list 1-10 (most to least relevant), no explanation. Chunks: ${initialResults.map((r, i) => `${i+1}. ${r.content.slice(0, 100)}...`).join('\n')}`;
     try {
@@ -169,15 +241,15 @@ async function retrieveRelevantChunks(question) {
 // ---------- GENERATE ANSWER (WITH GROK API) ----------
 async function generateAnswer(question, chunks) {
   if (chunks.length === 0) {
-    return "No relevant information found in the 1975 NASA Space Settlements study.";
+    return "No relevant information found in the space habitats documents.";
   }
 
   const context = chunks.join('\n\n');
-  const prompt = `You are an expert on the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the provided chunks, analyze the specified habitat design and extrapolate for a cylindrical habitat with a 4-mile major diameter spinning at 0.95 RPM. Structure your answer as:
+  const prompt = `You are an expert on space habitats, including the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the provided chunks, analyze the specified habitat design and extrapolate for a cylindrical habitat with a 4-mile major diameter spinning at 0.95 RPM. Structure your answer as:
 
 1. Strengths (bullet points, cite chunks, e.g., [Chunk 1])
 2. Weaknesses (bullet points, cite chunks)
-3. Comparison to other geometries (torus, sphere) in the study
+3. Comparison to other geometries (torus, sphere) in the documents
 4. Extrapolated feasibility (calculate gravity if possible, e.g., g ≈ RPM² × radius)
 
 Be concise, accurate, and cite chunk numbers. If the chunks lack specific details, infer from similar designs (e.g., ~1 RPM cylinders) and note limitations.
@@ -200,8 +272,8 @@ Answer:`;
       {
         model: 'grok-3',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2048, // Increased for full answers
-        temperature: 0.3 // Low for factual accuracy
+        max_tokens: 2048,
+        temperature: 0.3
       },
       {
         headers: {
