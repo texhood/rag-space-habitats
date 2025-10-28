@@ -1,4 +1,6 @@
-// server.js — FULLY WORKING WITH MULTI-PDF PROCESSING
+// server.js — UPDATED FOR multi-qa-mpnet-base-cos-v1
+// server.js — FIXED SQL SYNTAX FOR O'NEILL
+// server.js — WITH REGEX-BASED SPECIAL CHARACTER ESCAPING
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -16,13 +18,17 @@ app.use(express.json());
 
 // ---------- MODEL CACHE ----------
 let extractor = null;
+let embeddingDim = null;
 async function getExtractor() {
   if (!extractor) {
-    console.log('Loading all-MiniLM-L12-v2 (local only)...');
-    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L12-v2', {
+    console.log('Loading multi-qa-mpnet-base-cos-v1 (local only)...');
+    extractor = await pipeline('feature-extraction', 'Xenova/multi-qa-mpnet-base-cos-v1', {
       local_files_only: true
     });
     console.log('Model loaded.');
+    const testOut = await extractor('test', { pooling: 'mean', normalize: true });
+    embeddingDim = testOut.data.length;
+    console.log(`Detected embedding dimension: ${embeddingDim}`);
   }
   return extractor;
 }
@@ -31,11 +37,11 @@ async function getExtractor() {
 async function extractTextFromPDF(pdfPath) {
   try {
     const data = await fs.readFile(pdfPath);
-    const result = await pdf(data, { max: 0 }); // Disable page limit for large PDFs
+    const result = await pdf(data, { max: 0, normalizeWhitespace: true });
     return result.text || '';
   } catch (e) {
     console.error(`Error extracting ${pdfPath}:`, e.message);
-    return ''; // Fallback to empty text
+    return '';
   }
 }
 
@@ -53,8 +59,14 @@ async function generateEmbeddings(chunks) {
   const model = await getExtractor();
   const embeddings = [];
   for (const c of chunks) {
+    if (!c) continue;
     const out = await model(c, { pooling: 'mean', normalize: true });
-    embeddings.push({ text: c, vector: Array.from(out.data) });
+    const vector = Array.from(out.data);
+    if (vector.length !== embeddingDim) {
+      console.warn(`Invalid embedding size for chunk: ${vector.length}, expected ${embeddingDim}`);
+      continue;
+    }
+    embeddings.push({ text: c, vector });
   }
   return embeddings;
 }
@@ -78,6 +90,10 @@ async function storeEmbeddings(embeddings, sourceFile) {
 
   for (const { text, vector } of embeddings) {
     const buffer = Buffer.from(new Float32Array(vector).buffer);
+    if (buffer.length !== embeddingDim * 4) {
+      console.warn(`Invalid buffer size for chunk: ${buffer.length}, expected ${embeddingDim * 4}`);
+      continue;
+    }
     await conn.execute(
       `INSERT INTO manual_chunks (content, embedding, metadata) VALUES (?, ?, ?)`,
       [text, buffer, JSON.stringify({ source: sourceFile })]
@@ -126,7 +142,7 @@ async function markPdfProcessed(hash, filePath) {
 async function preprocessManual() {
   const incomingDir = path.join(__dirname, 'documents', 'incoming');
   const extractedDir = path.join(__dirname, 'documents', 'extracted');
-  await fs.mkdir(extractedDir, { recursive: true }); // Ensure extracted folder exists
+  await fs.mkdir(extractedDir, { recursive: true });
 
   const files = (await fs.readdir(incomingDir)).filter(f => f.endsWith('.pdf'));
   if (files.length === 0) {
@@ -154,7 +170,6 @@ async function preprocessManual() {
     await storeEmbeddings(embeddings, file);
     await markPdfProcessed(hash, file);
 
-    // Move to extracted
     const newPath = path.join(extractedDir, file);
     await fs.rename(pdfPath, newPath);
     console.log(`Moved ${file} to documents/extracted`);
@@ -187,28 +202,62 @@ async function retrieveRelevantChunks(question) {
   const model = await getExtractor();
   const qOut = await model(question, { pooling: 'mean', normalize: true });
   const qVec = Array.from(qOut.data);
+  if (qVec.length !== embeddingDim) {
+    console.error(`Invalid query embedding size: ${qVec.length}, expected ${embeddingDim}`);
+    await conn.end();
+    return [];
+  }
 
-  const keywords = ['cylinder', 'rotation', 'habitat', 'RPM', 'diameter'];
-  const likeClause = keywords.map(k => `content LIKE '%${k}%'`).join(' OR ');
-  const [rows] = await conn.execute(
+  const keywords = ['cylinder', 'rotation', 'habitat', 'RPM', 'diameter', 'ecology', 'population', 'O\'Neill', 'gravity', 'space settlement'];
+  let likeClause = keywords.map(k => {
+    // Escape special characters using regex
+    const escaped = k.replace(/[\\%_']/g, match => {
+      switch (match) {
+        case '\\': return '\\\\';
+        case '%': return '\\%';
+        case '_': return '\\_';
+        case "'": return "''";
+        default: return match;
+      }
+    });
+    return `content LIKE '%${escaped}%'`;
+  }).join(' OR ');
+  let rows = [];
+
+  [rows] = await conn.execute(
     `SELECT id, content, embedding FROM manual_chunks WHERE ${likeClause}`
   );
+
+  if (rows.length === 0) {
+    console.warn('No chunks matched keywords, retrieving all chunks');
+    [rows] = await conn.execute(`SELECT id, content, embedding FROM manual_chunks`);
+  }
   await conn.end();
 
   const initialResults = rows
     .map(row => {
       const embBuffer = row.embedding;
+      if (!embBuffer || embBuffer.length !== embeddingDim * 4) {
+        console.warn(`Skipping chunk ${row.id}: Invalid BLOB size ${embBuffer ? embBuffer.length : 'null'}, expected ${embeddingDim * 4}`);
+        return null;
+      }
       const aligned = Buffer.alloc(embBuffer.length);
       embBuffer.copy(aligned);
-      const embArray = Array.from(new Float32Array(aligned.buffer, aligned.byteOffset, 768));
-      const sim = cosineSimilarity(qVec, embArray);
-      return { content: row.content, sim };
+      try {
+        const embArray = Array.from(new Float32Array(aligned.buffer, aligned.byteOffset, embeddingDim));
+        const sim = cosineSimilarity(qVec, embArray);
+        return { content: row.content, sim };
+      } catch (e) {
+        console.warn(`Skipping chunk ${row.id}: ${e.message}`);
+        return null;
+      }
     })
+    .filter(r => r !== null)
     .sort((a, b) => b.sim - a.sim)
     .slice(0, 10);
 
-  if (process.env.XAI_API_KEY) {
-    const rerankPrompt = `Rank these 10 chunks from the 1975 NASA Space Settlements: A Design Study (NASA SP-413) by relevance to the question: "${question}". Focus on cylindrical habitats and rotation dynamics. Return only a numbered list 1-10 (most to least relevant), no explanation. Chunks: ${initialResults.map((r, i) => `${i+1}. ${r.content.slice(0, 100)}...`).join('\n')}`;
+  if (process.env.XAI_API_KEY && initialResults.length > 0) {
+    const rerankPrompt = `Rank these 10 chunks from space habitat documents, including the 1975 NASA Space Settlements: A Design Study (NASA SP-413), by relevance to the question: "${question}". Focus on cylindrical habitats, rotation dynamics, and population support. Return only a numbered list 1-10 (most to least relevant), no explanation. Chunks: ${initialResults.map((r, i) => `${i+1}. ${r.content.slice(0, 100)}...`).join('\n')}`;
     try {
       const rerankRes = await axios.post(
         'https://api.x.ai/v1/chat/completions',
@@ -245,12 +294,12 @@ async function generateAnswer(question, chunks) {
   }
 
   const context = chunks.join('\n\n');
-  const prompt = `You are an expert on space habitats, including the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the provided chunks, analyze the specified habitat design and extrapolate for a cylindrical habitat with a 4-mile major diameter spinning at 0.95 RPM. Structure your answer as:
+  const prompt = `You are an expert on space habitats, including the 1975 NASA/Stanford Space Settlements: A Design Study (NASA SP-413). Using ONLY the provided chunks, analyze the specified habitat design and extrapolate for a cylindrical habitat with a 6437m major diameter, 6237m minor diameter, 10,000m long, spinning at 0.95 RPM, designed to sustain 1,000,000 humans and a viable ecology. Structure your answer as:
 
 1. Strengths (bullet points, cite chunks, e.g., [Chunk 1])
 2. Weaknesses (bullet points, cite chunks)
 3. Comparison to other geometries (torus, sphere) in the documents
-4. Extrapolated feasibility (calculate gravity if possible, e.g., g ≈ RPM² × radius)
+4. Extrapolated feasibility (calculate gravity, e.g., g ≈ RPM² × radius; assess population support)
 
 Be concise, accurate, and cite chunk numbers. If the chunks lack specific details, infer from similar designs (e.g., ~1 RPM cylinders) and note limitations.
 
