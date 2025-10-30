@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './index.css';
 
 function App() {
@@ -8,13 +11,22 @@ function App() {
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
+  const [showLogin, setShowLogin] = useState(true);
   const [form, setForm] = useState({ username: '', password: '' });
   const [isLogin, setIsLogin] = useState(true);
+  const [preprocessStatus, setPreprocessStatus] = useState('');
 
+  // Check auth on mount
   useEffect(() => {
     axios.get('http://localhost:5000/me', { withCredentials: true })
-      .then(res => setUser(res.data.user))
-      .catch(() => setUser(null));
+      .then(res => {
+        setUser(res.data.user);
+        setShowLogin(false);
+      })
+      .catch(() => {
+        setUser(null);
+        setShowLogin(true);
+      });
   }, []);
 
   const handleAuth = async () => {
@@ -23,14 +35,18 @@ function App() {
       await axios.post(`http://localhost:5000${endpoint}`, form, { withCredentials: true });
       const res = await axios.get('http://localhost:5000/me', { withCredentials: true });
       setUser(res.data.user);
+      setShowLogin(false);
     } catch (err) {
-      alert(err.response?.data?.error || 'Auth failed');
+      alert(err.response?.data?.error || 'Authentication failed');
     }
   };
 
   const logout = () => {
     axios.post('http://localhost:5000/logout', {}, { withCredentials: true })
-      .then(() => setUser(null));
+      .then(() => {
+        setUser(null);
+        setShowLogin(true);
+      });
   };
 
   const ask = async () => {
@@ -47,16 +63,36 @@ function App() {
     }
   };
 
-  if (!user) {
+  const runPreprocess = async () => {
+    setPreprocessStatus('Starting preprocessing...');
+    try {
+      const res = await axios.post('http://localhost:5000/admin/preprocess', {}, { withCredentials: true });
+      setPreprocessStatus(res.data.message);
+    } catch (err) {
+      setPreprocessStatus(`Error: ${err.response?.data?.error || err.message}`);
+    }
+  };
+
+  // === LOGIN / REGISTER SCREEN ===
+  if (showLogin) {
     return (
       <div className="App">
         <h1>Space Habitats RAG</h1>
         <div className="auth">
           <h2>{isLogin ? 'Login' : 'Register'}</h2>
-          <input placeholder="Username" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-          <input type="password" placeholder="Password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          <input
+            placeholder="Username"
+            value={form.username}
+            onChange={e => setForm({ ...form, username: e.target.value })}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={e => setForm({ ...form, password: e.target.value })}
+          />
           <button onClick={handleAuth}>{isLogin ? 'Login' : 'Register'}</button>
-          <p onClick={() => setIsLogin(!isLogin)} style={{cursor: 'pointer', color: 'blue'}}>
+          <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: 'pointer', color: 'blue' }}>
             {isLogin ? 'Need an account? Register' : 'Have an account? Login'}
           </p>
         </div>
@@ -64,18 +100,34 @@ function App() {
     );
   }
 
+  // === MAIN APP ===
   return (
     <div className="App">
       <h1>Space Habitats Q&A</h1>
-      <p>Welcome, {user.username}! <button onClick={logout}>Logout</button></p>
+      <p>
+        Welcome, <strong>{user.username}</strong> ({user.role})
+        {' '}
+        <button onClick={logout}>Logout</button>
+      </p>
+
+      {/* ADMIN PANEL */}
+      {user.role === 'admin' && (
+        <div className="admin-panel">
+          <h3>Admin Tools</h3>
+          <button onClick={runPreprocess} disabled={preprocessStatus.includes('Starting')}>
+            Run Preprocessing
+          </button>
+          {preprocessStatus && <p>{preprocessStatus}</p>}
+        </div>
+      )}
 
       <div className="input-group">
         <input
           type="text"
           placeholder="Ask about space habitats..."
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !loading && ask()}
+          onChange={e => setQuestion(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !loading && ask()}
         />
         <button onClick={ask} disabled={loading}>
           {loading ? 'Thinking...' : 'Ask'}
@@ -86,8 +138,12 @@ function App() {
 
       {answer && (
         <div className="answer">
-          <strong>Answer:</strong>
-          <ReactMarkdown>{answer}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+          >
+            {answer}
+          </ReactMarkdown>
         </div>
       )}
     </div>
