@@ -1,4 +1,4 @@
-// server.js — ALWAYS CALL GROK + LOOSENED RETRIEVAL
+// server.js – FIXED LATEX DELIMITERS FOR WEB
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -98,26 +98,38 @@ app.post('/ask', requireAuth, async (req, res) => {
   }
 });
 
-// ---------- GENERATE ANSWER (WITH LATEX DELIMITERS) ----------
+// ---------- GENERATE ANSWER (WITH PROPER WEB LATEX DELIMITERS) ----------
 async function generateAnswer(question, chunks) {
   const context = chunks.map((c, i) => `[Chunk ${i+1}]\n${c}`).join('\n\n');
-  const prompt = `You are an expert on space habitats from NASA SP-413. Answer using **LaTeX math delimiters**:
+  const prompt = `You are an expert on space habitats from NASA SP-413. Answer using **markdown with LaTeX math**:
 
-- Inline math: \( x = 2 \)
-- Display math: \[ E = mc^2 \]
+CRITICAL: Use these exact delimiters for math:
+- Inline math: $x = 2$
+- Display math: $$E = mc^2$$
 
-Use LaTeX for all equations. Structure your answer as:
+NEVER use \\( \\) or \\[ \\] delimiters - always use $ and $$.
 
-1. Strengths (bullets, cite chunks)
-2. Weaknesses (bullets, cite chunks)
-3. Comparison to other geometries
-4. **Exact Gravity Calculation** (use LaTeX, show steps)
+Format your response in clean markdown:
+- Use **bold** for emphasis
+- Use proper paragraphs
+- Structure calculations as numbered steps
 
-Context: ${context}
+Include:
+1. **Strengths** (bullets, cite chunks)
+2. **Weaknesses** (bullets, cite chunks)  
+3. **Comparison** to other geometries
+4. **Exact Gravity Calculation** (show all steps with LaTeX)
+
+Example math formatting:
+- Inline: The radius is $r = 250$ meters
+- Display: $$a = \\omega^2 r$$
+
+Context from NASA SP-413:
+${context}
 
 Question: ${question}
 
-Answer:`;
+Answer (use $ and $$ for all math):`;
 
   if (!process.env.XAI_API_KEY) {
     return chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
