@@ -57,7 +57,7 @@ async function retrieveRelevantChunks(question) {
   if (!rows.length) {
     console.log('No keyword matches — scanning all chunks');
     const scanConn = await pool.getConnection();
-    [rows] = await scanConn.query(`SELECT id, content, embedding FROM manual_chunks LIMIT 200`);
+    [rows] = await scanConn.query(`SELECT id, content, embedding FROM document_chunks LIMIT 200`);
     scanConn.release();
   }
 
