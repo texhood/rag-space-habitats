@@ -22,7 +22,7 @@ class RAGService {
     try {
       // This is a placeholder - implement your actual retrieval logic
       // Could use vector similarity, keyword search, etc.
-      
+
       // Example: Simple keyword search
       const keywords = question.toLowerCase().split(' ').filter(w => w.length > 3);
       const searchPattern = `%${keywords.join('%')}%`;
@@ -43,26 +43,26 @@ class RAGService {
 
   /**
    * Generate answer using Claude or Grok
+   * Fixed - check which API key is configured
    */
   async generateAnswer(question, chunks) {
     const context = chunks.map((c, i) => `[Chunk ${i + 1}]\n${c}`).join('\n\n');
 
     // If no LLM configured, return chunks
-    if (!this.anthropic && !this.useGrok) {
+    if (!process.env.ANTHROPIC_API_KEY && !process.env.XAI_API_KEY) {
       return this._formatChunksAsAnswer(chunks);
     }
 
-    // Use Claude
-    if (this.anthropic) {
-      return await this._generateWithClaude(question, context);
-    }
-
-    // Use Grok
-    if (this.useGrok) {
+    // Use Grok if key exists
+    if (process.env.XAI_API_KEY) {
       return await this._generateWithGrok(question, context);
     }
-  }
 
+    // Use Claude if key exists
+    if (process.env.ANTHROPIC_API_KEY) {
+      return await this._generateWithClaude(question, context);
+    }
+  }
   /**
    * Generate answer with Claude
    */

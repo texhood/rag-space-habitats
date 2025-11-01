@@ -57,7 +57,7 @@ function AdminPanel({ user, onClose }) {
   // Change user role
   const changeRole = async (userId, currentRole) => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    
+
     if (!window.confirm(`Change role to ${newRole}?`)) {
       return;
     }
@@ -163,7 +163,7 @@ function AdminPanel({ user, onClose }) {
                 <h3>User Management</h3>
                 <button onClick={loadUsers} className="refresh-btn">🔄 Refresh</button>
               </div>
-              
+
               <table className="users-table">
                 <thead>
                   <tr>
@@ -221,22 +221,31 @@ function AdminPanel({ user, onClose }) {
 
               <div className="stats-grid">
                 <div className="stat-card">
-                  <div className="stat-value">{analytics.total_queries || 0}</div>
+                  <div className="stat-value">
+                    {analytics?.total_queries ?? 0}
+                  </div>
                   <div className="stat-label">Total Queries</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value">{analytics.active_users || 0}</div>
+                  <div className="stat-value">
+                    {analytics?.active_users ?? 0}
+                  </div>
                   <div className="stat-label">Active Users</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">
-                    {analytics.avg_response_time ? Math.round(analytics.avg_response_time) : 0}ms
+                    {analytics?.avg_response_time ? Math.round(analytics.avg_response_time) : 0}ms
                   </div>
                   <div className="stat-label">Avg Response Time</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">
-                    {analytics.avg_chunks_retrieved ? analytics.avg_chunks_retrieved.toFixed(1) : 0}
+                    {(() => {
+                      const chunks = analytics?.avg_chunks_retrieved;
+                      if (!chunks) return '0.0';
+                      const num = typeof chunks === 'number' ? chunks : parseFloat(chunks);
+                      return isNaN(num) ? '0.0' : num.toFixed(1);
+                    })()}
                   </div>
                   <div className="stat-label">Avg Chunks Retrieved</div>
                 </div>
@@ -270,7 +279,7 @@ function AdminPanel({ user, onClose }) {
           {activeTab === 'tools' && !loading && (
             <div className="tools-tab">
               <h3>Admin Tools</h3>
-              
+
               <div className="tool-card">
                 <h4>🔄 Preprocessing</h4>
                 <p>Rebuild the document embeddings and chunks</p>
