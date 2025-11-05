@@ -81,6 +81,46 @@ button:disabled { background: #ccc; cursor: not-allowed; }
   margin: 0.5em 0;
 }
 
+/* Settings panel */
+.settings-panel {
+  background: #e3f2fd;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border-left: 4px solid #2196f3;
+}
+
+.settings-panel h3 {
+  margin-top: 0;
+  color: #1565c0;
+}
+
+.setting-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.setting-group label {
+  font-weight: 500;
+  color: #333;
+}
+
+.setting-group select {
+  padding: 8px 12px;
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.setting-group button {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
 /* Admin panel */
 .admin-panel {
   background: #e9ecef;

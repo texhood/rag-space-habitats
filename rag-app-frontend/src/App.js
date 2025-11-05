@@ -15,12 +15,16 @@ function App() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [isLogin, setIsLogin] = useState(true);
   const [preprocessStatus, setPreprocessStatus] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [llmPref, setLlmPref] = useState('grok');
+  const [savingLlm, setSavingLlm] = useState(false);
 
   // Check auth on mount
   useEffect(() => {
     axios.get('http://localhost:5000/me', { withCredentials: true })
       .then(res => {
         setUser(res.data.user);
+        setLlmPref(res.data.user.llm_preference || 'grok');
         setShowLogin(false);
       })
       .catch(() => {
@@ -73,6 +77,25 @@ function App() {
     }
   };
 
+  const saveLlmPreference = async () => {
+    setSavingLlm(true);
+    try {
+      const res = await axios.post('http://localhost:5000/settings/llm',
+        { llm_preference: llmPref },
+        { withCredentials: true }
+      );
+      if (user) {
+        setUser({ ...user, llm_preference: llmPref });
+      }
+      alert('LLM preference saved successfully!');
+      setShowSettings(false);
+    } catch (err) {
+      alert(`Error: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setSavingLlm(false);
+    }
+  };
+
   // === LOGIN / REGISTER SCREEN ===
   if (showLogin) {
     return (
@@ -107,8 +130,28 @@ function App() {
       <p>
         Welcome, <strong>{user.username}</strong> ({user.role})
         {' '}
+        <button onClick={() => setShowSettings(!showSettings)}>⚙️ Settings</button>
+        {' '}
         <button onClick={logout}>Logout</button>
       </p>
+
+      {/* SETTINGS PANEL */}
+      {showSettings && (
+        <div className="settings-panel">
+          <h3>Settings</h3>
+          <div className="setting-group">
+            <label>LLM Preference:</label>
+            <select value={llmPref} onChange={(e) => setLlmPref(e.target.value)}>
+              <option value="grok">Grok</option>
+              <option value="claude">Claude</option>
+              <option value="both">Both (Grok + Claude)</option>
+            </select>
+            <button onClick={saveLlmPreference} disabled={savingLlm}>
+              {savingLlm ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ADMIN PANEL */}
       {user.role === 'admin' && (
