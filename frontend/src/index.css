@@ -319,3 +319,73 @@ button:disabled {
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
+
+/* LLM Selector */
+.llm-selector {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.llm-selector label {
+  font-weight: 600;
+  color: #333;
+  font-size: 16px;
+  margin-right: 5px;
+}
+
+.llm-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.llm-options button {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.llm-options button:hover:not(:disabled) {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+}
+
+.llm-options button.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.llm-options button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.llm-current {
+  margin-left: auto;
+  color: #666;
+  font-size: 14px;
+}
+
+.llm-current strong {
+  color: #667eea;
+}

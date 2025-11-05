@@ -34,7 +34,7 @@ passport.use(new LocalStrategy({ usernameField: 'username' }, async (username, p
 passport.serializeUser((u, done) => done(null, u.id));
 passport.deserializeUser(async (id, done) => {
   try {
-    const [rows] = await pool.query('SELECT id, username, role FROM users WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, username, role, llm_preference FROM users WHERE id = ?', [id]);
     done(null, rows[0]);
   } catch (err) { done(err); }
 });
@@ -69,8 +69,22 @@ app.post('/login', passport.authenticate('local'), (req, res) => {
 app.post('/logout', (req, res) => { req.logout(() => res.json({ success: true })); });
 
 app.get('/me', (req, res) => {
-  if (req.user) res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role } });
+  if (req.user) res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role, llm_preference: req.user.llm_preference || 'grok' } });
   else res.status(401).json({ error: 'Not logged in' });
+});
+
+// ---------- SETTINGS: UPDATE LLM PREFERENCE ----------
+app.post('/settings/llm', requireAuth, async (req, res) => {
+  const { llm_preference } = req.body;
+  const valid = ['grok', 'claude', 'both'];
+  if (!llm_preference || !valid.includes(llm_preference)) {
+    return res.status(400).json({ error: 'Invalid LLM preference' });
+  }
+  try {
+    await pool.query('UPDATE users SET llm_preference = ? WHERE id = ?', [llm_preference, req.user.id]);
+    req.user.llm_preference = llm_preference;
+    res.json({ success: true, llm_preference });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ---------- ADMIN: PREPROCESS ----------
@@ -88,9 +102,10 @@ app.post('/ask', requireAuth, async (req, res) => {
   const { question } = req.body;
   if (!question) return res.status(400).json({ error: 'Question required' });
   try {
-    console.log(`User ${req.user.username} asks: "${question}"`);
+    const llmPref = req.user.llm_preference || 'grok';
+    console.log(`User ${req.user.username} asks: "${question}" (LLM: ${llmPref})`);
     const chunks = await retrieveRelevantChunks(question);
-    const answer = await generateAnswer(question, chunks);
+    const answer = await generateAnswer(question, chunks, llmPref);
     res.json({ answer });
   } catch (e) {
     console.error('Ask error:', e);
@@ -98,10 +113,8 @@ app.post('/ask', requireAuth, async (req, res) => {
   }
 });
 
-// ---------- GENERATE ANSWER (WITH PROPER WEB LATEX DELIMITERS) ----------
-async function generateAnswer(question, chunks) {
-  const context = chunks.map((c, i) => `[Chunk ${i+1}]\n${c}`).join('\n\n');
-  const prompt = `You are an expert on space habitats from NASA SP-413. Answer using **markdown with LaTeX math**:
+// ---------- SYSTEM PROMPT ----------
+const SYSTEM_PROMPT = `You are an expert on space habitats from NASA SP-413. Answer using **markdown with LaTeX math**:
 
 CRITICAL: Use these exact delimiters for math:
 - Inline math: $x = 2$
@@ -116,25 +129,17 @@ Format your response in clean markdown:
 
 Include:
 1. **Strengths** (bullets, cite chunks)
-2. **Weaknesses** (bullets, cite chunks)  
+2. **Weaknesses** (bullets, cite chunks)
 3. **Comparison** to other geometries
 4. **Exact Gravity Calculation** (show all steps with LaTeX)
 
 Example math formatting:
 - Inline: The radius is $r = 250$ meters
-- Display: $$a = \\omega^2 r$$
+- Display: $$a = \\omega^2 r$$`;
 
-Context from NASA SP-413:
-${context}
-
-Question: ${question}
-
-Answer (use $ and $$ for all math):`;
-
-  if (!process.env.XAI_API_KEY) {
-    return chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
-  }
-
+// ---------- GROK API ----------
+async function queryGrok(prompt) {
+  if (!process.env.XAI_API_KEY) return null;
   try {
     const res = await axios.post('https://api.x.ai/v1/chat/completions', {
       model: 'grok-3',
@@ -144,8 +149,67 @@ Answer (use $ and $$ for all math):`;
     }, { headers: { Authorization: `Bearer ${process.env.XAI_API_KEY}` } });
     return res.data.choices[0].message.content.trim();
   } catch (e) {
-    return `Grok error: ${e.message}`;
+    console.error('Grok error:', e.message);
+    return null;
   }
+}
+
+// ---------- CLAUDE API ----------
+async function queryClaude(prompt) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const res = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY } });
+    return res.data.content[0].text.trim();
+  } catch (e) {
+    console.error('Claude error:', e.message);
+    return null;
+  }
+}
+
+// ---------- GENERATE ANSWER (WITH PROPER WEB LATEX DELIMITERS) ----------
+async function generateAnswer(question, chunks, llmPref = 'grok') {
+  const context = chunks.map((c, i) => `[Chunk ${i+1}]\n${c}`).join('\n\n');
+  const prompt = `${SYSTEM_PROMPT}
+
+Context from NASA SP-413:
+${context}
+
+Question: ${question}
+
+Answer (use $ and $$ for all math):`;
+
+  if (llmPref === 'grok') {
+    const answer = await queryGrok(prompt);
+    return answer || chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
+  } else if (llmPref === 'claude') {
+    const answer = await queryClaude(prompt);
+    return answer || chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
+  } else if (llmPref === 'both') {
+    const [grokAnswer, claudeAnswer] = await Promise.all([
+      queryGrok(prompt),
+      queryClaude(prompt)
+    ]);
+
+    let result = '';
+    if (grokAnswer) {
+      result += '## Grok Response\n\n' + grokAnswer;
+    }
+    if (claudeAnswer) {
+      if (result) result += '\n\n---\n\n';
+      result += '## Claude Response\n\n' + claudeAnswer;
+    }
+    if (!result) {
+      result = chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
+    }
+    return result;
+  }
+
+  return chunks.map((c, i) => `[${i+1}] ${c}`).join('\n\n');
 }
 
 // ---------- START ----------

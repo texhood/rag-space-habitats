@@ -17,6 +17,8 @@ function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [preprocessStatus, setPreprocessStatus] = useState('');
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [llmPreference, setLlmPreference] = useState('grok');
+  const [availableLLMs, setAvailableLLMs] = useState({ grok: true, claude: false });
 
   // Check auth on mount
   useEffect(() => {
@@ -30,6 +32,18 @@ function App() {
         setShowLogin(true);
       });
   }, []);
+
+  // Load user settings when authenticated
+  useEffect(() => {
+    if (user) {
+      axios.get('http://localhost:5000/api/auth/settings', { withCredentials: true })
+        .then(res => {
+          setLlmPreference(res.data.llm_preference);
+          setAvailableLLMs(res.data.available_llms);
+        })
+        .catch(err => console.error('Failed to load settings:', err));
+    }
+  }, [user]);
 
   const handleAuth = async () => {
     const endpoint = isLogin ? '/login' : '/register';
@@ -50,6 +64,22 @@ function App() {
         setShowLogin(true);
         setShowAdminPanel(false);
       });
+  };
+
+  const updateLLMPreference = async (preference) => {
+    try {
+      console.log('Updating LLM preference to:', preference);
+      const response = await axios.post(
+        'http://localhost:5000/api/auth/settings/llm',
+        { preference },
+        { withCredentials: true }
+      );
+      console.log('Update response:', response.data);
+      setLlmPreference(preference);
+    } catch (err) {
+      console.error('Failed to update LLM preference:', err);
+      alert('Failed to update LLM preference: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const ask = async () => {
@@ -121,16 +151,39 @@ function App() {
         )}
       </p>
 
-      {/* SIMPLE ADMIN TOOLS (kept for backward compatibility)
-      {user.role === 'admin' && !showAdminPanel && (
-        <div className="admin-panel-legacy">
-          <h3>Quick Admin Tools</h3>
-          <button onClick={runPreprocess} disabled={preprocessStatus.includes('Starting')}>
-            Run Preprocessing
+      {/* LLM SELECTOR */}
+      <div className="llm-selector">
+        <label>AI Model:</label>
+        <div className="llm-options">
+          <button
+            className={llmPreference === 'grok' ? 'active' : ''}
+            onClick={() => updateLLMPreference('grok')}
+            disabled={!availableLLMs.grok}
+          >
+            🔵 Grok
           </button>
-          {preprocessStatus && <p>{preprocessStatus}</p>}
+          <button
+            className={llmPreference === 'claude' ? 'active' : ''}
+            onClick={() => updateLLMPreference('claude')}
+            disabled={!availableLLMs.claude}
+          >
+            🟣 Claude
+          </button>
+          {availableLLMs.grok && availableLLMs.claude && (
+            <button
+              className={llmPreference === 'both' ? 'active' : ''}
+              onClick={() => updateLLMPreference('both')}
+            >
+              🤖 Both
+            </button>
+          )}
         </div>
-      )} */}
+        {llmPreference && (
+          <span className="llm-current">
+            Current: <strong>{llmPreference.charAt(0).toUpperCase() + llmPreference.slice(1)}</strong>
+          </span>
+        )}
+      </div>
 
       <div className="input-group">
         <input

@@ -76,6 +76,33 @@ class User {
     );
     return rows[0].count > 0;
   }
+
+  /**
+   * Update user's LLM preference
+   */
+  static async updateLLMPreference(id, preference) {
+    const validPreferences = ['grok', 'claude', 'both'];
+    if (!validPreferences.includes(preference)) {
+      throw new Error('Invalid LLM preference. Must be: grok, claude, or both');
+    }
+    
+    const [result] = await pool.query(
+      'UPDATE users SET llm_preference = ? WHERE id = ?',
+      [preference, id]
+    );
+    return result.affectedRows > 0;
+  }
+
+  /**
+   * Get user's LLM preference
+   */
+  static async getLLMPreference(id) {
+    const [rows] = await pool.query(
+      'SELECT llm_preference FROM users WHERE id = ?',
+      [id]
+    );
+    return rows[0]?.llm_preference || 'grok';
+  }
 }
 
 module.exports = User;

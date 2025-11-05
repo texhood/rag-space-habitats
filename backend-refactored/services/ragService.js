@@ -1,6 +1,7 @@
 // services/ragService.js
 const Anthropic = require('@anthropic-ai/sdk');
 const pool = require('../config/database');
+const axios = require('axios');
 
 class RAGService {
   constructor() {
@@ -9,10 +10,21 @@ class RAGService {
       this.anthropic = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY
       });
-    } else if (process.env.XAI_API_KEY) {
-      // Keep Grok support as fallback
-      this.useGrok = true;
+      this.claudeAvailable = true;
+    } else {
+      this.claudeAvailable = false;
     }
+
+    // Initialize Grok if API key is available
+    if (process.env.XAI_API_KEY) {
+      this.grokAvailable = true;
+    } else {
+      this.grokAvailable = false;
+    }
+
+    // Dual LLM mode configuration
+    this.dualLLMMode = process.env.DUAL_LLM_MODE === 'true';
+    this.primaryLLM = process.env.PRIMARY_LLM || 'claude'; // 'claude' or 'grok'
   }
 
   /**
@@ -42,26 +54,92 @@ class RAGService {
   }
 
   /**
-   * Generate answer using Claude or Grok
-   * Fixed - check which API key is configured
+   * Generate answer using Claude and/or Grok based on configuration
+   * Supports single LLM mode and dual LLM mode
    */
   async generateAnswer(question, chunks) {
     const context = chunks.map((c, i) => `[Chunk ${i + 1}]\n${c}`).join('\n\n');
 
     // If no LLM configured, return chunks
-    if (!process.env.ANTHROPIC_API_KEY && !process.env.XAI_API_KEY) {
+    if (!this.claudeAvailable && !this.grokAvailable) {
       return this._formatChunksAsAnswer(chunks);
     }
 
-    // Use Grok if key exists
-    if (process.env.XAI_API_KEY) {
+    // Dual LLM mode - get both answers and combine
+    if (this.dualLLMMode && this.claudeAvailable && this.grokAvailable) {
+      return await this._generateDualLLM(question, context);
+    }
+
+    // Single LLM mode - use primary or fallback
+    if (this.primaryLLM === 'claude' && this.claudeAvailable) {
+      return await this._generateWithClaude(question, context);
+    }
+
+    if (this.primaryLLM === 'grok' && this.grokAvailable) {
       return await this._generateWithGrok(question, context);
     }
 
-    // Use Claude if key exists
-    if (process.env.ANTHROPIC_API_KEY) {
+    // Fallback to whatever is available
+    if (this.claudeAvailable) {
       return await this._generateWithClaude(question, context);
     }
+
+    if (this.grokAvailable) {
+      return await this._generateWithGrok(question, context);
+    }
+  }
+
+  /**
+   * Generate answers from both Claude and Grok, combine results
+   */
+  async _generateDualLLM(question, context) {
+    console.log('Dual LLM mode enabled - fetching answers from both Claude and Grok');
+
+    try {
+      const [claudeAnswer, grokAnswer] = await Promise.all([
+        this._generateWithClaude(question, context).catch(err => {
+          console.error('Claude failed in dual mode:', err.message);
+          return null;
+        }),
+        this._generateWithGrok(question, context).catch(err => {
+          console.error('Grok failed in dual mode:', err.message);
+          return null;
+        })
+      ]);
+
+      // If both failed, return error
+      if (!claudeAnswer && !grokAnswer) {
+        throw new Error('Both Claude and Grok failed to generate answers');
+      }
+
+      // If only one succeeded, return it
+      if (!claudeAnswer) {
+        return `**Grok Response** (Claude unavailable):\n\n${grokAnswer}`;
+      }
+      if (!grokAnswer) {
+        return `**Claude Response** (Grok unavailable):\n\n${claudeAnswer}`;
+      }
+
+      // Both succeeded - combine responses
+      return this._combineDualLLMResponses(claudeAnswer, grokAnswer);
+    } catch (err) {
+      console.error('Dual LLM error:', err);
+      throw new Error('Failed to generate answers in dual LLM mode');
+    }
+  }
+
+  /**
+   * Combine responses from both LLMs
+   */
+  _combineDualLLMResponses(claudeAnswer, grokAnswer) {
+    const separator = '\n\n---\n\n';
+
+    return `## Comparative Analysis from Dual LLMs\n\n` +
+           `### Claude Sonnet Response\n\n${claudeAnswer}` +
+           `${separator}` +
+           `### Grok Response\n\n${grokAnswer}` +
+           `${separator}` +
+           `**Note:** This response combines perspectives from both Claude and Grok to provide comprehensive coverage of your question.`;
   }
   /**
    * Generate answer with Claude
@@ -117,8 +195,6 @@ Answer (use $ and $$ for all math):`
    * Generate answer with Grok
    */
   async _generateWithGrok(question, context) {
-    const axios = require('axios');
-
     try {
       const prompt = `You are an expert on space habitats from NASA SP-413. Answer using **markdown with LaTeX math**:
 

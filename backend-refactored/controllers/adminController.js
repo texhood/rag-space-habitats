@@ -113,25 +113,28 @@ class AdminController {
    */
   static async triggerPreprocess(req, res, next) {
     try {
-      // This would trigger your preprocessing script
-      // For now, we'll just acknowledge the request
-      
-      // In production, you might want to:
-      // - Run preprocessing in a worker/background job
-      // - Use a queue system like Bull/BullMQ
-      // - Track preprocessing status
-      
       console.log(`[${req.user.username}] Triggered preprocessing`);
+      
+      // Run preprocessing in the background
+      const { spawn } = require('child_process');
+      const path = require('path');
+      const scriptPath = path.join(__dirname, '../scripts/preprocess.js');
+      
+      // Spawn the process
+      const child = spawn('node', [scriptPath], {
+        detached: true,
+        stdio: 'inherit'
+      });
+      
+      // Don't wait for it to finish
+      child.unref();
       
       res.json({ 
         success: true,
-        message: 'Preprocessing started in background'
+        message: 'Preprocessing started in background. Check server logs for progress.'
       });
-
-      // Optionally run the preprocessing asynchronously
-      // Don't await this - let it run in background
-      // require('../scripts/preprocess.js')().catch(console.error);
     } catch (err) {
+      console.error('Preprocessing trigger error:', err);
       next(err);
     }
   }
