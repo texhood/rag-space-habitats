@@ -13,12 +13,16 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [showLogin, setShowLogin] = useState(true);
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ username: '', password: '', email: '' });
   const [isLogin, setIsLogin] = useState(true);
-  const [preprocessStatus, setPreprocessStatus] = useState('');
+  // const [preprocessStatus, setPreprocessStatus] = useState('');
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [llmPreference, setLlmPreference] = useState('grok');
   const [availableLLMs, setAvailableLLMs] = useState({ grok: true, claude: false });
+
+    // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
 
   // Check auth on mount
   useEffect(() => {
@@ -46,14 +50,42 @@ function App() {
   }, [user]);
 
   const handleAuth = async () => {
-    const endpoint = isLogin ? '/login' : '/register';
+    if (!form.username || !form.password) {
+      alert('Please enter username and password');
+      return;
+    }
+
+    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+    
     try {
-      await axios.post(`http://localhost:5000${endpoint}`, form, { withCredentials: true });
-      const res = await axios.get('http://localhost:5000/me', { withCredentials: true });
-      setUser(res.data.user);
-      setShowLogin(false);
+      const response = await axios.post(`http://localhost:5000${endpoint}`, form, { withCredentials: true });
+      
+      if (endpoint === '/api/auth/register') {
+        // Registration successful - just switch to login, DON'T fetch user
+        alert(response.data.message || 'Registration successful! Please login.');
+        setIsLogin(true); // Switch to login form
+        setForm({ username: form.username, password: '', email: '' }); // Keep username, clear password and email
+      } else {
+        // Login successful - NOW fetch user data
+        try {
+          const res = await axios.get('http://localhost:5000/api/auth/me', { withCredentials: true });
+          setUser(res.data.user);
+          setShowLogin(false);
+        } catch (err) {
+          console.error('Failed to fetch user after login:', err);
+          alert('Login successful but failed to load user data. Please refresh the page.');
+        }
+      }
     } catch (err) {
-      alert(err.response?.data?.error || 'Authentication failed');
+      const errorData = err.response?.data;
+      
+      // User already exists - redirect to login
+      if (errorData?.shouldRedirectToLogin) {
+        alert(errorData.message);
+        setIsLogin(true);
+      } else {
+        alert(errorData?.message || errorData?.error || 'Authentication failed');
+      }
     }
   };
 
@@ -82,6 +114,27 @@ function App() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail) {
+      alert('Please enter your email address');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/auth/forgot-password',
+        { email: forgotPasswordEmail },
+        { withCredentials: true }
+      );
+      alert(response.data.message);
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+      setIsLogin(true); // Go back to login
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to send reset email');
+    }
+  };
+
   const ask = async () => {
     if (!question.trim()) return;
     setLoading(true);
@@ -96,15 +149,47 @@ function App() {
     }
   };
 
-  const runPreprocess = async () => {
-    setPreprocessStatus('Starting preprocessing...');
-    try {
-      const res = await axios.post('http://localhost:5000/admin/preprocess', {}, { withCredentials: true });
-      setPreprocessStatus(res.data.message);
-    } catch (err) {
-      setPreprocessStatus(`Error: ${err.response?.data?.error || err.message}`);
-    }
-  };
+  // const runPreprocess = async () => {
+  //   setPreprocessStatus('Starting preprocessing...');
+  //   try {
+  //     const res = await axios.post('http://localhost:5000/admin/preprocess', {}, { withCredentials: true });
+  //     setPreprocessStatus(res.data.message);
+  //   } catch (err) {
+  //     setPreprocessStatus(`Error: ${err.response?.data?.error || err.message}`);
+  //   }
+  // };
+
+    // === FORGOT PASSWORD SCREEN ===
+  if (showForgotPassword) {
+    return (
+      <div className="App">
+        <h1>Space Habitats RAG</h1>
+        <div className="auth">
+          <h2>Reset Password</h2>
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+            Enter your email address and we'll send you a link to reset your password.
+          </p>
+          <input
+            type="email"
+            placeholder="Email address"
+            value={forgotPasswordEmail}
+            onChange={e => setForgotPasswordEmail(e.target.value)}
+            onKeyPress={e => e.key === 'Enter' && handleForgotPassword()}
+          />
+          <button onClick={handleForgotPassword}>Send Reset Link</button>
+          <p 
+            onClick={() => {
+              setShowForgotPassword(false);
+              setForgotPasswordEmail('');
+            }}
+            style={{ cursor: 'pointer', color: '#667eea', marginTop: '15px' }}
+          >
+            ← Back to login
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // === LOGIN / REGISTER SCREEN ===
   if (showLogin) {
@@ -117,15 +202,42 @@ function App() {
             placeholder="Username"
             value={form.username}
             onChange={e => setForm({ ...form, username: e.target.value })}
+            onKeyPress={e => e.key === 'Enter' && handleAuth()}
           />
           <input
             type="password"
             placeholder="Password"
             value={form.password}
             onChange={e => setForm({ ...form, password: e.target.value })}
+            onKeyPress={e => e.key === 'Enter' && handleAuth()}
           />
+          {!isLogin && (
+            <input
+              type="email"
+              placeholder="Email (optional, for password reset)"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+              onKeyPress={e => e.key === 'Enter' && handleAuth()}
+            />
+          )}
           <button onClick={handleAuth}>{isLogin ? 'Login' : 'Register'}</button>
-          <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: 'pointer', color: 'blue' }}>
+          
+          {isLogin && (
+            <p 
+              onClick={() => setShowForgotPassword(true)} 
+              style={{ 
+                cursor: 'pointer', 
+                color: '#667eea', 
+                fontSize: '14px', 
+                marginTop: '10px',
+                textDecoration: 'underline'
+              }}
+            >
+              Forgot password?
+            </p>
+          )}
+          
+          <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: 'pointer', color: '#667eea', marginTop: '15px' }}>
             {isLogin ? 'Need an account? Register' : 'Have an account? Login'}
           </p>
         </div>

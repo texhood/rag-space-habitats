@@ -14,6 +14,17 @@ class User {
     return rows[0];
   }
 
+    /**
+   * Find user by email
+   */
+  static async findByEmail(email) {
+    const [rows] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+    return rows[0];
+  }
+
   /**
    * Find user by ID
    */
@@ -38,11 +49,11 @@ class User {
   /**
    * Create a new user
    */
-  static async create(username, password, role = 'user') {
+  static async create(username, password, role = 'user', email = null) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
-      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-      [username, hashedPassword, role]
+      'INSERT INTO users (username, password, role, email) VALUES (?, ?, ?, ?)',
+      [username, hashedPassword, role, email]
     );
     return result.insertId;
   }
