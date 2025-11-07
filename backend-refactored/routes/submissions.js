@@ -162,6 +162,61 @@ router.post('/', upload.single('file'), async (req, res) => {
   }
 });
 
+// PATCH /api/submissions/:id/status - Update submission status (admin only)
+router.patch('/:id/status', async (req, res) => {
+  try {
+    if (!req.isAuthenticated() || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { status, review_notes } = req.body;
+    const validStatuses = ['pending', 'approved', 'rejected', 'processed'];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        error: 'Invalid status',
+        valid: validStatuses 
+      });
+    }
+
+    const submissions = getCollection('document_submissions');
+    
+    const updateData = {
+      status,
+      updated_at: new Date()
+    };
+
+    // Add review metadata if approving or rejecting
+    if (status === 'approved' || status === 'rejected') {
+      updateData.reviewed_by = req.user.id;
+      updateData.reviewed_by_username = req.user.username;
+      updateData.reviewed_at = new Date();
+      if (review_notes) {
+        updateData.review_notes = review_notes;
+      }
+    }
+
+    const result = await submissions.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    res.json({ 
+      success: true,
+      message: `Submission ${status}`,
+      submission_id: req.params.id,
+      status
+    });
+  } catch (err) {
+    console.error('Status update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Error handling middleware for multer errors
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {

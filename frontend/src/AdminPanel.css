@@ -402,3 +402,95 @@
     padding: 8px;
   }
 }
+
+/* Submission Review */
+.submissions-review {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.submission-review-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.submission-review-card h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.submission-review-card p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.content-preview {
+  margin-top: 10px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.review-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.approve-btn {
+  background: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.approve-btn:hover {
+  background: #218838;
+}
+
+.reject-btn {
+  background: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.reject-btn:hover {
+  background: #c82333;
+}
+
+.process-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.process-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.processing-stats h4 {
+  margin-top: 20px;
+  margin-bottom: 15px;
+  color: #333;
+}
