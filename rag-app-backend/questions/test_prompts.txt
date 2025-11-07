@@ -1,2 +1,0 @@
-There are multiple basic geometries for space habitats referenced. Extrapolate from the 1975 Space Habitats: A Design Study on a cylindrical habitat of 6437m major diameter, 6237m minor diameter, 10,000m long spinning at 0.95 RPM. The habitat must be able to sustain 1,000,000 humans and associated lifeforms with a viable ecology.
-
