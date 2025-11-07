@@ -40,7 +40,7 @@ h1 {
 }
 
 /* User info bar */
-.App>p {
+.App > p {
   text-align: center;
   padding: 15px;
   background: #f8f9fa;
@@ -48,7 +48,7 @@ h1 {
   margin-bottom: 25px;
 }
 
-.App>p button {
+.App > p button {
   margin-left: 10px;
 }
 
@@ -74,21 +74,11 @@ h1 {
   font-size: 16px;
   transition: border-color 0.3s;
   box-sizing: border-box;
-  /* Ensures padding doesn't overflow */
 }
 
 .auth input:focus {
   outline: none;
   border-color: #667eea;
-}
-
-.auth input[type="email"] {
-  color: #555;
-}
-
-.auth input[type="email"]::placeholder {
-  color: #999;
-  font-style: italic;
 }
 
 .auth button {
@@ -199,15 +189,8 @@ button:disabled {
 }
 
 @keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* Answer Box */
@@ -222,9 +205,7 @@ button:disabled {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.answer h2,
-.answer h3,
-.answer h4 {
+.answer h2, .answer h3, .answer h4 {
   color: #667eea;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
@@ -240,8 +221,7 @@ button:disabled {
   font-size: 1.4em;
 }
 
-.answer ul,
-.answer ol {
+.answer ul, .answer ol {
   padding-left: 2em;
   margin: 1em 0;
 }
@@ -299,46 +279,6 @@ button:disabled {
 .admin-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
-}
-
-/* KaTeX Math Styling */
-.katex {
-  font-size: 1.1em;
-}
-
-.katex-display {
-  margin: 1.5em 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .App {
-    padding: 20px;
-  }
-
-  h1 {
-    font-size: 2em;
-  }
-
-  .input-group {
-    flex-direction: column;
-  }
-
-  .input-group button {
-    width: 100%;
-  }
-
-  .answer {
-    padding: 20px;
-    font-size: 14px;
-  }
-}
-
-/* Smooth Transitions */
-* {
-  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 /* LLM Selector */
@@ -409,4 +349,324 @@ button:disabled {
 
 .llm-current strong {
   color: #667eea;
+}
+
+/* Document Actions */
+.document-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #667eea;
+  background: white;
+  color: #667eea;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.action-btn.submit-document {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+/* Submit Form */
+.submit-form {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.submit-form input,
+.submit-form textarea,
+.submit-form select {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.submit-form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.submit-form select {
+  cursor: pointer;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Submissions List */
+.submissions-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.submissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.submission-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.submission-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.submission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.submission-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3em;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-processed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.submission-description {
+  color: #666;
+  margin: 10px 0;
+  font-style: italic;
+}
+
+.submission-meta {
+  display: flex;
+  gap: 20px;
+  margin: 15px 0;
+  font-size: 14px;
+  color: #888;
+}
+
+.submission-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+
+.tag {
+  background: #e9ecef;
+  color: #495057;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.submission-votes {
+  display: flex;
+  gap: 15px;
+  margin: 15px 0;
+  font-size: 14px;
+}
+
+.submission-content {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+details {
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+details summary {
+  color: #667eea;
+  font-weight: 600;
+  padding: 10px;
+  background: #f8f9ff;
+  border-radius: 6px;
+  user-select: none;
+}
+
+details summary:hover {
+  background: #eef1ff;
+}
+
+details[open] summary {
+  margin-bottom: 10px;
+}
+
+/* KaTeX Math Styling */
+.katex {
+  font-size: 1.1em;
+}
+
+.katex-display {
+  margin: 1.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .App {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+
+  .input-group button {
+    width: 100%;
+  }
+
+  .answer {
+    padding: 20px;
+    font-size: 14px;
+  }
+
+  .document-actions {
+    flex-direction: column;
+  }
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Upload Method Selector */
+.upload-method-selector {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.upload-method-selector label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.upload-method-selector input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.upload-method-selector span {
+  user-select: none;
+}
+
+/* File Upload Area */
+.file-upload-area {
+  margin-bottom: 20px;
+}
+
+.file-upload-label {
+  display: block;
+  padding: 40px;
+  border: 3px dashed #667eea;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #f8f9ff;
+}
+
+.file-upload-label:hover {
+  border-color: #764ba2;
+  background: #eef1ff;
+  transform: translateY(-2px);
+}
+
+.file-upload-label strong {
+  color: #667eea;
+  font-size: 18px;
+}
+
+.file-upload-label small {
+  color: #888;
+  font-size: 14px;
 }

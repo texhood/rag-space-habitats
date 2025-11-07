@@ -5,11 +5,13 @@ const cors = require('cors');
 const passport = require('./config/passport');
 const sessionMiddleware = require('./config/session');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const mongoClient = require('./config/mongodb');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const ragRoutes = require('./routes/rag');
 const adminRoutes = require('./routes/admin');
+const submissionRoutes = require('./routes/submissions');
 
 // Initialize Express
 const app = express();
@@ -25,8 +27,8 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
 // Session
 app.use(sessionMiddleware);
@@ -84,6 +86,8 @@ app.post('/admin/preprocess', (req, res, next) => {
   adminRoutes.handle(req, res, next);
 });
 
+app.use('/api/submissions', submissionRoutes);
+
 // ======================
 // ERROR HANDLING
 // ======================
@@ -100,24 +104,43 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log('=================================');
-  console.log('🚀 Space Habitats RAG Server');
-  console.log('=================================');
-  console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🎨 Frontend: http://localhost:3000`);
-  console.log('=================================');
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`LLM: ${process.env.ANTHROPIC_API_KEY ? 'Claude' : process.env.XAI_API_KEY ? 'Grok' : 'None'}`);
-  console.log('=================================');
-  console.log('');
-  console.log('📊 Admin API Endpoints Available:');
-  console.log('   GET    /api/admin/users       - List users');
-  console.log('   GET    /api/admin/analytics   - View analytics');
-  console.log('   PATCH  /api/admin/users/:id/role - Update role');
-  console.log('   DELETE /api/admin/users/:id   - Delete user');
-  console.log('=================================');
-});
+// Initialize MongoDB connection
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await mongoClient.connect();
+    
+    // Start Express server
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
+
+// app.listen(PORT, () => {
+//   console.log('=================================');
+//   console.log('🚀 Space Habitats RAG Server');
+//   console.log('=================================');
+//   console.log(`📡 Server: http://localhost:${PORT}`);
+//   console.log(`🎨 Frontend: http://localhost:3000`);
+//   console.log('=================================');
+//   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+//   console.log(`LLM: ${process.env.ANTHROPIC_API_KEY ? 'Claude' : process.env.XAI_API_KEY ? 'Grok' : 'None'}`);
+//   console.log('=================================');
+//   console.log('');
+//   console.log('📊 Admin API Endpoints Available:');
+//   console.log('   GET    /api/admin/users       - List users');
+//   console.log('   GET    /api/admin/analytics   - View analytics');
+//   console.log('   PATCH  /api/admin/users/:id/role - Update role');
+//   console.log('   DELETE /api/admin/users/:id   - Delete user');
+//   console.log('=================================');
+// });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
