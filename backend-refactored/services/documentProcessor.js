@@ -193,6 +193,11 @@ class DocumentProcessor {
       'SELECT COUNT(*) as total FROM document_chunks'
     );
 
+    /*
+    * Use the boolean flag for faster queries
+    */
+   
+
     return {
       submissions: {
         pending,

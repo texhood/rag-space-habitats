@@ -27,8 +27,8 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express.json({ limit: '500mb' }));
-app.use(express.urlencoded({ extended: true, limit: '500mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Session
 app.use(sessionMiddleware);
@@ -49,7 +49,7 @@ app.use((req, res, next) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
@@ -60,6 +60,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/rag', ragRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/submissions', submissionRoutes);
 
 // Legacy compatibility routes (for existing frontend)
 app.post('/register', (req, res, next) => {
@@ -86,8 +87,6 @@ app.post('/admin/preprocess', (req, res, next) => {
   adminRoutes.handle(req, res, next);
 });
 
-app.use('/api/submissions', submissionRoutes);
-
 // ======================
 // ERROR HANDLING
 // ======================
@@ -104,15 +103,30 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// Initialize MongoDB connection
+// Initialize MongoDB connection and start server
 async function startServer() {
   try {
     // Connect to MongoDB
     await mongoClient.connect();
-    
+
     // Start Express server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      
+      // Check embedding service
+      const embeddingService = require('./services/embeddingService');
+      embeddingService.checkHealth()
+        .then(healthy => {
+          if (healthy) {
+            console.log('✅ Embedding service ready on port 5001');
+          } else {
+            console.log('⚠️  Embedding service not available - will use keyword search fallback');
+          }
+        })
+        .catch(err => {
+          console.log('⚠️  Could not connect to embedding service:', err.message);
+          console.log('   Start it with: python python-services/embedding_server.py');
+        });
     });
   } catch (err) {
     console.error('Failed to start server:', err);
@@ -122,25 +136,6 @@ async function startServer() {
 
 // Start the server
 startServer();
-
-// app.listen(PORT, () => {
-//   console.log('=================================');
-//   console.log('🚀 Space Habitats RAG Server');
-//   console.log('=================================');
-//   console.log(`📡 Server: http://localhost:${PORT}`);
-//   console.log(`🎨 Frontend: http://localhost:3000`);
-//   console.log('=================================');
-//   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-//   console.log(`LLM: ${process.env.ANTHROPIC_API_KEY ? 'Claude' : process.env.XAI_API_KEY ? 'Grok' : 'None'}`);
-//   console.log('=================================');
-//   console.log('');
-//   console.log('📊 Admin API Endpoints Available:');
-//   console.log('   GET    /api/admin/users       - List users');
-//   console.log('   GET    /api/admin/analytics   - View analytics');
-//   console.log('   PATCH  /api/admin/users/:id/role - Update role');
-//   console.log('   DELETE /api/admin/users/:id   - Delete user');
-//   console.log('=================================');
-// });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
