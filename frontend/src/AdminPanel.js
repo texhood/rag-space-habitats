@@ -11,6 +11,7 @@ function AdminPanel({ onClose }) {
   const [preprocessStatus, setPreprocessStatus] = useState('');
   const [submissions, setSubmissions] = useState([]);
   const [processingStats, setProcessingStats] = useState(null);
+  const [embeddingStatus, setEmbeddingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,6 +26,7 @@ function AdminPanel({ onClose }) {
       fetchPendingSubmissions();
     } else if (activeTab === 'processing') {
       fetchProcessingStats();
+      fetchEmbeddingStatus();
     }
   }, [activeTab]);
 
@@ -110,6 +112,18 @@ function AdminPanel({ onClose }) {
       setProcessingStats(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmbeddingStatus = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/admin/embedding-status', {
+        withCredentials: true
+      });
+      setEmbeddingStatus(res.data);
+    } catch (err) {
+      console.error('Failed to fetch embedding status:', err);
+      setEmbeddingStatus(null);
     }
   };
 
@@ -216,8 +230,25 @@ function AdminPanel({ onClose }) {
       alert(`Processed ${res.data.processed} submissions, ${res.data.failed} failed`);
       fetchPendingSubmissions();
       fetchProcessingStats();
+      fetchEmbeddingStatus();
     } catch (err) {
       alert('Batch processing failed: ' + (err.response?.data?.details || err.message));
+    }
+  };
+
+  const handleGenerateEmbeddings = async () => {
+    if (!window.confirm('Generate embeddings for chunks? This may take a while.')) return;
+    
+    try {
+      const res = await axios.post(
+        'http://localhost:5000/api/admin/embed-all',
+        {},
+        { withCredentials: true }
+      );
+      alert(res.data.message);
+      fetchEmbeddingStatus();
+    } catch (err) {
+      alert('Failed: ' + (err.response?.data?.details || err.message));
     }
   };
 
@@ -517,6 +548,48 @@ function AdminPanel({ onClose }) {
                     This will convert all approved submissions into searchable chunks
                   </p>
                 </div>
+
+                {/* VECTOR EMBEDDINGS SECTION */}
+                {embeddingStatus && (
+                  <div style={{ marginTop: '30px', padding: '20px', background: '#f0f8ff', borderRadius: '8px', border: '2px solid #4a90e2' }}>
+                    <h4>🔬 Vector Embeddings</h4>
+                    <div className="stats-grid">
+                      <div className="stat-card">
+                        <div className="stat-value" style={{ fontSize: '32px' }}>
+                          {embeddingStatus.server_healthy ? '✅' : '❌'}
+                        </div>
+                        <div className="stat-label">Embedding Server</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value">{embeddingStatus.chunks?.embedded || 0}</div>
+                        <div className="stat-label">Chunks with Embeddings</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-value">{embeddingStatus.chunks?.not_embedded || 0}</div>
+                        <div className="stat-label">Need Embeddings</div>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={handleGenerateEmbeddings}
+                      className="process-btn"
+                      style={{ marginTop: '15px' }}
+                      disabled={!embeddingStatus.server_healthy}
+                    >
+                      🔬 Generate Embeddings for Existing Chunks
+                    </button>
+                    
+                    {!embeddingStatus.server_healthy && (
+                      <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                        ⚠️ Embedding server not running. Start it with: python python-services/embedding_server.py
+                      </p>
+                    )}
+                    
+                    <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+                      Free local embeddings • No API costs • 384 dimensions • Semantic search
+                    </p>
+                  </div>
+                )}
 
                 <div style={{ marginTop: '30px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
                   <h4>Legacy Processing (File System)</h4>
