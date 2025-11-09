@@ -2,6 +2,7 @@
 const pool = require('../config/database');
 const { getCollection } = require('../config/mongodb');
 const { ObjectId } = require('mongodb');
+const embeddingService = require('./embeddingService');
 
 class DocumentProcessor {
   constructor() {
@@ -37,7 +38,19 @@ class DocumentProcessor {
       const chunks = this.createChunks(submission.content);
       console.log(`Created ${chunks.length} chunks`);
 
-      // Store chunks in MySQL
+      // Generate embeddings for chunks
+      console.log('Generating embeddings...');
+      let embeddings = [];
+      try {
+        embeddings = await embeddingService.generateBatchEmbeddings(chunks);
+        console.log(`✅ Generated ${embeddings.length} embeddings`);
+      } catch (embErr) {
+        console.error('⚠️  Embedding generation failed, continuing without embeddings:', embErr.message);
+        // Continue without embeddings (they can be generated later)
+        embeddings = new Array(chunks.length).fill(null);
+      }
+
+      // Store chunks in MySQL with embeddings
       let insertedCount = 0;
       for (let i = 0; i < chunks.length; i++) {
         const metadata = JSON.stringify({
@@ -49,11 +62,14 @@ class DocumentProcessor {
           submitted_at: submission.submitted_at
         });
 
+        const embeddingJson = embeddings[i] ? JSON.stringify(embeddings[i]) : null;
+        const hasEmbedding = embeddings[i] ? true : false;
+
         await pool.query(
           `INSERT INTO document_chunks 
-           (content, metadata, source_id, source_type, chunk_index) 
-           VALUES (?, ?, ?, ?, ?)`,
-          [chunks[i], metadata, submissionId, 'mongodb_submission', i]
+           (content, metadata, source_id, source_type, chunk_index, embedding_vector, has_embedding) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [chunks[i], metadata, submissionId, 'mongodb_submission', i, embeddingJson, hasEmbedding]
         );
         insertedCount++;
       }
@@ -192,11 +208,6 @@ class DocumentProcessor {
     const [chunksResult] = await pool.query(
       'SELECT COUNT(*) as total FROM document_chunks'
     );
-
-    /*
-    * Use the boolean flag for faster queries
-    */
-   
 
     return {
       submissions: {

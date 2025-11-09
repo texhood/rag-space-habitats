@@ -1,10 +1,11 @@
 // services/ragService.js
 const pool = require('../config/database');
 const embeddingService = require('./embeddingService');
+const axios = require('axios');
 
 class RAGService {
   /**
-   * Retrieve relevant chunks using vector similarity
+   * Retrieve relevant chunks using vector similarity or keyword search
    */
   async retrieveRelevantChunks(question, limit = 5) {
     try {
@@ -27,18 +28,88 @@ class RAGService {
   }
 
   /**
+   * Generate answer from chunks using LLM
+   */
+  async generateAnswer(question, chunks) {
+    if (!chunks || chunks.length === 0) {
+      return "I don't have enough information to answer that question.";
+    }
+
+    // Build context from chunks
+    const context = chunks.join('\n\n---\n\n');
+
+    const prompt = `You are a helpful AI assistant with expertise in space habitats and orbital engineering. Use the following context to answer the question accurately and concisely.
+
+Context from knowledge base:
+${context}
+
+Question: ${question}
+
+Please provide a clear, accurate answer based on the context above. If the context doesn't contain enough information, say so.
+
+Answer:`;
+
+    try {
+      console.log('[LLM] Calling Grok API...');
+      
+      const response = await axios.post(
+        'https://api.x.ai/v1/chat/completions',
+        {
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful AI assistant specializing in space habitats and orbital engineering.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          model: 'grok-3',
+          stream: false,
+          temperature: 0.7,
+          max_tokens: 2000
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.XAI_API_KEY}`
+          },
+          timeout: 30000
+        }
+      );
+
+      const answer = response.data.choices[0].message.content;
+      console.log('[LLM] Response received');
+      return answer;
+
+    } catch (err) {
+      console.error('[LLM] Grok error:', err.response?.data || err.message);
+      
+      // Fallback: return context-based response
+      return `Based on the available information:\n\n${chunks[0].substring(0, 500)}...\n\n(Full LLM response unavailable)`;
+    }
+  }
+
+  /**
    * Vector similarity search
    */
   async vectorSearch(question, limit = 5) {
-  try {
-    const queryEmbedding = await embeddingService.generateEmbedding(question);
-    
-    // Get all chunks with embeddings (using index)
-    const [chunks] = await pool.query(`
-      SELECT id, content, embedding_vector 
-      FROM document_chunks 
-      WHERE has_embedding = TRUE
-    `);
+    try {
+      // Generate embedding for the question
+      const queryEmbedding = await embeddingService.generateEmbedding(question);
+      
+      // Get all chunks with embeddings
+      const [chunks] = await pool.query(`
+        SELECT id, content, embedding_vector 
+        FROM document_chunks 
+        WHERE has_embedding = TRUE
+      `);
+      
+      if (chunks.length === 0) {
+        console.log('[RAG] No embedded chunks found');
+        return [];
+      }
       
       console.log(`[RAG] Comparing query against ${chunks.length} chunks`);
       
@@ -61,6 +132,7 @@ class RAGService {
       console.log(`[RAG] Top ${limit} similarities:`, 
         topChunks.map(c => c.similarity.toFixed(3)).join(', '));
       
+      // Return just the content strings (what the controller expects)
       return topChunks.map(c => c.content);
       
     } catch (err) {
@@ -73,6 +145,8 @@ class RAGService {
    * Fallback keyword search
    */
   async keywordSearch(question, limit = 5) {
+    console.log('[RAG] Using keyword search');
+    
     const keywords = question.toLowerCase().split(' ').filter(w => w.length > 3);
     const searchPattern = `%${keywords.join('%')}%`;
 
