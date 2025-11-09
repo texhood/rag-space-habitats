@@ -13,12 +13,12 @@ logging.basicConfig(level=logging.INFO)
 
 # Load model (happens once at startup)
 print("Loading embedding model...")
-model = SentenceTransformer('all-MiniLM-L6-v2')  # 384 dimensions, fast
+model = SentenceTransformer('multi-qa-mpnet-base-dot-v1')  # 384 dimensions, fast
 print("Model loaded!")
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "healthy", "model": "all-MiniLM-L6-v2"})
+    return jsonify({"status": "healthy", "model": "multi-qa-mpnet-base-dot-v1"})
 
 @app.route('/embed', methods=['POST'])
 def embed():
