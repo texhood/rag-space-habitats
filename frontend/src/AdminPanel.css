@@ -494,3 +494,105 @@
   margin-bottom: 15px;
   color: #333;
 }
+
+/* Beta Mode Control */
+.beta-control-panel {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.beta-status {
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+  border: 3px solid;
+}
+
+.beta-status.enabled {
+  background: #d4edda;
+  border-color: #28a745;
+}
+
+.beta-status.disabled {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+.beta-status h4 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+}
+
+.beta-status p {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+/* Pricing Management */
+.pricing-management {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pricing-table-container {
+  overflow-x: auto;
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pricing-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 14px;
+}
+
+.pricing-table thead {
+  background: #667eea;
+  color: white;
+}
+
+.pricing-table th {
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 2px solid #5568d3;
+}
+
+.pricing-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: middle;
+}
+
+.pricing-table tbody tr:hover {
+  background: #f5f5f5;
+}
+
+.pricing-table input {
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.pricing-table input:focus {
+  outline: none;
+  border-color: #5568d3;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Responsive pricing table */
+@media (max-width: 1200px) {
+  .pricing-table {
+    font-size: 12px;
+  }
+  
+  .pricing-table th,
+  .pricing-table td {
+    padding: 8px 6px;
+  }
+}

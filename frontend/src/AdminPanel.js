@@ -12,6 +12,9 @@ function AdminPanel({ onClose }) {
   const [submissions, setSubmissions] = useState([]);
   const [processingStats, setProcessingStats] = useState(null);
   const [embeddingStatus, setEmbeddingStatus] = useState(null);
+  const [betaMode, setBetaMode] = useState(null);
+  const [pricing, setPricing] = useState([]);
+  const [editingTier, setEditingTier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,6 +30,10 @@ function AdminPanel({ onClose }) {
     } else if (activeTab === 'processing') {
       fetchProcessingStats();
       fetchEmbeddingStatus();
+    } else if (activeTab === 'beta') {
+      fetchBetaMode();
+    } else if (activeTab === 'pricing') {
+      fetchPricing();
     }
   }, [activeTab]);
 
@@ -127,6 +134,40 @@ function AdminPanel({ onClose }) {
     }
   };
 
+  const fetchBetaMode = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('http://localhost:5000/api/admin/beta-mode', {
+        withCredentials: true
+      });
+      setBetaMode(res.data);
+    } catch (err) {
+      console.error('Failed to fetch beta mode:', err);
+      setError('Failed to load beta mode');
+      setBetaMode(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPricing = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('http://localhost:5000/api/admin/pricing', {
+        withCredentials: true
+      });
+      setPricing(res.data.tiers || []);
+    } catch (err) {
+      console.error('Failed to fetch pricing:', err);
+      setError('Failed to load pricing');
+      setPricing([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateUserRole = async (userId, newRole) => {
     try {
       await axios.post(
@@ -201,23 +242,6 @@ function AdminPanel({ onClose }) {
     }
   };
 
-  const handleProcessSubmission = async (id) => {
-    if (!window.confirm('Process this submission into chunks?')) return;
-    
-    try {
-      const res = await axios.post(
-        `http://localhost:5000/api/admin/process/${id}`,
-        {},
-        { withCredentials: true }
-      );
-      alert(`Success! Created ${res.data.chunks_created} chunks`);
-      fetchPendingSubmissions();
-      fetchProcessingStats();
-    } catch (err) {
-      alert('Processing failed: ' + (err.response?.data?.details || err.message));
-    }
-  };
-
   const handleProcessAll = async () => {
     if (!window.confirm('Process ALL approved submissions?')) return;
     
@@ -249,6 +273,65 @@ function AdminPanel({ onClose }) {
       fetchEmbeddingStatus();
     } catch (err) {
       alert('Failed: ' + (err.response?.data?.details || err.message));
+    }
+  };
+
+  const handleToggleBetaMode = async () => {
+    const enable = !betaMode.enabled;
+    
+    const currentPrice = betaMode.price !== undefined && betaMode.price !== null 
+      ? betaMode.price 
+      : (betaMode.tier_limits?.beta?.price !== undefined ? betaMode.tier_limits?.beta?.price : 0);
+    
+    if (enable) {
+      const priceText = currentPrice === 0 ? 'FREE' : `$${currentPrice}/month`;
+      if (!window.confirm(`Enable BETA MODE? All new subscriptions will be ${priceText} with Pro features.`)) {
+        return;
+      }
+    } else {
+      if (!window.confirm('Disable BETA MODE? New subscriptions will use regular pricing.')) {
+        return;
+      }
+    }
+    
+    try {
+      const res = await axios.post(
+        'http://localhost:5000/api/admin/beta-mode',
+        { 
+          enabled: enable,
+          price: currentPrice,
+          benefits: 'All Pro features at beta pricing'
+        },
+        { withCredentials: true }
+      );
+      
+      console.log('Toggle response:', res.data);
+      
+      await fetchBetaMode();
+      
+      const finalPrice = res.data.config.price;
+      const priceText = finalPrice === 0 ? 'FREE' : `$${finalPrice}/month`;
+      alert(`Beta mode ${enable ? 'ENABLED' : 'DISABLED'} at ${priceText}`);
+      
+    } catch (err) {
+      alert('Failed: ' + (err.response?.data?.error || err.message));
+      await fetchBetaMode();
+    }
+  };
+
+  const handleUpdatePricing = async (tierKey, updates) => {
+    try {
+      await axios.put(
+        `http://localhost:5000/api/admin/pricing/${tierKey}`,
+        updates,
+        { withCredentials: true }
+      );
+      
+      alert('Pricing updated successfully!');
+      setEditingTier(null);
+      fetchPricing();
+    } catch (err) {
+      alert('Failed to update: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -290,6 +373,18 @@ function AdminPanel({ onClose }) {
             onClick={() => setActiveTab('processing')}
           >
             ⚙️ Processing
+          </button>
+          <button 
+            className={activeTab === 'pricing' ? 'active' : ''}
+            onClick={() => setActiveTab('pricing')}
+          >
+            💰 Pricing
+          </button>
+          <button 
+            className={activeTab === 'beta' ? 'active' : ''}
+            onClick={() => setActiveTab('beta')}
+          >
+            🚀 Beta Mode
           </button>
         </div>
 
@@ -549,7 +644,6 @@ function AdminPanel({ onClose }) {
                   </p>
                 </div>
 
-                {/* VECTOR EMBEDDINGS SECTION */}
                 {embeddingStatus && (
                   <div style={{ marginTop: '30px', padding: '20px', background: '#f0f8ff', borderRadius: '8px', border: '2px solid #4a90e2' }}>
                     <h4>🔬 Vector Embeddings</h4>
@@ -586,7 +680,7 @@ function AdminPanel({ onClose }) {
                     )}
                     
                     <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                      Free local embeddings • No API costs • 384 dimensions • Semantic search
+                      Free local embeddings • No API costs • 768 dimensions • Semantic search
                     </p>
                   </div>
                 )}
@@ -598,6 +692,434 @@ function AdminPanel({ onClose }) {
                   </button>
                   {preprocessStatus && <p>{preprocessStatus}</p>}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PRICING TAB */}
+        {activeTab === 'pricing' && (
+          <div className="admin-section">
+            <h3>💰 Pricing Management</h3>
+            
+            {loading && <p>Loading pricing...</p>}
+            
+            {error && (
+              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
+                {error}
+              </div>
+            )}
+            
+            {!loading && pricing.length > 0 && (
+              <div className="pricing-management">
+                <div style={{ marginBottom: '20px', padding: '15px', background: '#e3f2fd', borderRadius: '8px' }}>
+                  <p style={{ margin: 0, fontSize: '14px' }}>
+                    💡 <strong>Tip:</strong> Changes here affect what users see on the pricing page and what they're charged via Stripe.
+                  </p>
+                </div>
+
+                <div className="pricing-table-container">
+                  <table className="pricing-table">
+                    <thead>
+                      <tr>
+                        <th>Tier</th>
+                        <th>Price/Month</th>
+                        <th>Queries/Day</th>
+                        <th>Uploads/Month</th>
+                        <th>File Size</th>
+                        <th>LLMs</th>
+                        <th>Stripe ID</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pricing.map(tier => (
+                        <tr key={tier.id} style={{ 
+                          background: tier.tier_key === 'beta' ? '#d4edda' : 'white',
+                          opacity: tier.is_active ? 1 : 0.5
+                        }}>
+                          <td>
+                            <strong>{tier.name}</strong>
+                            <br />
+                            <span style={{ fontSize: '12px', color: '#666' }}>{tier.tier_key}</span>
+                          </td>
+                          <td>
+                            {editingTier === tier.tier_key ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                defaultValue={tier.price}
+                                id={`price-${tier.tier_key}`}
+                                style={{ width: '80px', padding: '4px' }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: '18px', fontWeight: 'bold', color: tier.price === 0 ? '#28a745' : '#333' }}>
+                                {tier.price === 0 ? 'FREE' : `$${parseFloat(tier.price).toFixed(2)}`}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {editingTier === tier.tier_key ? (
+                              <input
+                                type="number"
+                                min="-1"
+                                defaultValue={tier.features.queries_per_day}
+                                id={`queries-${tier.tier_key}`}
+                                style={{ width: '80px', padding: '4px' }}
+                              />
+                            ) : (
+                              tier.features.queries_per_day === -1 ? '∞ Unlimited' : tier.features.queries_per_day
+                            )}
+                          </td>
+                          <td>
+                            {editingTier === tier.tier_key ? (
+                              <input
+                                type="number"
+                                min="-1"
+                                defaultValue={tier.features.uploads_per_month}
+                                id={`uploads-${tier.tier_key}`}
+                                style={{ width: '80px', padding: '4px' }}
+                              />
+                            ) : (
+                              tier.features.uploads_per_month === -1 ? '∞ Unlimited' : tier.features.uploads_per_month
+                            )}
+                          </td>
+                          <td>
+                            {editingTier === tier.tier_key ? (
+                              <input
+                                type="number"
+                                min="0"
+                                defaultValue={tier.features.max_file_size_mb}
+                                id={`filesize-${tier.tier_key}`}
+                                style={{ width: '80px', padding: '4px' }}
+                              />
+                            ) : (
+                              tier.features.max_file_size_mb ? `${tier.features.max_file_size_mb}MB` : 'N/A'
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontSize: '12px' }}>
+                              {tier.features.llm_access?.join(', ') || 'None'}
+                            </div>
+                          </td>
+                          <td>
+                            {editingTier === tier.tier_key ? (
+                              <input
+                                type="text"
+                                defaultValue={tier.stripe_price_id || ''}
+                                placeholder="price_..."
+                                id={`stripe-${tier.tier_key}`}
+                                style={{ width: '120px', padding: '4px', fontSize: '11px' }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#666' }}>
+                                {tier.stripe_price_id || '—'}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {editingTier === tier.tier_key ? (
+                              <div style={{ display: 'flex', gap: '5px' }}>
+                                <button
+                                  onClick={() => {
+                                    const updates = {
+                                      price: parseFloat(document.getElementById(`price-${tier.tier_key}`).value),
+                                      stripe_price_id: document.getElementById(`stripe-${tier.tier_key}`).value || null,
+                                      features: {
+                                        queries_per_day: parseInt(document.getElementById(`queries-${tier.tier_key}`).value),
+                                        uploads_per_month: parseInt(document.getElementById(`uploads-${tier.tier_key}`).value),
+                                        max_file_size_mb: parseInt(document.getElementById(`filesize-${tier.tier_key}`).value)
+                                      }
+                                    };
+                                    handleUpdatePricing(tier.tier_key, updates);
+                                  }}
+                                  className="approve-btn"
+                                  style={{ padding: '5px 10px', fontSize: '12px' }}
+                                >
+                                  💾 Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingTier(null)}
+                                  className="reject-btn"
+                                  style={{ padding: '5px 10px', fontSize: '12px' }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingTier(tier.tier_key)}
+                                className="process-btn"
+                                style={{ padding: '5px 15px', fontSize: '12px' }}
+                              >
+                                ✏️ Edit
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pricing Summary Cards */}
+                <div style={{ marginTop: '30px' }}>
+                  <h4>Quick Stats</h4>
+                  <div className="stats-grid">
+                    <div className="stat-card">
+                      <div className="stat-value">{pricing.length}</div>
+                      <div className="stat-label">Active Tiers</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-value">
+                        ${Math.min(...pricing.map(t => parseFloat(t.price)))}
+                      </div>
+                      <div className="stat-label">Lowest Price</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-value">
+                        ${Math.max(...pricing.map(t => parseFloat(t.price)))}
+                      </div>
+                      <div className="stat-label">Highest Price</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-value">
+                        {pricing.filter(t => t.stripe_price_id).length}/{pricing.length}
+                      </div>
+                      <div className="stat-label">Stripe Connected</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feature Legend */}
+                <div style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <h4>Feature Reference</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', fontSize: '14px' }}>
+                    <div>
+                      <strong>Queries/Day:</strong>
+                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>-1 = Unlimited</li>
+                        <li>Number = Daily limit</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>Uploads/Month:</strong>
+                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>-1 = Unlimited</li>
+                        <li>0 = View only</li>
+                        <li>Number = Monthly limit</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>File Size:</strong>
+                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>Value in MB</li>
+                        <li>0 = No uploads allowed</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>Stripe Price ID:</strong>
+                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>From Stripe dashboard</li>
+                        <li>Format: price_xxxxx</li>
+                        <li>Required for paid tiers</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LLM Access Editor */}
+                <div style={{ marginTop: '30px', padding: '20px', background: '#fff3cd', borderRadius: '8px', border: '2px solid #ffc107' }}>
+                  <h4>⚠️ LLM Access Configuration</h4>
+                  <p style={{ fontSize: '14px', marginBottom: '10px' }}>
+                    LLM access cannot be edited here yet. Currently set in database:
+                  </p>
+                  <ul style={{ fontSize: '14px', margin: 0 }}>
+                    {pricing.map(t => (
+                      <li key={t.id}>
+                        <strong>{t.name}:</strong> {t.features.llm_access?.join(', ') || 'None'}
+                      </li>
+                    ))}
+                  </ul>
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: '10px', marginBottom: 0 }}>
+                    To change LLM access, update the tier_features table directly or we can add an editor UI.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* BETA MODE TAB */}
+        {activeTab === 'beta' && (
+          <div className="admin-section">
+            <h3>🚀 Beta Mode Control</h3>
+            
+            {loading && <p>Loading beta mode settings...</p>}
+            
+            {error && (
+              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
+                {error}
+              </div>
+            )}
+            
+            {!loading && betaMode && (
+              <div className="beta-control-panel">
+                {/* Current Status Banner */}
+                <div className={`beta-status ${betaMode.enabled ? 'enabled' : 'disabled'}`}>
+                  <h4>Current Status: {betaMode.enabled ? '✅ BETA MODE ENABLED' : '❌ BETA MODE DISABLED'}</h4>
+                  <p>
+                    {betaMode.enabled 
+                      ? `All new subscriptions are $${betaMode.tier_limits?.beta?.price || betaMode.price}/month with Pro features`
+                      : 'Beta mode is not active. Regular pricing applies.'
+                    }
+                  </p>
+                </div>
+
+                {/* Stats */}
+                <div className="stats-grid" style={{ marginTop: '20px' }}>
+                  <div className="stat-card">
+                    <div className="stat-value" style={{ fontSize: '48px' }}>
+                      {betaMode.enabled ? '✅' : '❌'}
+                    </div>
+                    <div className="stat-label">Beta Mode Status</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">${betaMode.tier_limits?.beta?.price || betaMode.price}</div>
+                    <div className="stat-label">Beta Price/Month</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">{betaMode.beta_users_count || 0}</div>
+                    <div className="stat-label">Beta Users</div>
+                  </div>
+                </div>
+
+                {/* Price Editor */}
+                <div style={{ marginTop: '20px', padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #ddd' }}>
+                  <h4>Beta Pricing Configuration</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '15px' }}>
+                    <label style={{ fontWeight: 'bold' }}>Beta Price:</label>
+                    <span style={{ fontSize: '24px' }}>$</span>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0" 
+                      value={betaMode.price !== undefined && betaMode.price !== null ? betaMode.price : 0}
+                      onChange={(e) => {
+                        const newPrice = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                        setBetaMode({...betaMode, price: isNaN(newPrice) ? 0 : newPrice});
+                      }}
+                      style={{ 
+                        fontSize: '18px', 
+                        padding: '8px 12px', 
+                        width: '100px',
+                        border: '2px solid #667eea',
+                        borderRadius: '6px'
+                      }}
+                    />
+                    <span style={{ fontSize: '18px' }}>/month</span>
+                    {betaMode.price === 0 && (
+                      <span style={{ color: '#28a745', fontWeight: 'bold', marginLeft: '10px' }}>
+                        ✅ FREE
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
+                    {betaMode.price === 0 
+                      ? 'Beta users will get Pro features for FREE (no Stripe subscription created).'
+                      : `Beta users will be charged $${betaMode.price}/month via Stripe.`
+                    }
+                  </p>
+                </div>
+
+                {/* Toggle Button */}
+                <div style={{ marginTop: '30px' }}>
+                  <button 
+                    onClick={handleToggleBetaMode}
+                    className={betaMode.enabled ? 'reject-btn' : 'approve-btn'}
+                    style={{ fontSize: '18px', padding: '15px 30px' }}
+                  >
+                    {betaMode.enabled ? '❌ DISABLE Beta Mode' : '✅ ENABLE Beta Mode'}
+                  </button>
+                </div>
+
+                {/* Pricing Table */}
+                {betaMode.tier_limits && (
+                  <div style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
+                    <h4>Current Pricing Structure</h4>
+                    <table style={{ width: '100%', marginTop: '15px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#667eea', color: 'white' }}>
+                          <th style={{ padding: '12px', textAlign: 'left' }}>Tier</th>
+                          <th style={{ padding: '12px', textAlign: 'right' }}>Price</th>
+                          <th style={{ padding: '12px', textAlign: 'center' }}>Queries/Day</th>
+                          <th style={{ padding: '12px', textAlign: 'center' }}>Uploads/Month</th>
+                          <th style={{ padding: '12px', textAlign: 'center' }}>LLMs</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ background: 'white', borderBottom: '1px solid #ddd' }}>
+                          <td style={{ padding: '12px' }}><strong>Free</strong></td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>$0</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.free.queries_per_day}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.free.uploads_per_month}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Grok</td>
+                        </tr>
+                        <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #ddd' }}>
+                          <td style={{ padding: '12px' }}><strong>Basic</strong></td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>$9</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.basic.queries_per_day}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.basic.uploads_per_month}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Grok</td>
+                        </tr>
+                        <tr style={{ background: 'white', borderBottom: '1px solid #ddd' }}>
+                          <td style={{ padding: '12px' }}><strong>Pro</strong></td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>$29</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.pro.uploads_per_month}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Both</td>
+                        </tr>
+                        <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #ddd' }}>
+                          <td style={{ padding: '12px' }}><strong>Enterprise</strong></td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>$99</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>Both + API</td>
+                        </tr>
+                        {betaMode.enabled && (
+                          <tr style={{ background: '#d4edda', borderBottom: '2px solid #28a745', fontWeight: 'bold' }}>
+                            <td style={{ padding: '12px' }}><strong>🚀 Beta (ACTIVE)</strong></td>
+                            <td style={{ padding: '12px', textAlign: 'right' }}>${betaMode.tier_limits.beta.price}</td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.beta.uploads_per_month}</td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>Both</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Beta Features Details */}
+                <div style={{ marginTop: '30px', padding: '20px', background: '#f0f8ff', borderRadius: '8px' }}>
+                  <h4>Beta Mode Details</h4>
+                  <ul style={{ textAlign: 'left', lineHeight: '1.8' }}>
+                    <li><strong>Price:</strong> ${betaMode.tier_limits?.beta?.price || betaMode.price}/month</li>
+                    <li><strong>Features:</strong> {betaMode.benefits}</li>
+                    <li><strong>Queries:</strong> Unlimited</li>
+                    <li><strong>Uploads:</strong> {betaMode.tier_limits?.beta?.uploads_per_month || 50}/month</li>
+                    <li><strong>LLMs:</strong> Both Grok & Claude</li>
+                    <li><strong>File Size:</strong> 100MB max</li>
+                  </ul>
+                </div>
+
+                {/* Warning when enabled */}
+                {betaMode.enabled && (
+                  <div style={{ marginTop: '20px', padding: '15px', background: '#fff3cd', borderRadius: '8px', border: '2px solid #ffc107' }}>
+                    <strong>⚠️ Warning:</strong> Beta mode is active! All new subscriptions will be charged ${betaMode.tier_limits?.beta?.price || betaMode.price}/month instead of regular prices.
+                  </div>
+                )}
               </div>
             )}
           </div>

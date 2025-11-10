@@ -7,13 +7,7 @@ const sessionMiddleware = require('./config/session');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const mongoClient = require('./config/mongodb');
 
-// Import routes
-const authRoutes = require('./routes/auth');
-const ragRoutes = require('./routes/rag');
-const adminRoutes = require('./routes/admin');
-const submissionRoutes = require('./routes/submissions');
-
-// Initialize Express
+// Initialize Express FIRST
 const app = express();
 
 // ======================
@@ -56,11 +50,19 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Import and mount routes
+const authRoutes = require('./routes/auth');
+const ragRoutes = require('./routes/rag');
+const adminRoutes = require('./routes/admin');
+const submissionRoutes = require('./routes/submissions');
+const subscriptionRoutes = require('./routes/subscriptions');
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rag', ragRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api', subscriptionRoutes); // Mounts /pricing, /beta-mode, /subscriptions/create-checkout
 
 // Legacy compatibility routes (for existing frontend)
 app.post('/register', (req, res, next) => {
