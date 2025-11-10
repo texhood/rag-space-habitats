@@ -4,6 +4,9 @@ const router = express.Router();
 const User = require('../models/User');
 const QueryLog = require('../models/QueryLog');
 const documentProcessor = require('../services/documentProcessor');
+const SystemSettings = require('../models/SystemSettings');
+const UsageService = require('../services/usageService');
+const Pricing = require('../models/Pricing');
 
 // Admin authentication middleware
 function isAdmin(req, res, next) {
@@ -232,6 +235,211 @@ router.post('/embed-all', isAdmin, async (req, res) => {
       error: 'Failed to generate embeddings',
       details: err.message
     });
+  }
+});
+
+// GET /api/admin/beta-mode - Get beta mode status
+router.get('/beta-mode', isAdmin, async (req, res) => {
+  try {
+    const betaConfig = await SystemSettings.getBetaMode();
+    
+    // Get pricing from database instead of UsageService
+    const allTiers = await Pricing.getAllTiers();
+    const tierLimits = {};
+    
+    for (const tier of allTiers) {
+      tierLimits[tier.tier_key] = {
+        ...tier.features,
+        price: parseFloat(tier.price || 0)
+      };
+    }
+    
+    // Count beta users
+    const [betaUsers] = await pool.query(
+      'SELECT COUNT(*) as count FROM users WHERE is_beta_user = TRUE'
+    );
+    
+    res.json({
+      ...betaConfig,
+      beta_users_count: betaUsers[0].count,
+      tier_limits: tierLimits
+    });
+  } catch (err) {
+    console.error('Beta mode fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/beta-mode - Toggle beta mode
+router.post('/beta-mode', isAdmin, async (req, res) => {
+  try {
+    const { enabled, price, stripe_price_id, benefits } = req.body;
+    
+    // Use exact price provided, or 0 as default
+    const betaPrice = price !== undefined && price !== null ? parseFloat(price) : 0;
+    
+    const config = {
+      enabled: enabled === true || enabled === 'true',
+      price: betaPrice,
+      stripe_price_id: stripe_price_id || null,
+      benefits: benefits || 'All Pro features at beta pricing'
+    };
+    
+    await SystemSettings.setBetaMode(config, req.user.id);
+    
+    // Also update the beta tier pricing in database
+    await Pricing.updatePrice('beta', betaPrice, stripe_price_id);
+    
+    const priceText = config.price === 0 ? 'FREE' : `$${config.price}`;
+    console.log(`[${req.user.username}] ${config.enabled ? 'Enabled' : 'Disabled'} beta mode at ${priceText}/month`);
+    
+    res.json({
+      success: true,
+      message: `Beta mode ${config.enabled ? 'enabled' : 'disabled'}`,
+      config
+    });
+  } catch (err) {
+    console.error('Beta mode update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/beta-users - Get list of beta users
+router.get('/beta-users', isAdmin, async (req, res) => {
+  try {
+    const [users] = await pool.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.email,
+        u.subscription_tier,
+        u.is_beta_user,
+        u.beta_enrolled_at,
+        s.status as subscription_status,
+        s.current_period_end
+      FROM users u
+      LEFT JOIN subscriptions s ON u.id = s.user_id
+      WHERE u.is_beta_user = TRUE
+      ORDER BY u.beta_enrolled_at DESC
+    `);
+    
+    res.json({ beta_users: users });
+  } catch (err) {
+    console.error('Beta users fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/grant-beta/:userId - Manually grant beta access
+router.post('/grant-beta/:userId', isAdmin, async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE users 
+       SET is_beta_user = TRUE, 
+           beta_enrolled_at = NOW(),
+           subscription_tier = 'beta',
+           subscription_status = 'active'
+       WHERE id = ?`,
+      [req.params.userId]
+    );
+    
+    console.log(`[${req.user.username}] Granted beta access to user ${req.params.userId}`);
+    
+    res.json({ 
+      success: true,
+      message: 'Beta access granted'
+    });
+  } catch (err) {
+    console.error('Grant beta error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/beta-mode - Get beta mode status
+router.get('/beta-mode', isAdmin, async (req, res) => {
+  try {
+    const betaConfig = await SystemSettings.getBetaMode();
+    
+    // Get pricing from UsageService.LIMITS
+    const allLimits = {
+      free: UsageService.LIMITS.free,
+      basic: UsageService.LIMITS.basic,
+      pro: UsageService.LIMITS.pro,
+      enterprise: UsageService.LIMITS.enterprise,
+      beta: UsageService.LIMITS.beta
+    };
+    
+    // Count beta users
+    const [betaUsers] = await pool.query(
+      'SELECT COUNT(*) as count FROM users WHERE is_beta_user = TRUE'
+    );
+    
+    res.json({
+      ...betaConfig,
+      beta_users_count: betaUsers[0].count,
+      tier_limits: allLimits  // Include all tier pricing
+    });
+  } catch (err) {
+    console.error('Beta mode fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/pricing - Get all tier pricing
+router.get('/pricing', isAdmin, async (req, res) => {
+  try {
+    const tiers = await Pricing.getAllTiers();
+    res.json({ tiers });
+  } catch (err) {
+    console.error('Pricing fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/pricing/:tierKey - Get specific tier pricing
+router.get('/pricing/:tierKey', isAdmin, async (req, res) => {
+  try {
+    const tier = await Pricing.getByTierKey(req.params.tierKey);
+    if (!tier) {
+      return res.status(404).json({ error: 'Tier not found' });
+    }
+    res.json({ tier });
+  } catch (err) {
+    console.error('Pricing fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/pricing/:tierKey - Update tier pricing
+router.put('/pricing/:tierKey', isAdmin, async (req, res) => {
+  try {
+    const { price, stripe_price_id, features } = req.body;
+    
+    // Update price if provided
+    if (price !== undefined) {
+      await Pricing.updatePrice(req.params.tierKey, price, stripe_price_id);
+    }
+    
+    // Update features if provided
+    if (features) {
+      for (const [key, value] of Object.entries(features)) {
+        await Pricing.updateFeature(req.params.tierKey, key, value);
+      }
+    }
+    
+    console.log(`[${req.user.username}] Updated pricing for ${req.params.tierKey}`);
+    
+    // Return updated tier
+    const updatedTier = await Pricing.getByTierKey(req.params.tierKey);
+    
+    res.json({
+      success: true,
+      message: 'Pricing updated',
+      tier: updatedTier
+    });
+  } catch (err) {
+    console.error('Pricing update error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

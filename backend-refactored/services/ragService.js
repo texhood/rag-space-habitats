@@ -75,7 +75,7 @@ Answer:`;
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.XAI_API_KEY}`
           },
-          timeout: 30000
+          timeout: 60000
         }
       );
 
@@ -92,12 +92,56 @@ Answer:`;
   }
 
   /**
-   * Vector similarity search
+   * Vector similarity search with smart query expansion
    */
   async vectorSearch(question, limit = 5) {
     try {
-      // Generate embedding for the question
-      const queryEmbedding = await embeddingService.generateEmbedding(question);
+      // Smart query expansion based on detected keywords
+      let expandedQuery = question;
+      
+      const lowerQuestion = question.toLowerCase();
+      
+      // Gravity-related queries
+      if (lowerQuestion.includes('gravity') || lowerQuestion.includes('g-force') || 
+          lowerQuestion.includes('simulate') || lowerQuestion.includes('artificial')) {
+        expandedQuery += ' rotation centrifugal spinning angular velocity';
+      }
+      
+      // Radiation-related queries
+      if (lowerQuestion.includes('radiation') || lowerQuestion.includes('shielding') || 
+          lowerQuestion.includes('protection') || lowerQuestion.includes('cosmic')) {
+        expandedQuery += ' shield protection water regolith magnetic field';
+      }
+      
+      // Habitat structure queries
+      if (lowerQuestion.includes('habitat') || lowerQuestion.includes('station') || 
+          lowerQuestion.includes('cylinder') || lowerQuestion.includes('torus')) {
+        expandedQuery += ' structure design colony settlement spacecraft';
+      }
+      
+      // Life support queries
+      if (lowerQuestion.includes('life support') || lowerQuestion.includes('oxygen') || 
+          lowerQuestion.includes('air') || lowerQuestion.includes('water')) {
+        expandedQuery += ' recycling atmosphere breathing closed-loop';
+      }
+      
+      // Agriculture/food queries
+      if (lowerQuestion.includes('food') || lowerQuestion.includes('farm') || 
+          lowerQuestion.includes('agriculture') || lowerQuestion.includes('grow')) {
+        expandedQuery += ' hydroponics plants crops cultivation greenhouse';
+      }
+      
+      // Structural/engineering queries
+      if (lowerQuestion.includes('material') || lowerQuestion.includes('structure') || 
+          lowerQuestion.includes('stress') || lowerQuestion.includes('strength')) {
+        expandedQuery += ' steel aluminum composite tension compression engineering';
+      }
+      
+      console.log('[RAG] Original query:', question);
+      console.log('[RAG] Expanded query:', expandedQuery);
+      
+      // Generate embedding for the expanded question
+      const queryEmbedding = await embeddingService.generateEmbedding(expandedQuery);
       
       // Get all chunks with embeddings
       const [chunks] = await pool.query(`

@@ -37,10 +37,10 @@ async function embedAllChunks() {
       const embeddings = await embeddingService.generateBatchEmbeddings(texts);
       
       // Update database
-      for (let i = 0; i < chunks.length; i++) {
+            for (let i = 0; i < chunks.length; i++) {
         const embeddingJson = JSON.stringify(embeddings[i]);
         await pool.query(
-          'UPDATE document_chunks SET embedding_vector = ? WHERE id = ?',
+          'UPDATE document_chunks SET embedding_vector = ?, has_embedding = TRUE WHERE id = ?',  // ← Add has_embedding = TRUE
           [embeddingJson, chunks[i].id]
         );
       }
