@@ -19,12 +19,12 @@ function PricingPage({ user, onClose }) {
       const pricingRes = await axios.get('http://localhost:5000/api/pricing', {
         withCredentials: true
       });
-      
+
       // Get beta mode status
       const betaRes = await axios.get('http://localhost:5000/api/beta-mode', {
         withCredentials: true
       });
-      
+
       setTiers(pricingRes.data.tiers || []);
       setBetaMode(betaRes.data);
       setLoading(false);
@@ -36,20 +36,50 @@ function PricingPage({ user, onClose }) {
 
   const handleUpgrade = async (tierKey) => {
     setProcessingCheckout(tierKey);
-    
+
     try {
       const res = await axios.post(
         'http://localhost:5000/api/subscriptions/create-checkout',
         { tier: tierKey },
         { withCredentials: true }
       );
-      
+
       // Redirect to Stripe Checkout
       if (res.data.url) {
         window.location.href = res.data.url;
       }
     } catch (err) {
       alert('Failed to start checkout: ' + (err.response?.data?.error || err.message));
+      setProcessingCheckout(null);
+    }
+  };
+
+  const handleDowngrade = async (tierKey) => {
+    const targetTier = tiers.find(t => t.tier_key === tierKey);
+    
+    if (!window.confirm(
+      `Are you sure you want to downgrade to ${targetTier?.name}?\n\n` +
+      `This will take effect at the end of your current billing period.\n` +
+      `You'll keep your current features until then.`
+    )) {
+      return;
+    }
+
+    setProcessingCheckout(tierKey);
+    
+    try {
+      const res = await axios.post(
+        'http://localhost:5000/api/subscriptions/schedule-downgrade',
+        { tier: tierKey },
+        { withCredentials: true }
+      );
+      
+      alert(`Downgrade scheduled! You'll be moved to ${targetTier?.name} at the end of your billing period.`);
+      setProcessingCheckout(null);
+      onClose();
+      
+    } catch (err) {
+      alert('Failed to schedule downgrade: ' + (err.response?.data?.error || err.message));
       setProcessingCheckout(null);
     }
   };
@@ -65,6 +95,13 @@ function PricingPage({ user, onClose }) {
     return targetIndex > currentIndex;
   };
 
+  const canDowngrade = (tierKey) => {
+    const tierOrder = ['free', 'basic', 'pro', 'enterprise', 'beta'];
+    const currentIndex = tierOrder.indexOf(user?.subscription_tier || 'free');
+    const targetIndex = tierOrder.indexOf(tierKey);
+    return targetIndex < currentIndex && targetIndex >= 0;
+  };
+
   if (loading) {
     return (
       <div className="pricing-page">
@@ -76,15 +113,15 @@ function PricingPage({ user, onClose }) {
   }
 
   // Filter out beta if not enabled
-  const visibleTiers = betaMode?.enabled 
-    ? tiers 
+  const visibleTiers = betaMode?.enabled
+    ? tiers
     : tiers.filter(t => t.tier_key !== 'beta');
 
   return (
     <div className="pricing-page">
       <div className="pricing-container">
         <button onClick={onClose} className="close-pricing-btn">✕</button>
-        
+
         <div className="pricing-header">
           <h1>Choose Your Plan</h1>
           <p>Select the perfect plan for your needs</p>
@@ -105,17 +142,22 @@ function PricingPage({ user, onClose }) {
           {visibleTiers.map(tier => {
             const isFree = tier.price === 0 || tier.tier_key === 'free';
             const isCurrent = isCurrentTier(tier.tier_key);
-            const canUpgradeToThis = canUpgrade(tier.tier_key);
+            
+            console.log(`[Tier: ${tier.name}] tier_key="${tier.tier_key}", user tier="${user?.subscription_tier}", isCurrent=${isCurrent}`);
+
+            const canChangeTier = (tierKey) => {
+              return canUpgrade(tierKey) || canDowngrade(tierKey);
+            };
             const isBeta = tier.tier_key === 'beta';
 
             return (
-              <div 
-                key={tier.id} 
+              <div
+                key={tier.id}
                 className={`pricing-card ${isCurrent ? 'current' : ''} ${isBeta ? 'beta' : ''} ${tier.tier_key === 'pro' ? 'popular' : ''}`}
               >
                 {tier.tier_key === 'pro' && <div className="popular-badge">Most Popular</div>}
                 {isBeta && <div className="beta-badge">🚀 Beta</div>}
-                
+
                 <div className="pricing-card-header">
                   <h3>{tier.name}</h3>
                   <div className="price">
@@ -138,21 +180,21 @@ function PricingPage({ user, onClose }) {
                   <ul>
                     <li>
                       <span className="feature-icon">✓</span>
-                      {tier.features.queries_per_day === -1 
-                        ? 'Unlimited queries' 
+                      {tier.features.queries_per_day === -1
+                        ? 'Unlimited queries'
                         : `${tier.features.queries_per_day} queries per day`}
                     </li>
                     <li>
                       <span className="feature-icon">✓</span>
-                      {tier.features.uploads_per_month === -1 
-                        ? 'Unlimited uploads' 
+                      {tier.features.uploads_per_month === -1
+                        ? 'Unlimited uploads'
                         : tier.features.uploads_per_month === 0
-                        ? 'View only (no uploads)'
-                        : `${tier.features.uploads_per_month} uploads per month`}
+                          ? 'View only (no uploads)'
+                          : `${tier.features.uploads_per_month} uploads per month`}
                     </li>
                     <li>
                       <span className="feature-icon">✓</span>
-                      {tier.features.max_file_size_mb 
+                      {tier.features.max_file_size_mb
                         ? `${tier.features.max_file_size_mb}MB max file size`
                         : 'No file uploads'}
                     </li>
@@ -161,8 +203,8 @@ function PricingPage({ user, onClose }) {
                       {tier.features.llm_access?.includes('claude') && tier.features.llm_access?.includes('grok')
                         ? 'Both Grok & Claude AI'
                         : tier.features.llm_access?.includes('grok')
-                        ? 'Grok AI access'
-                        : 'AI access'}
+                          ? 'Grok AI access'
+                          : 'AI access'}
                     </li>
                     {tier.tier_key === 'enterprise' && (
                       <>
@@ -191,13 +233,22 @@ function PricingPage({ user, onClose }) {
                     >
                       Sign Up Free
                     </button>
-                  ) : canUpgradeToThis && !isFree ? (
+                  ) : canUpgrade(tier.tier_key) && !isFree ? (
                     <button 
                       className="pricing-btn upgrade"
                       onClick={() => handleUpgrade(tier.tier_key)}
                       disabled={processingCheckout === tier.tier_key}
                     >
                       {processingCheckout === tier.tier_key ? 'Processing...' : 'Upgrade Now'}
+                    </button>
+                  ) : canDowngrade(tier.tier_key) ? (
+                    <button 
+                      className="pricing-btn downgrade"
+                      onClick={() => handleDowngrade(tier.tier_key)}
+                      disabled={processingCheckout === tier.tier_key}
+                      style={{ background: '#ff9800' }}
+                    >
+                      {processingCheckout === tier.tier_key ? 'Processing...' : 'Downgrade'}
                     </button>
                   ) : (
                     <button className="pricing-btn" disabled>

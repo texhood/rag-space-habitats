@@ -123,7 +123,7 @@ class AuthController {
   /**
    * Get current user
    */
-  static getCurrentUser(req, res) {
+  static async getCurrentUser(req, res) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ 
         error: 'Not authenticated',
@@ -131,13 +131,39 @@ class AuthController {
       });
     }
 
-    res.json({ 
-      user: {
-        id: req.user.id,
-        username: req.user.username,
-        role: req.user.role
+    try {
+      // Fetch fresh user data from database
+      const pool = require('../config/database');
+      const [users] = await pool.query(
+        'SELECT id, username, email, role, subscription_tier, subscription_status FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      if (users.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
       }
-    });
+
+      const freshUser = users[0];
+      
+      console.log(`[Auth] Returning user data for ${freshUser.username}:`, {
+        tier: freshUser.subscription_tier,
+        status: freshUser.subscription_status
+      });
+
+      res.json({ 
+        user: {
+          id: freshUser.id,
+          username: freshUser.username,
+          email: freshUser.email,
+          role: freshUser.role,
+          subscription_tier: freshUser.subscription_tier,
+          subscription_status: freshUser.subscription_status
+        }
+      });
+    } catch (err) {
+      console.error('[Auth] Get current user error:', err);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    }
   }
 
   /**

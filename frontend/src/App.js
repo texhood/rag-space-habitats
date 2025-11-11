@@ -25,13 +25,38 @@ function App() {
     checkAuth();
   }, []);
 
+  // Check for successful checkout and refresh user data
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutStatus = urlParams.get('checkout');
+    const tier = urlParams.get('tier');
+
+    if (checkoutStatus === 'success') {
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Show success message
+      alert(`🎉 Successfully upgraded to ${tier} tier! Your account has been updated.`);
+      
+      // Refresh user data from server
+      checkAuth();
+    } else if (checkoutStatus === 'cancelled') {
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      alert('Checkout was cancelled. You can upgrade anytime!');
+    }
+  }, []);
+
   const checkAuth = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/auth/me', {
         withCredentials: true
       });
+      console.log('[Auth] User data:', res.data.user); // ADD THIS LINE FOR DEBUG
       setUser(res.data.user);
     } catch (err) {
+      console.log('[Auth] Not authenticated'); // ADD THIS LINE FOR DEBUG
       setUser(null);
     }
   };
