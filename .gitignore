@@ -8,3 +8,6 @@ rag-app-frontend/build/
 
 # Large PDFs (optional)
 *.pdf
+
+# Markdown files
+*.md

@@ -53,10 +53,10 @@ function App() {
       const res = await axios.get('http://localhost:5000/api/auth/me', {
         withCredentials: true
       });
-      console.log('[Auth] User data:', res.data.user); // ADD THIS LINE FOR DEBUG
+      // console.log('[Auth] User data:', res.data.user); // ADD THIS LINE FOR DEBUG
       setUser(res.data.user);
     } catch (err) {
-      console.log('[Auth] Not authenticated'); // ADD THIS LINE FOR DEBUG
+      // console.log('[Auth] Not authenticated'); // ADD THIS LINE FOR DEBUG
       setUser(null);
     }
   };

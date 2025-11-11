@@ -131,15 +131,15 @@ app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Debug session
-app.use((req, res, next) => {
-  if (req.path.includes('/auth/') || req.path.includes('/rag/')) {
-    console.log(`[Session] ${req.method} ${req.path}`);
-    console.log(`[Session] Authenticated: ${req.isAuthenticated ? req.isAuthenticated() : 'N/A'}`);
-    console.log(`[Session] User: ${req.user?.username || 'None'}`);
-  }
-  next();
-});
+// // Debug session
+// app.use((req, res, next) => {
+//   if (req.path.includes('/auth/') || req.path.includes('/rag/')) {
+//     console.log(`[Session] ${req.method} ${req.path}`);
+//     console.log(`[Session] Authenticated: ${req.isAuthenticated ? req.isAuthenticated() : 'N/A'}`);
+//     console.log(`[Session] User: ${req.user?.username || 'None'}`);
+//   }
+//   next();
+// });
 
 // Request logging
 app.use((req, res, next) => {

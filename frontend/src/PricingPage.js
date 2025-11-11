@@ -143,7 +143,7 @@ function PricingPage({ user, onClose }) {
             const isFree = tier.price === 0 || tier.tier_key === 'free';
             const isCurrent = isCurrentTier(tier.tier_key);
             
-            console.log(`[Tier: ${tier.name}] tier_key="${tier.tier_key}", user tier="${user?.subscription_tier}", isCurrent=${isCurrent}`);
+            // console.log(`[Tier: ${tier.name}] tier_key="${tier.tier_key}", user tier="${user?.subscription_tier}", isCurrent=${isCurrent}`);
 
             const canChangeTier = (tierKey) => {
               return canUpgrade(tierKey) || canDowngrade(tierKey);
