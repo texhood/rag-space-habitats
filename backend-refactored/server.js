@@ -117,7 +117,10 @@ app.post('/api/subscriptions/webhook',
 // CORS
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie']  // Important for session cookies
 }));
 
 // Body parsing (after webhook route)
