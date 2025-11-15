@@ -1,4 +1,5 @@
 // PricingPage.js
+import API_URL from './config';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './PricingPage.css';
@@ -16,12 +17,12 @@ function PricingPage({ user, onClose }) {
   const fetchPricing = async () => {
     try {
       // Get tier pricing
-      const pricingRes = await axios.get('http://localhost:5000/api/pricing', {
+      const pricingRes = await axios.get(`${API_URL}/api/pricing`, {
         withCredentials: true
       });
 
       // Get beta mode status
-      const betaRes = await axios.get('http://localhost:5000/api/beta-mode', {
+      const betaRes = await axios.get(`${API_URL}/api/beta-mode`, {
         withCredentials: true
       });
 
@@ -39,7 +40,7 @@ function PricingPage({ user, onClose }) {
 
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/subscriptions/create-checkout',
+        `${API_URL}/api/subscriptions/create-checkout`,
         { tier: tierKey },
         { withCredentials: true }
       );
@@ -69,7 +70,7 @@ function PricingPage({ user, onClose }) {
     
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/subscriptions/schedule-downgrade',
+        `${API_URL}/api/subscriptions/schedule-downgrade`,
         { tier: tierKey },
         { withCredentials: true }
       );

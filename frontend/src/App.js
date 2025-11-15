@@ -1,4 +1,5 @@
 // App.js
+import API_URL from './config';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
@@ -34,23 +35,23 @@ function App() {
     if (checkoutStatus === 'success') {
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
-      
+
       // Show success message
       alert(`🎉 Successfully upgraded to ${tier} tier! Your account has been updated.`);
-      
+
       // Refresh user data from server
       checkAuth();
     } else if (checkoutStatus === 'cancelled') {
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
-      
+
       alert('Checkout was cancelled. You can upgrade anytime!');
     }
   }, []);
 
   const checkAuth = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/auth/me', {
+      const res = await axios.get(`${API_URL}/api/api/auth/me`, {
         withCredentials: true
       });
       // console.log('[Auth] User data:', res.data.user); // ADD THIS LINE FOR DEBUG
@@ -64,7 +65,7 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      const res = await axios.post(`${API_URL}/api/auth/login`, {
         username: loginUsername,
         password: loginPassword
       }, { withCredentials: true });
@@ -81,7 +82,7 @@ function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', {
+      const res = await axios.post(`${API_URL}/api/api/auth/register`, {
         username: registerUsername,
         password: registerPassword
       }, { withCredentials: true });
@@ -97,7 +98,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:5000/api/auth/logout', {}, {
+      await axios.post(`${API_URL}/api/api/auth/logout`, {}, {
         withCredentials: true
       });
       setUser(null);
@@ -115,7 +116,7 @@ function App() {
     setResponse('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/rag/ask', {
+      const res = await axios.post(`${API_URL}/api/api/rag/ask`, {
         question: question
       }, { withCredentials: true });
 
@@ -132,11 +133,11 @@ function App() {
       <header className="App-header">
         <div className="header-content">
           <h1>🚀 Space Habitats RAG System</h1>
-<div className="auth-section">
+          <div className="auth-section">
             {user ? (
               <>
                 <span>Welcome, {user.username}!</span>
-                <button 
+                <button
                   onClick={() => setShowPricing(true)}
                   className="upgrade-btn"
                   style={{ marginLeft: '15px' }}
@@ -261,9 +262,9 @@ function App() {
       )}
 
       {showPricing && (
-        <PricingPage 
-          user={user} 
-          onClose={() => setShowPricing(false)} 
+        <PricingPage
+          user={user}
+          onClose={() => setShowPricing(false)}
         />
       )}
     </div>

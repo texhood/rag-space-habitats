@@ -1,4 +1,5 @@
 // AdminPanel.js
+import API_URL from './config';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './AdminPanel.css';
@@ -41,7 +42,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/users', {
+      const res = await axios.get(`${API_URL}/api/admin/users`, {
         withCredentials: true
       });
       console.log('Fetched users:', res.data);
@@ -59,7 +60,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/analytics', {
+      const res = await axios.get(`${API_URL}/api/admin/analytics`, {
         withCredentials: true
       });
       setAnalytics(res.data.analytics);
@@ -75,7 +76,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/analytics', {
+      const res = await axios.get(`${API_URL}/api/admin/analytics`, {
         withCredentials: true
       });
       setQueries(res.data.recentQueries || []);
@@ -92,7 +93,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/submissions?status=pending', {
+      const res = await axios.get(`${API_URL}/api/submissions?status=pending`, {
         withCredentials: true
       });
       setSubmissions(res.data.submissions || []);
@@ -109,7 +110,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/processing-stats', {
+      const res = await axios.get(`${API_URL}/api/admin/processing-stats`, {
         withCredentials: true
       });
       setProcessingStats(res.data);
@@ -124,7 +125,7 @@ function AdminPanel({ onClose }) {
 
   const fetchEmbeddingStatus = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/embedding-status', {
+      const res = await axios.get(`${API_URL}/api/admin/embedding-status`, {
         withCredentials: true
       });
       setEmbeddingStatus(res.data);
@@ -138,7 +139,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/beta-mode', {
+      const res = await axios.get(`${API_URL}/api/admin/beta-mode`, {
         withCredentials: true
       });
       setBetaMode(res.data);
@@ -155,7 +156,7 @@ function AdminPanel({ onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/pricing', {
+      const res = await axios.get(`${API_URL}/api/admin/pricing`, {
         withCredentials: true
       });
       setPricing(res.data.tiers || []);
@@ -200,7 +201,7 @@ function AdminPanel({ onClose }) {
     setPreprocessStatus('Starting preprocessing...');
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/preprocess',
+        `${API_URL}/api/admin/preprocess`,
         {},
         { withCredentials: true }
       );
@@ -247,7 +248,7 @@ function AdminPanel({ onClose }) {
     
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/process-all',
+        `${API_URL}/api/admin/process-all`,
         {},
         { withCredentials: true }
       );
@@ -265,7 +266,7 @@ function AdminPanel({ onClose }) {
     
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/embed-all',
+        `${API_URL}/api/admin/embed-all`,
         {},
         { withCredentials: true }
       );
@@ -296,7 +297,7 @@ function AdminPanel({ onClose }) {
     
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/beta-mode',
+        `${API_URL}/api/admin/beta-mode`,
         { 
           enabled: enable,
           price: currentPrice,
