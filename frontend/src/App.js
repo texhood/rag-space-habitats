@@ -116,7 +116,7 @@ function App() {
     setResponse('');
 
     try {
-      const res = await axios.post(`${API_URL}/api/api/rag/ask`, {
+      const res = await axios.post(`${API_URL}/api/rag/ask`, {
         question: question
       }, { withCredentials: true });
 
