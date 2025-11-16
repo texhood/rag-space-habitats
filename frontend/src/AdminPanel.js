@@ -172,7 +172,7 @@ function AdminPanel({ onClose }) {
   const updateUserRole = async (userId, newRole) => {
     try {
       await axios.post(
-        `http://localhost:5000/api/admin/users/${userId}/role`,
+        `${API_URL}/api/admin/users/${userId}/role`,
         { role: newRole },
         { withCredentials: true }
       );
@@ -188,7 +188,7 @@ function AdminPanel({ onClose }) {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/admin/users/${userId}`, {
+      await axios.delete(`${API_URL}/api/admin/users/${userId}`, {
         withCredentials: true
       });
       fetchUsers();
@@ -216,7 +216,7 @@ function AdminPanel({ onClose }) {
     
     try {
       await axios.patch(
-        `http://localhost:5000/api/submissions/${id}/status`,
+        `${API_URL}/api/submissions/${id}/status`,
         { status: 'approved', review_notes: 'Approved by admin' },
         { withCredentials: true }
       );
@@ -232,7 +232,7 @@ function AdminPanel({ onClose }) {
     
     try {
       await axios.patch(
-        `http://localhost:5000/api/submissions/${id}/status`,
+        `${API_URL}/api/submissions/${id}/status`,
         { status: 'rejected', review_notes: notes || 'Rejected by admin' },
         { withCredentials: true }
       );
@@ -323,7 +323,7 @@ function AdminPanel({ onClose }) {
   const handleUpdatePricing = async (tierKey, updates) => {
     try {
       await axios.put(
-        `http://localhost:5000/api/admin/pricing/${tierKey}`,
+        `${API_URL}/api/admin/pricing/${tierKey}`,
         updates,
         { withCredentials: true }
       );
