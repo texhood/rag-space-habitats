@@ -114,13 +114,29 @@ app.post('/api/subscriptions/webhook',
 // MIDDLEWARE
 // ======================
 
-// CORS
+/ CORS - Support multiple origins
+const allowedOrigins = [
+  'http://localhost:3000',  // Local frontend
+  'https://rag-space-habitats.vercel.app',  // Production frontend
+  process.env.CORS_ORIGIN  // Railway env variable
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman, curl, mobile apps)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['set-cookie']  // Important for session cookies
+  exposedHeaders: ['set-cookie']
 }));
 
 // Body parsing (after webhook route)
