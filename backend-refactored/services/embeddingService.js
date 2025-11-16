@@ -7,10 +7,10 @@ class EmbeddingService {
     this.embeddingServerUrl = process.env.EMBEDDING_SERVER_URL || 'http://localhost:5001';
     this.useLocalServer = !process.env.USE_HUGGINGFACE_API; // Default to local if available
     
-    // HuggingFace API fallback - CORRECT NEW ENDPOINT
+    // HuggingFace API fallback - CORRECT NEW ROUTER ENDPOINT
     this.huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
     this.modelName = 'sentence-transformers/all-mpnet-base-v2'; // 768 dimensions
-    this.apiUrl = 'https://router.huggingface.co/hf-inference';
+    this.apiUrl = `https://router.huggingface.co/hf-inference/models/${this.modelName}`; // CORRECT ENDPOINT
     this.dimensions = 768;
     
     console.log(`🔧 Embedding Service Mode: ${this.useLocalServer ? 'Local Server' : 'HuggingFace API'}`);
@@ -29,7 +29,7 @@ class EmbeddingService {
         console.log('✅ Local embedding server healthy:', response.data);
         return true;
       } catch (err) {
-        console.warn('⚠️  Local embedding server not reachable, will use HuggingFace API');
+        console.warn('⚠️ Local embedding server not reachable, will use HuggingFace API');
         this.useLocalServer = false; // Switch to API
       }
     }
@@ -58,7 +58,7 @@ class EmbeddingService {
       try {
         return await this.generateEmbeddingViaLocalServer(text);
       } catch (err) {
-        console.warn('⚠️  Local server failed, falling back to HuggingFace API:', err.message);
+        console.warn('⚠️ Local server failed, falling back to HuggingFace API:', err.message);
         this.useLocalServer = false; // Switch to API for subsequent calls
       }
     }
@@ -81,7 +81,7 @@ class EmbeddingService {
   }
 
   /**
-   * Generate embedding via HuggingFace Inference API (NEW ENDPOINT)
+   * Generate embedding via HuggingFace Router API (NEW ENDPOINT - 2025)
    */
   async generateEmbeddingViaAPI(text) {
     if (!this.huggingfaceApiKey) {
@@ -92,8 +92,10 @@ class EmbeddingService {
       const response = await axios.post(
         this.apiUrl,
         {
-          model: this.modelName,
-          inputs: text.substring(0, 5000)
+          inputs: text.substring(0, 5000),
+          options: {
+            wait_for_model: true
+          }
         },
         {
           headers: {
@@ -104,25 +106,64 @@ class EmbeddingService {
         }
       );
       
-      // Response format may vary, handle both cases
+      // Response format for feature-extraction through router
       let embedding = response.data;
       
-      // Check if it's wrapped in an array or object
-      if (embedding.embeddings) {
-        embedding = embedding.embeddings[0];
-      } else if (Array.isArray(embedding) && Array.isArray(embedding[0])) {
-        embedding = embedding[0];
+      console.log('[HuggingFace] Raw response type:', typeof embedding, Array.isArray(embedding));
+      
+      // Handle nested array format (most common for embeddings)
+      if (Array.isArray(embedding)) {
+        if (Array.isArray(embedding[0])) {
+          // Nested array: [[embedding]]
+          embedding = embedding[0];
+        }
+        // Otherwise it's already a flat array
+      } else if (embedding && typeof embedding === 'object') {
+        // Check for wrapped formats
+        if (embedding.embeddings && Array.isArray(embedding.embeddings)) {
+          embedding = Array.isArray(embedding.embeddings[0]) ? embedding.embeddings[0] : embedding.embeddings;
+        } else if (embedding.embedding && Array.isArray(embedding.embedding)) {
+          embedding = embedding.embedding;
+        } else {
+          console.error('[HuggingFace] Unexpected response structure:', embedding);
+          throw new Error('Unexpected response format from HuggingFace API');
+        }
+      }
+      
+      // Verify it's an array of numbers
+      if (!Array.isArray(embedding) || typeof embedding[0] !== 'number') {
+        console.error('[HuggingFace] Invalid embedding format:', embedding);
+        throw new Error('Invalid embedding format from HuggingFace API');
       }
       
       // Verify dimensions
       if (embedding.length !== this.dimensions) {
-        console.warn(`⚠️  Expected ${this.dimensions} dimensions, got ${embedding.length}`);
+        console.warn(`⚠️ Expected ${this.dimensions} dimensions, got ${embedding.length}`);
       }
       
+      console.log(`[HuggingFace] Successfully generated embedding with ${embedding.length} dimensions`);
       return embedding;
+      
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message;
-      console.error('HuggingFace API error:', errorMsg);
+      const status = err.response?.status;
+      const errorData = err.response?.data;
+      const errorMsg = errorData?.error || err.message;
+      
+      console.error('[HuggingFace] API error:', {
+        status,
+        message: errorMsg,
+        data: errorData,
+        url: this.apiUrl
+      });
+      
+      if (status === 404) {
+        throw new Error(`Model endpoint not found. URL: ${this.apiUrl}. Try a different model like 'intfloat/multilingual-e5-large'`);
+      }
+      
+      if (status === 410) {
+        throw new Error(`Old API endpoint deprecated. Already using new endpoint: ${this.apiUrl}`);
+      }
+      
       throw new Error(`Failed to generate embedding via HuggingFace API: ${errorMsg}`);
     }
   }
@@ -136,7 +177,7 @@ class EmbeddingService {
       try {
         return await this.generateBatchViaLocalServer(texts);
       } catch (err) {
-        console.warn('⚠️  Local batch embedding failed, falling back to API');
+        console.warn('⚠️ Local batch embedding failed, falling back to API');
         this.useLocalServer = false;
       }
     }
