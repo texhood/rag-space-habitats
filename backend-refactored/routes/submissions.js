@@ -4,6 +4,7 @@ const router = express.Router();
 const { getCollection } = require('../config/mongodb');
 const { ObjectId } = require('mongodb');
 const upload = require('../middleware/upload');
+const multer = require('multer'); // ✅ ADDED: Import multer for error handling
 const textExtractor = require('../services/textExtractor');
 const fs = require('fs').promises;
 
