@@ -6,7 +6,7 @@ class EmbeddingService {
     // Using HuggingFace Inference API instead of local server
     this.huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
     this.modelName = 'sentence-transformers/all-mpnet-base-v2'; // 768 dimensions
-    this.apiUrl = `https://api-inference.huggingface.co/pipeline/feature-extraction/${this.modelName}`;
+    this.apiUrl = `https://api-inference.huggingface.co/models/${this.modelName}`;
     this.dimensions = 768; // all-mpnet-base-v2
     
     if (!this.huggingfaceApiKey) {
