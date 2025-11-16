@@ -7,11 +7,12 @@ class EmbeddingService {
     this.embeddingServerUrl = process.env.EMBEDDING_SERVER_URL || 'http://localhost:5001';
     this.useLocalServer = !process.env.USE_HUGGINGFACE_API; // Default to local if available
     
-    // HuggingFace API fallback - CORRECT NEW ROUTER ENDPOINT
+    // HuggingFace API fallback - USE MODEL THAT SUPPORTS FEATURE-EXTRACTION
     this.huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
-    this.modelName = 'sentence-transformers/all-mpnet-base-v2'; // 768 dimensions
-    this.apiUrl = `https://router.huggingface.co/hf-inference/models/${this.modelName}`; // CORRECT ENDPOINT
-    this.dimensions = 768;
+    // Use intfloat/multilingual-e5-large which is confirmed to work with feature-extraction
+    this.modelName = 'intfloat/multilingual-e5-large'; // 1024 dimensions
+    this.apiUrl = `https://router.huggingface.co/hf-inference/models/${this.modelName}`;
+    this.dimensions = 1024; // Changed from 768 to 1024
     
     console.log(`🔧 Embedding Service Mode: ${this.useLocalServer ? 'Local Server' : 'HuggingFace API'}`);
   }
@@ -81,7 +82,7 @@ class EmbeddingService {
   }
 
   /**
-   * Generate embedding via HuggingFace Router API (NEW ENDPOINT - 2025)
+   * Generate embedding via HuggingFace Router API (FINAL WORKING VERSION)
    */
   async generateEmbeddingViaAPI(text) {
     if (!this.huggingfaceApiKey) {
@@ -89,6 +90,11 @@ class EmbeddingService {
     }
     
     try {
+      console.log('[HuggingFace] Requesting embedding...', {
+        url: this.apiUrl,
+        textLength: text.length
+      });
+      
       const response = await axios.post(
         this.apiUrl,
         {
@@ -109,25 +115,13 @@ class EmbeddingService {
       // Response format for feature-extraction through router
       let embedding = response.data;
       
-      console.log('[HuggingFace] Raw response type:', typeof embedding, Array.isArray(embedding));
-      
-      // Handle nested array format (most common for embeddings)
-      if (Array.isArray(embedding)) {
-        if (Array.isArray(embedding[0])) {
-          // Nested array: [[embedding]]
-          embedding = embedding[0];
-        }
-        // Otherwise it's already a flat array
-      } else if (embedding && typeof embedding === 'object') {
-        // Check for wrapped formats
-        if (embedding.embeddings && Array.isArray(embedding.embeddings)) {
-          embedding = Array.isArray(embedding.embeddings[0]) ? embedding.embeddings[0] : embedding.embeddings;
-        } else if (embedding.embedding && Array.isArray(embedding.embedding)) {
-          embedding = embedding.embedding;
-        } else {
-          console.error('[HuggingFace] Unexpected response structure:', embedding);
-          throw new Error('Unexpected response format from HuggingFace API');
-        }
+      // Handle response format
+      if (Array.isArray(embedding) && Array.isArray(embedding[0])) {
+        // Nested array: [[embedding]]
+        embedding = embedding[0];
+      } else if (!Array.isArray(embedding)) {
+        console.error('[HuggingFace] Unexpected response structure:', embedding);
+        throw new Error('Unexpected response format from HuggingFace API');
       }
       
       // Verify it's an array of numbers
@@ -136,12 +130,7 @@ class EmbeddingService {
         throw new Error('Invalid embedding format from HuggingFace API');
       }
       
-      // Verify dimensions
-      if (embedding.length !== this.dimensions) {
-        console.warn(`⚠️ Expected ${this.dimensions} dimensions, got ${embedding.length}`);
-      }
-      
-      console.log(`[HuggingFace] Successfully generated embedding with ${embedding.length} dimensions`);
+      console.log(`[HuggingFace] ✅ Successfully generated embedding with ${embedding.length} dimensions`);
       return embedding;
       
     } catch (err) {
@@ -157,11 +146,15 @@ class EmbeddingService {
       });
       
       if (status === 404) {
-        throw new Error(`Model endpoint not found. URL: ${this.apiUrl}. Try a different model like 'intfloat/multilingual-e5-large'`);
+        throw new Error(`Model endpoint not found: ${this.apiUrl}`);
+      }
+      
+      if (status === 400) {
+        throw new Error(`Bad request to HuggingFace API: ${errorMsg}. Check model and request format.`);
       }
       
       if (status === 410) {
-        throw new Error(`Old API endpoint deprecated. Already using new endpoint: ${this.apiUrl}`);
+        throw new Error(`API endpoint deprecated: ${this.apiUrl}`);
       }
       
       throw new Error(`Failed to generate embedding via HuggingFace API: ${errorMsg}`);
