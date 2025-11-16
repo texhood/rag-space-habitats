@@ -114,7 +114,7 @@ app.post('/api/subscriptions/webhook',
 // MIDDLEWARE
 // ======================
 
-/ CORS - Support multiple origins
+// CORS - Support multiple origins
 const allowedOrigins = [
   'http://localhost:3000',  // Local frontend
   'https://rag-space-habitats.vercel.app',  // Production frontend
