@@ -1,3 +1,20 @@
+# Project Statement
+This project is intended to learn to develop a R-A-G applications. The first iteration will use a node.js, React, MariaDB 11.7+ stack. The first model should be a free model that can be run 100% locally. Subsequent iterations will explore different software stacks and models.
+
+Ultimately, I want to produce at lest one RAG app that gathers publicly available content on the design and construction of space and exoplanet habitats to create a queryable knowledge base for space afficionados. In its final form, it should: 
+ - render mathematics expressions in mathematics notation,
+ - enable registration and login,
+ - paid subscriptions,
+ - continuous updates/document addition,
+ - documents submitted for inclusion in the app are stored in MongoDB,
+ - documents submitted must be approved prior to extraction and chunking into MariaDB,
+ - have a set of visual Admin tools for
+	- app maintenance issues, 
+	- user maintenance, 
+	- query analytics.
+	
+A pipeline should be developed so that a pull request into the main branch of the repo automatically deploys the updates to a production site.
+
 # Architecture Diagram
 
 ## System Overview
