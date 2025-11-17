@@ -681,7 +681,7 @@ function AdminPanel({ onClose }) {
                     )}
                     
                     <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                      Free local embeddings • No API costs • 768 dimensions • Semantic search
+                      Free local embeddings • No API costs • 1024 dimensions • Semantic search
                     </p>
                   </div>
                 )}
