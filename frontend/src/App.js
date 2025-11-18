@@ -6,6 +6,10 @@ import './App.css';
 import AdminPanel from './AdminPanel';
 //import SubmitContent from './SubmitContent';
 import PricingPage from './PricingPage';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -187,7 +191,12 @@ function App() {
                 <div className="response-container">
                   <h3>Response:</h3>
                   <div className="response-text">
-                    {response}
+                    <ReactMarkdown
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {response}
+                    </ReactMarkdown>
                   </div>
                 </div>
               )}
