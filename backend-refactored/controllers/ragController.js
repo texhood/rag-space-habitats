@@ -1,10 +1,11 @@
 // controllers/ragController.js
 const RAGService = require('../services/ragService');
 const QueryLog = require('../models/QueryLog');
+const User = require('../models/User');
 
 class RAGController {
   /**
-   * Handle question asking
+   * Handle question asking with user's LLM preference
    */
   static async ask(req, res, next) {
     const startTime = Date.now();
@@ -22,9 +23,13 @@ class RAGController {
 
       console.log(`[${req.user.username}] Question: "${question}"`);
 
-      // Get relevant chunks and generate answer
+      // Get user's LLM preference
+      const llmPreference = await User.getLLMPreference(req.user.id);
+      console.log(`[${req.user.username}] LLM preference: ${llmPreference}`);
+
+      // Get relevant chunks and generate answer with user's preferred LLM
       const chunks = await RAGService.retrieveRelevantChunks(question);
-      const answer = await RAGService.generateAnswer(question, chunks);
+      const answer = await RAGService.generateAnswer(question, chunks, llmPreference);
 
       // Log the query
       const responseTime = Date.now() - startTime;
@@ -36,7 +41,8 @@ class RAGController {
         answer,
         metadata: {
           chunksRetrieved: chunks.length,
-          responseTimeMs: responseTime
+          responseTimeMs: responseTime,
+          llmUsed: llmPreference
         }
       });
     } catch (err) {

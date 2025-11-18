@@ -3,6 +3,35 @@ const pool = require('../config/database');
 const embeddingService = require('./embeddingService');
 const axios = require('axios');
 
+// System prompt with strict LaTeX formatting rules for BOTH Grok and Claude
+const SYSTEM_PROMPT = `You are a helpful AI assistant with expertise in space habitats and orbital engineering.
+
+CRITICAL: MATHEMATICAL NOTATION FORMATTING RULES
+When including mathematical formulas or equations in your response, you MUST follow these rules exactly:
+
+1. Use $...$ for inline math (e.g., "The radius $r = 500$ meters")
+2. Use $$...$$ for display equations on their own line
+3. Do NOT use square brackets [ ] or \\[ \\] for math
+4. Do NOT use \\( \\) notation
+5. Do NOT wrap math in HTML tags like <p>, <span>, etc.
+6. Always use proper LaTeX syntax inside the delimiters
+
+CORRECT EXAMPLES:
+✓ "The centripetal acceleration is $a = \\omega^2 r$ where $\\omega$ is angular velocity."
+✓ "The rotation period is:
+
+$$T = \\frac{2\\pi}{\\omega}$$
+
+where $T$ is in seconds."
+
+INCORRECT EXAMPLES (NEVER DO THIS):
+✗ "[ a = \\omega^2 r ]"
+✗ "<p>$$a = \\omega^2 r$$</p>"
+✗ "\\[ a = \\omega^2 r \\]"
+✗ "\\( a = \\omega^2 r \\)"
+
+Answer questions accurately using the provided context. Use proper mathematical notation as specified above.`;
+
 class RAGService {
   /**
    * Retrieve relevant chunks using vector similarity or keyword search
@@ -28,9 +57,9 @@ class RAGService {
   }
 
   /**
-   * Generate answer from chunks using LLM
+   * Generate answer using selected LLM(s)
    */
-  async generateAnswer(question, chunks) {
+  async generateAnswer(question, chunks, llmPreference = 'grok') {
     if (!chunks || chunks.length === 0) {
       return "I don't have enough information to answer that question.";
     }
@@ -38,19 +67,59 @@ class RAGService {
     // Build context from chunks
     const context = chunks.join('\n\n---\n\n');
 
-    const prompt = `You are a helpful AI assistant with expertise in space habitats and orbital engineering. Use the following context to answer the question accurately and concisely.
+    // Check which APIs are available
+    const hasGrok = !!(process.env.XAI_API_KEY && process.env.XAI_API_KEY !== 'xai_key');
+    const hasClaude = !!(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'not_yet_available');
+
+    console.log(`[RAG] User preference: ${llmPreference}, Available - Grok: ${hasGrok}, Claude: ${hasClaude}`);
+
+    // Handle "both" mode - get answers from both and compare
+    if (llmPreference === 'both' && hasClaude && hasGrok) {
+      console.log('[RAG] Using BOTH LLMs for comparison');
+      return await this._generateWithBoth(question, context);
+    }
+
+    // Handle specific preference
+    if (llmPreference === 'claude' && hasClaude) {
+      console.log('[RAG] Using Claude (user preference)');
+      return await this._generateWithClaude(question, context);
+    }
+
+    if (llmPreference === 'grok' && hasGrok) {
+      console.log('[RAG] Using Grok (user preference)');
+      return await this._generateWithGrok(question, context);
+    }
+
+    // Fallback: use whatever is available
+    if (hasGrok) {
+      console.log('[RAG] Falling back to Grok');
+      return await this._generateWithGrok(question, context);
+    }
+
+    if (hasClaude) {
+      console.log('[RAG] Falling back to Claude');
+      return await this._generateWithClaude(question, context);
+    }
+
+    // No LLM available
+    return `Based on the available information:\n\n${chunks[0].substring(0, 500)}...\n\n(No LLM available)`;
+  }
+
+  /**
+   * Generate answer using Grok API
+   */
+  async _generateWithGrok(question, context) {
+    const prompt = `${SYSTEM_PROMPT}
 
 Context from knowledge base:
 ${context}
 
 Question: ${question}
 
-Please provide a clear, accurate answer based on the context above. If the context doesn't contain enough information, say so.
-
 Answer:`;
 
     try {
-      console.log('[LLM] Calling Grok API...');
+      console.log('[Grok] Calling API...');
       
       const response = await axios.post(
         'https://api.x.ai/v1/chat/completions',
@@ -58,11 +127,11 @@ Answer:`;
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful AI assistant specializing in space habitats and orbital engineering.'
+              content: SYSTEM_PROMPT
             },
             {
               role: 'user',
-              content: prompt
+              content: `Context from knowledge base:\n${context}\n\nQuestion: ${question}\n\nAnswer:`
             }
           ],
           model: 'grok-3',
@@ -80,14 +149,100 @@ Answer:`;
       );
 
       const answer = response.data.choices[0].message.content;
-      console.log('[LLM] Response received');
+      console.log('[Grok] Response received');
       return answer;
 
     } catch (err) {
-      console.error('[LLM] Grok error:', err.response?.data || err.message);
+      console.error('[Grok] API error:', err.response?.data || err.message);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate answer using Claude API
+   */
+  async _generateWithClaude(question, context) {
+    try {
+      console.log('[Claude] Calling API...');
       
-      // Fallback: return context-based response
-      return `Based on the available information:\n\n${chunks[0].substring(0, 500)}...\n\n(Full LLM response unavailable)`;
+      const response = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          system: SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `Context from knowledge base:\n${context}\n\nQuestion: ${question}\n\nAnswer:`
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          timeout: 60000
+        }
+      );
+
+      const answer = response.data.content[0].text;
+      console.log('[Claude] Response received');
+      return answer;
+
+    } catch (err) {
+      console.error('[Claude] API error:', err.response?.data || err.message);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate answers from BOTH LLMs and present comparison
+   */
+  async _generateWithBoth(question, context) {
+    try {
+      console.log('[Both] Requesting answers from both Claude and Grok...');
+      
+      // Run both in parallel
+      const [grokResult, claudeResult] = await Promise.allSettled([
+        this._generateWithGrok(question, context),
+        this._generateWithClaude(question, context)
+      ]);
+
+      let response = '## Comparison of Responses\n\n';
+
+      // Add Grok's response
+      if (grokResult.status === 'fulfilled') {
+        response += '### 🔵 Grok\'s Answer:\n\n';
+        response += grokResult.value + '\n\n';
+      } else {
+        response += '### 🔵 Grok\'s Answer:\n\n';
+        response += '_Grok API unavailable_\n\n';
+      }
+
+      response += '---\n\n';
+
+      // Add Claude's response
+      if (claudeResult.status === 'fulfilled') {
+        response += '### 🟣 Claude\'s Answer:\n\n';
+        response += claudeResult.value + '\n\n';
+      } else {
+        response += '### 🟣 Claude\'s Answer:\n\n';
+        response += '_Claude API unavailable_\n\n';
+      }
+
+      return response;
+
+    } catch (err) {
+      console.error('[Both] Error getting responses:', err);
+      // Fall back to whichever one works
+      try {
+        return await this._generateWithGrok(question, context);
+      } catch {
+        return await this._generateWithClaude(question, context);
+      }
     }
   }
 

@@ -330,3 +330,71 @@ body {
     font-size: 24px;
   }
 }
+
+/* LLM Selector Styles */
+.llm-selector {
+  margin: 20px 0;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.llm-selector label {
+  font-weight: 600;
+  color: #333;
+  margin-right: 10px;
+}
+
+.llm-options {
+  display: flex;
+  gap: 10px;
+}
+
+.llm-options button {
+  padding: 8px 16px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.llm-options button:hover:not(:disabled) {
+  border-color: #666;
+  transform: translateY(-1px);
+}
+
+.llm-options button.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+.llm-options button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.llm-current {
+  margin-left: auto;
+  color: #666;
+  font-size: 14px;
+}
+
+.llm-current strong {
+  color: #333;
+}
+
+/* Math rendering styles - ensure proper spacing */
+.response-text .katex-display {
+  margin: 1em 0;
+}
+
+.response-text .katex {
+  font-size: 1.1em;
+}

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 import AdminPanel from './AdminPanel';
-//import SubmitContent from './SubmitContent';
 import PricingPage from './PricingPage';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -23,12 +22,34 @@ function App() {
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
-  //const [showSubmit, setShowSubmit] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  
+  // LLM preference state
+  const [llmPreference, setLlmPreference] = useState('grok');
+  const [availableLLMs, setAvailableLLMs] = useState({ grok: true, claude: false });
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Load user settings when authenticated
+  useEffect(() => {
+    if (user) {
+      console.log('Loading user settings...');
+      axios.get(`${API_URL}/api/auth/settings`, { withCredentials: true })
+        .then(res => {
+          console.log('Settings loaded:', res.data);
+          setLlmPreference(res.data.llm_preference);
+          setAvailableLLMs(res.data.available_llms);
+        })
+        .catch(err => {
+          console.error('Failed to load settings:', err);
+          // Set defaults if loading fails
+          setLlmPreference('grok');
+          setAvailableLLMs({ grok: true, claude: false });
+        });
+    }
+  }, [user]);
 
   // Check for successful checkout and refresh user data
   useEffect(() => {
@@ -37,31 +58,22 @@ function App() {
     const tier = urlParams.get('tier');
 
     if (checkoutStatus === 'success') {
-      // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
-
-      // Show success message
       alert(`🎉 Successfully upgraded to ${tier} tier! Your account has been updated.`);
-
-      // Refresh user data from server
       checkAuth();
     } else if (checkoutStatus === 'cancelled') {
-      // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
-
       alert('Checkout was cancelled. You can upgrade anytime!');
     }
   }, []);
 
   const checkAuth = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/api/auth/me`, {
+      const res = await axios.get(`${API_URL}/api/auth/me`, {
         withCredentials: true
       });
-      // console.log('[Auth] User data:', res.data.user); // ADD THIS LINE FOR DEBUG
       setUser(res.data.user);
     } catch (err) {
-      // console.log('[Auth] Not authenticated'); // ADD THIS LINE FOR DEBUG
       setUser(null);
     }
   };
@@ -86,7 +98,7 @@ function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_URL}/api/api/auth/register`, {
+      const res = await axios.post(`${API_URL}/api/auth/register`, {
         username: registerUsername,
         password: registerPassword
       }, { withCredentials: true });
@@ -102,13 +114,29 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.post(`${API_URL}/api/api/auth/logout`, {}, {
+      await axios.post(`${API_URL}/api/auth/logout`, {}, {
         withCredentials: true
       });
       setUser(null);
       setResponse('');
     } catch (err) {
       console.error('Logout error:', err);
+    }
+  };
+
+  const updateLLMPreference = async (preference) => {
+    try {
+      console.log('Updating LLM preference to:', preference);
+      const updateResponse = await axios.post(
+        `${API_URL}/api/auth/settings/llm`,
+        { preference },
+        { withCredentials: true }
+      );
+      console.log('Update response:', updateResponse.data);
+      setLlmPreference(preference);
+    } catch (err) {
+      console.error('Failed to update LLM preference:', err);
+      alert('Failed to update LLM preference: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -172,6 +200,40 @@ function App() {
       <main className="App-main">
         {user ? (
           <>
+            {/* LLM SELECTOR */}
+            <div className="llm-selector">
+              <label>AI Model:</label>
+              <div className="llm-options">
+                <button
+                  className={llmPreference === 'grok' ? 'active' : ''}
+                  onClick={() => updateLLMPreference('grok')}
+                  disabled={!availableLLMs.grok}
+                >
+                  🔵 Grok
+                </button>
+                <button
+                  className={llmPreference === 'claude' ? 'active' : ''}
+                  onClick={() => updateLLMPreference('claude')}
+                  disabled={!availableLLMs.claude}
+                >
+                  🟣 Claude
+                </button>
+                {availableLLMs.grok && availableLLMs.claude && (
+                  <button
+                    className={llmPreference === 'both' ? 'active' : ''}
+                    onClick={() => updateLLMPreference('both')}
+                  >
+                    🤖 Both
+                  </button>
+                )}
+              </div>
+              {llmPreference && (
+                <span className="llm-current">
+                  Current: <strong>{llmPreference.charAt(0).toUpperCase() + llmPreference.slice(1)}</strong>
+                </span>
+              )}
+            </div>
+
             <div className="chat-container">
               <form onSubmit={handleAsk} className="question-form">
                 <input
