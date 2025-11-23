@@ -2,6 +2,7 @@
 import API_URL from './config';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import DocumentViewer from './DocumentViewer';
 import './AdminPanel.css';
 
 function AdminPanel({ onClose }) {
@@ -16,6 +17,7 @@ function AdminPanel({ onClose }) {
   const [betaMode, setBetaMode] = useState(null);
   const [pricing, setPricing] = useState([]);
   const [editingTier, setEditingTier] = useState(null);
+  const [viewingDocument, setViewingDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -579,6 +581,13 @@ function AdminPanel({ onClose }) {
                       </div>
                     </details>
                     <div className="review-actions">
+                      <button 
+                        onClick={() => setViewingDocument(sub._id)} 
+                        className="btn-primary"
+                        style={{ marginRight: '10px' }}
+                      >
+                        👁️ View Document
+                      </button>
                       <button onClick={() => handleApprove(sub._id)} className="approve-btn">
                         ✅ Approve
                       </button>
@@ -1126,6 +1135,13 @@ function AdminPanel({ onClose }) {
           </div>
         )}
       </div>
+      {/* Document Viewer Modal */}
+      {viewingDocument && (
+        <DocumentViewer
+          submissionId={viewingDocument}
+          onClose={() => setViewingDocument(null)}
+        />
+      )}
     </div>
   );
 }

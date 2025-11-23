@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 import AdminPanel from './AdminPanel';
+import SubmitContent from './SubmitContent';
 import PricingPage from './PricingPage';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -22,6 +23,7 @@ function App() {
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showSubmit, setShowSubmit] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   
   // LLM preference state
@@ -175,6 +177,12 @@ function App() {
                   style={{ marginLeft: '15px' }}
                 >
                   ⚡ Upgrade
+                </button>
+                <button
+                  onClick={() => setShowSubmit(true)}
+                  style={{ marginLeft: '10px' }}
+                >
+                  📤 Submit Content
                 </button>
                 {user.role === 'admin' && (
                   <button onClick={() => setShowAdmin(true)} style={{ marginLeft: '10px' }}>
@@ -330,6 +338,13 @@ function App() {
 
       {showAdmin && user?.role === 'admin' && (
         <AdminPanel onClose={() => setShowAdmin(false)} />
+      )}
+
+      {showSubmit && (
+        <SubmitContent 
+          user={user}
+          onClose={() => setShowSubmit(false)}
+        />
       )}
 
       {showPricing && (
