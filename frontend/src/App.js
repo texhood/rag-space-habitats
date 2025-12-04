@@ -1,17 +1,25 @@
 // App.js
 import API_URL from './config';
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
 import AdminPanel from './AdminPanel';
 import SubmitContent from './SubmitContent';
 import PricingPage from './PricingPage';
+import LandingPage from './LandingPage';
+import AppNavbar from './AppNavbar';
+import BrowseKnowledgeBase from './BrowseKnowledgeBase';
+import './AppNavbar.css';
+import './BrowseKnowledgeBase.css';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 
-function App() {
+// Main dashboard component (the existing app functionality)
+function Dashboard() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [question, setQuestion] = useState('');
   const [response, setResponse] = useState('');
@@ -69,6 +77,21 @@ function App() {
     }
   }, []);
 
+  // Check for login/register query params (from landing page)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const showLoginParam = urlParams.get('login');
+    const showRegisterParam = urlParams.get('register');
+
+    if (showLoginParam === 'true' && !user) {
+      setShowLogin(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (showRegisterParam === 'true' && !user) {
+      setShowRegister(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [user]);
+
   const checkAuth = async () => {
     try {
       const res = await axios.get(`${API_URL}/api/auth/me`, {
@@ -121,6 +144,7 @@ function App() {
       });
       setUser(null);
       setResponse('');
+      navigate('/'); // Redirect to landing page after logout
     } catch (err) {
       console.error('Logout error:', err);
     }
@@ -164,46 +188,14 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div className="header-content">
-          <h1>🚀 Space Habitats RAG System</h1>
-          <div className="auth-section">
-            {user ? (
-              <>
-                <span>Welcome, {user.username}!</span>
-                <button
-                  onClick={() => setShowPricing(true)}
-                  className="upgrade-btn"
-                  style={{ marginLeft: '15px' }}
-                >
-                  ⚡ Upgrade
-                </button>
-                <button
-                  onClick={() => setShowSubmit(true)}
-                  style={{ marginLeft: '10px' }}
-                >
-                  📤 Submit Content
-                </button>
-                {user.role === 'admin' && (
-                  <button onClick={() => setShowAdmin(true)} style={{ marginLeft: '10px' }}>
-                    Admin Panel
-                  </button>
-                )}
-                <button onClick={handleLogout} style={{ marginLeft: '10px' }}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => setShowLogin(true)}>Login</button>
-                <button onClick={() => setShowRegister(true)} style={{ marginLeft: '10px' }}>
-                  Register
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* AppNavbar replaces the old header */}
+      <AppNavbar 
+        user={user}
+        onLogout={handleLogout}
+        onShowAdmin={setShowAdmin}
+        onShowSubmit={setShowSubmit}
+        onShowPricing={setShowPricing}
+      />
 
       <main className="App-main">
         {user ? (
@@ -276,6 +268,14 @@ function App() {
           <div className="welcome-message">
             <h2>Welcome to the Space Habitats Knowledge Base</h2>
             <p>Please login or register to ask questions.</p>
+            <div className="welcome-buttons">
+              <button onClick={() => setShowLogin(true)} className="btn-primary">
+                Login
+              </button>
+              <button onClick={() => setShowRegister(true)} className="btn-secondary">
+                Register
+              </button>
+            </div>
           </div>
         )}
       </main>
@@ -354,6 +354,27 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+// Root App component with Router
+function App() {
+  return (
+    <Router>
+      <Routes>
+        {/* Landing page as home */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Main application dashboard */}
+        <Route path="/app" element={<Dashboard />} />
+        
+        {/* Browse knowledge base */}
+        <Route path="/browse" element={<BrowseKnowledgeBase />} />
+        
+        {/* Redirect old routes to new structure */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
