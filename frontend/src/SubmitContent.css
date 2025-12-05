@@ -322,3 +322,119 @@
   outline: 3px solid #667eea;
   outline-offset: 2px;
 }
+
+* Form row for side-by-side fields */
+.form-row {
+  display: flex;
+  gap: 15px;
+}
+
+.form-group.half {
+  flex: 1;
+}
+
+/* License Section */
+.license-section {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  border: 1px solid #e9ecef;
+}
+
+.license-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.license-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.license-option:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.license-option.selected {
+  border-color: #667eea;
+  background: #eef0ff;
+}
+
+.license-option input[type="radio"] {
+  display: none;
+}
+
+.license-icon {
+  font-size: 1.2rem;
+}
+
+.license-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.license-description {
+  margin-top: 12px;
+  padding: 10px;
+  background: #e7f3ff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #0056b3;
+  border-left: 3px solid #0056b3;
+}
+
+.license-help {
+  display: block;
+  margin-top: 10px;
+}
+
+.license-help a {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.license-help a:hover {
+  text-decoration: underline;
+}
+
+.license-notice {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Responsive - stack license options on mobile */
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .form-group.half {
+    width: 100%;
+  }
+  
+  .license-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .license-option {
+    padding: 10px;
+  }
+  
+  .license-label {
+    font-size: 0.8rem;
+  }
+}

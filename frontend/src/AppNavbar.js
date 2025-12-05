@@ -6,12 +6,27 @@ import './AppNavbar.css';
 function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    setMenuOpen(false);
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
     if (onLogout) {
       onLogout();
+    }
+  };
+
+  const handleNavClick = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+  };
+
+  const handleActionClick = (action) => {
+    setMobileMenuOpen(false);
+    setUserMenuOpen(false);
+    if (action) {
+      action(true);
     }
   };
 
@@ -21,16 +36,16 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
     <nav className="app-navbar">
       <div className="app-navbar-container">
         {/* Logo / Home Link */}
-        <div className="app-navbar-brand" onClick={() => navigate('/')}>
+        <div className="app-navbar-brand" onClick={() => handleNavClick('/')}>
           <span className="brand-icon">🚀</span>
           <span className="brand-text">Space Habitats</span>
         </div>
 
         {/* Main Navigation Links */}
-        <div className="app-navbar-links">
+        <div className={`app-navbar-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
           <button
             className={`nav-link ${isActive('/app') ? 'active' : ''}`}
-            onClick={() => navigate('/app')}
+            onClick={() => handleNavClick('/app')}
           >
             <span className="nav-icon">🔍</span>
             <span className="nav-text">Ask Questions</span>
@@ -38,7 +53,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
 
           <button
             className={`nav-link ${isActive('/browse') ? 'active' : ''}`}
-            onClick={() => navigate('/browse')}
+            onClick={() => handleNavClick('/browse')}
           >
             <span className="nav-icon">📚</span>
             <span className="nav-text">Browse</span>
@@ -47,36 +62,78 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
           {user && onShowSubmit && (
             <button
               className="nav-link"
-              onClick={() => onShowSubmit(true)}
+              onClick={() => handleActionClick(onShowSubmit)}
             >
               <span className="nav-icon">📤</span>
               <span className="nav-text">Submit</span>
             </button>
           )}
+
+          {/* Mobile-only menu items */}
+          <div className="mobile-only-items">
+            {user ? (
+              <>
+                <div className="mobile-user-info">
+                  <span className="user-avatar">👤</span>
+                  <span className="user-name">{user.username}</span>
+                </div>
+                {onShowPricing && (
+                  <button
+                    className="nav-link"
+                    onClick={() => handleActionClick(onShowPricing)}
+                  >
+                    <span className="nav-icon">⚡</span>
+                    <span className="nav-text">Upgrade</span>
+                  </button>
+                )}
+                {user.role === 'admin' && onShowAdmin && (
+                  <button
+                    className="nav-link"
+                    onClick={() => handleActionClick(onShowAdmin)}
+                  >
+                    <span className="nav-icon">🛠️</span>
+                    <span className="nav-text">Admin Panel</span>
+                  </button>
+                )}
+                <button className="nav-link logout-link" onClick={handleLogout}>
+                  <span className="nav-icon">🚪</span>
+                  <span className="nav-text">Logout</span>
+                </button>
+              </>
+            ) : (
+              <button
+                className="nav-link"
+                onClick={() => handleNavClick('/app?login=true')}
+              >
+                <span className="nav-icon">🔑</span>
+                <span className="nav-text">Login</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* User Menu */}
-        <div className="app-navbar-user">
+        {/* Desktop User Menu */}
+        <div className="app-navbar-user desktop-only">
           {user ? (
             <div className="user-menu-container">
               <button 
                 className="user-menu-trigger"
-                onClick={() => setMenuOpen(!menuOpen)}
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <span className="user-avatar">👤</span>
                 <span className="user-name">{user.username}</span>
-                <span className="menu-arrow">{menuOpen ? '▲' : '▼'}</span>
+                <span className="menu-arrow">{userMenuOpen ? '▲' : '▼'}</span>
               </button>
 
-              {menuOpen && (
+              {userMenuOpen && (
                 <div className="user-dropdown">
                   {onShowPricing && (
-                    <button onClick={() => { setMenuOpen(false); onShowPricing(true); }}>
+                    <button onClick={() => { setUserMenuOpen(false); onShowPricing(true); }}>
                       ⚡ Upgrade
                     </button>
                   )}
                   {user.role === 'admin' && onShowAdmin && (
-                    <button onClick={() => { setMenuOpen(false); onShowAdmin(true); }}>
+                    <button onClick={() => { setUserMenuOpen(false); onShowAdmin(true); }}>
                       🛠️ Admin Panel
                     </button>
                   )}
@@ -91,7 +148,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
             <div className="auth-buttons">
               <button 
                 className="btn-login"
-                onClick={() => navigate('/app')}
+                onClick={() => navigate('/app?login=true')}
               >
                 Login
               </button>
@@ -102,17 +159,21 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
         {/* Mobile Menu Toggle */}
         <button 
           className="mobile-menu-toggle"
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
         >
-          ☰
+          {mobileMenuOpen ? '✕' : '☰'}
         </button>
       </div>
 
-      {/* Click outside to close menu */}
-      {menuOpen && (
+      {/* Click outside to close menus */}
+      {(userMenuOpen || mobileMenuOpen) && (
         <div 
           className="menu-backdrop" 
-          onClick={() => setMenuOpen(false)}
+          onClick={() => {
+            setUserMenuOpen(false);
+            setMobileMenuOpen(false);
+          }}
         />
       )}
     </nav>

@@ -12,9 +12,39 @@ function SubmitContent({ user, onClose }) {
   const [file, setFile] = useState(null);
   const [tags, setTags] = useState('');
   const [category, setCategory] = useState('general');
+  const [license, setLicense] = useState('cc-by');
+  const [attribution, setAttribution] = useState(user?.username || '');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // License options with descriptions
+  const licenseOptions = [
+    {
+      value: 'cc-by',
+      label: 'CC BY 4.0 (Attribution)',
+      description: 'Others can share and adapt your work, with credit to you.',
+      icon: '🌍'
+    },
+    {
+      value: 'cc-by-sa',
+      label: 'CC BY-SA 4.0 (Attribution-ShareAlike)',
+      description: 'Others can share and adapt, but must use the same license.',
+      icon: '🔄'
+    },
+    {
+      value: 'cc-by-nc',
+      label: 'CC BY-NC 4.0 (Attribution-NonCommercial)',
+      description: 'Others can share and adapt for non-commercial purposes only.',
+      icon: '🚫💰'
+    },
+    {
+      value: 'private',
+      label: 'Private (All Rights Reserved)',
+      description: 'Only you and administrators can view this document.',
+      icon: '🔒'
+    }
+  ];
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -49,6 +79,8 @@ function SubmitContent({ user, onClose }) {
       formData.append('description', description);
       formData.append('tags', tags);
       formData.append('category', category);
+      formData.append('license', license);
+      formData.append('attribution', attribution.trim() || user?.username || 'Anonymous');
 
       if (uploadMode === 'file' && file) {
         formData.append('file', file);
@@ -77,6 +109,8 @@ function SubmitContent({ user, onClose }) {
         setFile(null);
         setTags('');
         setCategory('general');
+        setLicense('cc-by');
+        setAttribution(user?.username || '');
         onClose();
       }, 2000);
 
@@ -88,6 +122,8 @@ function SubmitContent({ user, onClose }) {
       setUploading(false);
     }
   };
+
+  const selectedLicense = licenseOptions.find(l => l.value === license);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -154,29 +190,79 @@ function SubmitContent({ user, onClose }) {
             />
           </div>
 
-          <div className="form-group">
-            <label>Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="general">General</option>
-              <option value="habitat-design">Habitat Design</option>
-              <option value="life-support">Life Support Systems</option>
-              <option value="propulsion">Propulsion</option>
-              <option value="construction">Construction Methods</option>
-              <option value="materials">Materials Science</option>
-              <option value="research">Research Paper</option>
-              <option value="technical">Technical Documentation</option>
-            </select>
+          <div className="form-row">
+            <div className="form-group half">
+              <label>Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="general">General</option>
+                <option value="habitat-design">Habitat Design</option>
+                <option value="life-support">Life Support Systems</option>
+                <option value="propulsion">Propulsion</option>
+                <option value="construction">Construction Methods</option>
+                <option value="materials">Materials Science</option>
+                <option value="research">Research Paper</option>
+                <option value="technical">Technical Documentation</option>
+              </select>
+            </div>
+
+            <div className="form-group half">
+              <label>Tags (comma-separated)</label>
+              <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="e.g., O'Neill cylinder, rotation"
+              />
+            </div>
           </div>
 
+          {/* License Selection */}
+          <div className="form-group license-section">
+            <label>
+              License <span className="required">*</span>
+            </label>
+            <div className="license-options">
+              {licenseOptions.map((option) => (
+                <label 
+                  key={option.value} 
+                  className={`license-option ${license === option.value ? 'selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="license"
+                    value={option.value}
+                    checked={license === option.value}
+                    onChange={(e) => setLicense(e.target.value)}
+                  />
+                  <span className="license-icon">{option.icon}</span>
+                  <span className="license-label">{option.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedLicense && (
+              <p className="license-description">
+                {selectedLicense.description}
+              </p>
+            )}
+            <small className="license-help">
+              <a href="https://creativecommons.org/licenses/" target="_blank" rel="noopener noreferrer">
+                Learn more about Creative Commons licenses →
+              </a>
+            </small>
+          </div>
+
+          {/* Attribution */}
           <div className="form-group">
-            <label>Tags (comma-separated)</label>
+            <label>
+              Attribution (How to credit you)
+            </label>
             <input
               type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g., O'Neill cylinder, rotation, artificial gravity"
+              value={attribution}
+              onChange={(e) => setAttribution(e.target.value)}
+              placeholder={user?.username || 'Your name or username'}
             />
-            <small>Helps categorize and search your document</small>
+            <small>This is how others will credit you when using your work.</small>
           </div>
 
           {uploadMode === 'file' ? (
@@ -230,6 +316,11 @@ function SubmitContent({ user, onClose }) {
 
           <p className="submit-notice">
             ℹ️ Your submission will be reviewed by an administrator before being added to the knowledge base.
+            {license !== 'private' && (
+              <span className="license-notice">
+                <br />📜 By submitting, you confirm you have the right to share this content under the {selectedLicense?.label} license.
+              </span>
+            )}
           </p>
         </form>
       </div>
