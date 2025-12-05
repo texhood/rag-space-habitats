@@ -1,7 +1,7 @@
 /* AppNavbar.css */
 
 .app-navbar {
-  background:rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   padding: 0 20px;
@@ -20,7 +20,7 @@
   height: 60px;
 }
 
-/* Brand / Logo */
+/* Brand and Logo */
 .app-navbar-brand {
   display: flex;
   align-items: center;
@@ -84,7 +84,7 @@
   font-size: 0.9rem;
 }
 
-/* Mobile-only items - hidden on desktop */
+/* Mobile-only items hidden on desktop */
 .mobile-only-items {
   display: none;
 }
@@ -184,7 +184,7 @@
   margin: 8px 0;
 }
 
-/* Auth Buttons (when not logged in) */
+/* Auth Buttons when not logged in */
 .auth-buttons {
   display: flex;
   gap: 10px;
@@ -234,10 +234,7 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* =========================
-   RESPONSIVE STYLES
-   ========================= */
-
+/* Responsive Styles for Mobile */
 @media (max-width: 768px) {
   .app-navbar {
     padding: 0 15px;
@@ -251,19 +248,16 @@
     display: none;
   }
 
-  /* Desktop user menu hidden on mobile */
   .desktop-only {
     display: none;
   }
 
-  /* Mobile menu toggle visible */
   .mobile-menu-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  /* Navigation links - mobile dropdown */
   .app-navbar-links {
     position: fixed;
     top: 55px;
@@ -322,7 +316,6 @@
     width: 28px;
   }
 
-  /* Mobile-only items visible */
   .mobile-only-items {
     display: flex;
     flex-direction: column;
@@ -354,11 +347,11 @@
   }
 
   .logout-link {
-    color: #ff6b6b !important;
+    color: #ff6b6b;
   }
 
   .logout-link:hover {
-    background: rgba(255, 107, 107, 0.15) !important;
+    background: rgba(255, 107, 107, 0.15);
   }
 }
 

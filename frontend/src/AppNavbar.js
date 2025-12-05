@@ -37,7 +37,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
       <div className="app-navbar-container">
         {/* Logo / Home Link */}
         <div className="app-navbar-brand" onClick={() => handleNavClick('/')}>
-          <span className="brand-icon">🚀</span>
+          <span className="brand-icon" role="img" aria-label="rocket">&#128640;</span>
           <span className="brand-text">Space Habitats</span>
         </div>
 
@@ -47,7 +47,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
             className={`nav-link ${isActive('/app') ? 'active' : ''}`}
             onClick={() => handleNavClick('/app')}
           >
-            <span className="nav-icon">🔍</span>
+            <span className="nav-icon" role="img" aria-label="search">&#128269;</span>
             <span className="nav-text">Ask Questions</span>
           </button>
 
@@ -55,7 +55,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
             className={`nav-link ${isActive('/browse') ? 'active' : ''}`}
             onClick={() => handleNavClick('/browse')}
           >
-            <span className="nav-icon">📚</span>
+            <span className="nav-icon" role="img" aria-label="books">&#128218;</span>
             <span className="nav-text">Browse</span>
           </button>
 
@@ -64,7 +64,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
               className="nav-link"
               onClick={() => handleActionClick(onShowSubmit)}
             >
-              <span className="nav-icon">📤</span>
+              <span className="nav-icon" role="img" aria-label="upload">&#128228;</span>
               <span className="nav-text">Submit</span>
             </button>
           )}
@@ -74,7 +74,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
             {user ? (
               <>
                 <div className="mobile-user-info">
-                  <span className="user-avatar">👤</span>
+                  <span className="user-avatar" role="img" aria-label="user">&#128100;</span>
                   <span className="user-name">{user.username}</span>
                 </div>
                 {onShowPricing && (
@@ -82,7 +82,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
                     className="nav-link"
                     onClick={() => handleActionClick(onShowPricing)}
                   >
-                    <span className="nav-icon">⚡</span>
+                    <span className="nav-icon" role="img" aria-label="lightning">&#9889;</span>
                     <span className="nav-text">Upgrade</span>
                   </button>
                 )}
@@ -91,12 +91,12 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
                     className="nav-link"
                     onClick={() => handleActionClick(onShowAdmin)}
                   >
-                    <span className="nav-icon">🛠️</span>
+                    <span className="nav-icon" role="img" aria-label="tools">&#128736;</span>
                     <span className="nav-text">Admin Panel</span>
                   </button>
                 )}
                 <button className="nav-link logout-link" onClick={handleLogout}>
-                  <span className="nav-icon">🚪</span>
+                  <span className="nav-icon" role="img" aria-label="door">&#128682;</span>
                   <span className="nav-text">Logout</span>
                 </button>
               </>
@@ -105,7 +105,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
                 className="nav-link"
                 onClick={() => handleNavClick('/app?login=true')}
               >
-                <span className="nav-icon">🔑</span>
+                <span className="nav-icon" role="img" aria-label="key">&#128273;</span>
                 <span className="nav-text">Login</span>
               </button>
             )}
@@ -120,26 +120,26 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
                 className="user-menu-trigger"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
-                <span className="user-avatar">👤</span>
+                <span className="user-avatar" role="img" aria-label="user">&#128100;</span>
                 <span className="user-name">{user.username}</span>
-                <span className="menu-arrow">{userMenuOpen ? '▲' : '▼'}</span>
+                <span className="menu-arrow">{userMenuOpen ? '\u25B2' : '\u25BC'}</span>
               </button>
 
               {userMenuOpen && (
                 <div className="user-dropdown">
                   {onShowPricing && (
                     <button onClick={() => { setUserMenuOpen(false); onShowPricing(true); }}>
-                      ⚡ Upgrade
+                      <span role="img" aria-label="lightning">&#9889;</span> Upgrade
                     </button>
                   )}
                   {user.role === 'admin' && onShowAdmin && (
                     <button onClick={() => { setUserMenuOpen(false); onShowAdmin(true); }}>
-                      🛠️ Admin Panel
+                      <span role="img" aria-label="tools">&#128736;</span> Admin Panel
                     </button>
                   )}
                   <hr className="dropdown-divider" />
                   <button onClick={handleLogout}>
-                    🚪 Logout
+                    <span role="img" aria-label="door">&#128682;</span> Logout
                   </button>
                 </div>
               )}
@@ -162,7 +162,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
         >
-          {mobileMenuOpen ? '✕' : '☰'}
+          {mobileMenuOpen ? '\u2715' : '\u2630'}
         </button>
       </div>
 
