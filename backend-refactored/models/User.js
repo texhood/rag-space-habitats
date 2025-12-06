@@ -8,7 +8,7 @@ class User {
    */
   static async findByUsername(username) {
     const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1',
+      'SELECT * FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
     return result.rows[0];
@@ -19,7 +19,7 @@ class User {
    */
   static async findByEmail(email) {
     const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
     return result.rows[0];
@@ -82,7 +82,7 @@ class User {
    */
   static async exists(username) {
     const result = await pool.query(
-      'SELECT COUNT(*) as count FROM users WHERE username = $1',
+      'SELECT COUNT(*) as count FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
     return parseInt(result.rows[0].count) > 0;
@@ -96,7 +96,7 @@ class User {
     if (!validPreferences.includes(preference)) {
       throw new Error('Invalid LLM preference. Must be: grok, claude, or both');
     }
-    
+
     const result = await pool.query(
       'UPDATE users SET llm_preference = $1 WHERE id = $2',
       [preference, id]

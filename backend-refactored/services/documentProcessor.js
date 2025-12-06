@@ -50,31 +50,41 @@ class DocumentProcessor {
         embeddings = new Array(chunks.length).fill(null);
       }
 
-      // Store chunks in MySQL with embeddings
+      // Store chunks in PostgreSQL with native pgvector embeddings
       let insertedCount = 0;
       for (let i = 0; i < chunks.length; i++) {
-        const metadata = JSON.stringify({
+        const metadata = {
           title: submission.title,
           source: submission.file_info?.original_name || 'text_submission',
           category: submission.category,
           tags: submission.tags,
           submitted_by: submission.submitted_by_username,
           submitted_at: submission.submitted_at
-        });
+        };
 
-        const embeddingJson = embeddings[i] ? JSON.stringify(embeddings[i]) : null;
-        const hasEmbedding = embeddings[i] ? true : false;
+        // Convert embedding array to pgvector format string
+        let embeddingValue = null;
+        if (embeddings[i] && Array.isArray(embeddings[i])) {
+          embeddingValue = `[${embeddings[i].join(',')}]`;
+        }
 
         await pool.query(
           `INSERT INTO document_chunks 
-           (content, metadata, source_id, source_type, chunk_index, embedding_vector, has_embedding) 
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [chunks[i], metadata, submissionId, 'mongodb_submission', i, embeddingJson, hasEmbedding]
+           (content, metadata, source_id, source_type, chunk_index, embedding) 
+           VALUES ($1, $2, $3, $4, $5, $6::vector)`,
+          [
+            chunks[i], 
+            JSON.stringify(metadata),  // JSONB column
+            submissionId, 
+            'mongodb_submission', 
+            i, 
+            embeddingValue
+          ]
         );
         insertedCount++;
       }
 
-      console.log(`✅ Inserted ${insertedCount} chunks into MySQL`);
+      console.log(`✅ Inserted ${insertedCount} chunks into PostgreSQL`);
 
       // Update submission status in MongoDB
       await submissions.updateOne(
@@ -205,7 +215,7 @@ class DocumentProcessor {
       submissions.countDocuments({ status: 'processing_failed' })
     ]);
 
-    const [chunksResult] = await pool.query(
+    const chunksResult = await pool.query(
       'SELECT COUNT(*) as total FROM document_chunks'
     );
 
@@ -218,7 +228,7 @@ class DocumentProcessor {
         total: pending + approved + processed + failed
       },
       chunks: {
-        total: chunksResult[0].total
+        total: parseInt(chunksResult.rows[0].total) || 0
       }
     };
   }

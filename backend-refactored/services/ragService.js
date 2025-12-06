@@ -247,7 +247,8 @@ Answer:`;
   }
 
   /**
-   * Vector similarity search with smart query expansion
+   * Vector similarity search using native pgvector
+   * This is the key improvement - the database handles similarity calculation
    */
   async vectorSearch(question, limit = 5) {
     try {
@@ -298,41 +299,42 @@ Answer:`;
       // Generate embedding for the expanded question
       const queryEmbedding = await embeddingService.generateEmbedding(expandedQuery);
       
-      // Get all chunks with embeddings
-      const [chunks] = await pool.query(`
-        SELECT id, content, embedding_vector 
-        FROM document_chunks 
-        WHERE has_embedding = TRUE
-      `);
+      if (!queryEmbedding || queryEmbedding.length === 0) {
+        console.log('[RAG] Failed to generate query embedding');
+        return [];
+      }
+      
+      // Format embedding as pgvector string
+      const embeddingStr = `[${queryEmbedding.join(',')}]`;
+      
+      // Native pgvector similarity search - the database does the heavy lifting!
+      // <=> is the cosine distance operator (1 - cosine_similarity)
+      const result = await pool.query(`
+        SELECT 
+          id,
+          content,
+          source_id,
+          metadata,
+          1 - (embedding <=> $1::vector) as similarity
+        FROM document_chunks
+        WHERE embedding IS NOT NULL
+        ORDER BY embedding <=> $1::vector
+        LIMIT $2
+      `, [embeddingStr, limit]);
+      
+      const chunks = result.rows;
       
       if (chunks.length === 0) {
         console.log('[RAG] No embedded chunks found');
         return [];
       }
       
-      console.log(`[RAG] Comparing query against ${chunks.length} chunks`);
-      
-      // Calculate similarity scores
-      const scoredChunks = chunks.map(chunk => {
-        const chunkEmbedding = JSON.parse(chunk.embedding_vector);
-        const similarity = embeddingService.cosineSimilarity(queryEmbedding, chunkEmbedding);
-        
-        return {
-          content: chunk.content,
-          similarity: similarity,
-          id: chunk.id
-        };
-      });
-      
-      // Sort by similarity and take top results
-      scoredChunks.sort((a, b) => b.similarity - a.similarity);
-      const topChunks = scoredChunks.slice(0, limit);
-      
+      console.log(`[RAG] Found ${chunks.length} chunks via vector search`);
       console.log(`[RAG] Top ${limit} similarities:`, 
-        topChunks.map(c => c.similarity.toFixed(3)).join(', '));
+        chunks.map(c => c.similarity.toFixed(3)).join(', '));
       
       // Return just the content strings (what the controller expects)
-      return topChunks.map(c => c.content);
+      return chunks.map(c => c.content);
       
     } catch (err) {
       console.error('[RAG] Vector search error:', err.message);
@@ -341,22 +343,45 @@ Answer:`;
   }
 
   /**
-   * Fallback keyword search
+   * Fallback keyword search using PostgreSQL full-text search
    */
   async keywordSearch(question, limit = 5) {
     console.log('[RAG] Using keyword search');
     
-    const keywords = question.toLowerCase().split(' ').filter(w => w.length > 3);
-    const searchPattern = `%${keywords.join('%')}%`;
+    try {
+      // PostgreSQL full-text search is more powerful than LIKE
+      const result = await pool.query(`
+        SELECT content,
+               ts_rank(to_tsvector('english', content), plainto_tsquery('english', $1)) as rank
+        FROM document_chunks
+        WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $1)
+        ORDER BY rank DESC
+        LIMIT $2
+      `, [question, limit]);
 
-    const [chunks] = await pool.query(`
-      SELECT content 
-      FROM document_chunks 
-      WHERE LOWER(content) LIKE ?
-      LIMIT ?
-    `, [searchPattern, limit]);
+      if (result.rows.length > 0) {
+        console.log(`[RAG] Full-text search found ${result.rows.length} chunks`);
+        return result.rows.map(row => row.content);
+      }
 
-    return chunks.map(chunk => chunk.content);
+      // Fallback to ILIKE if full-text search returns nothing
+      const keywords = question.toLowerCase().split(' ').filter(w => w.length > 3);
+      const searchPattern = `%${keywords.join('%')}%`;
+
+      const likeResult = await pool.query(`
+        SELECT content 
+        FROM document_chunks 
+        WHERE LOWER(content) LIKE $1
+        LIMIT $2
+      `, [searchPattern, limit]);
+
+      console.log(`[RAG] LIKE search found ${likeResult.rows.length} chunks`);
+      return likeResult.rows.map(row => row.content);
+      
+    } catch (err) {
+      console.error('[RAG] Keyword search error:', err.message);
+      return [];
+    }
   }
 }
 

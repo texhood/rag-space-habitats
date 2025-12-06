@@ -4,7 +4,7 @@ const Pricing = require('../models/Pricing');
 
 class UsageService {
   /**
-   * Tier limits configuration
+   * Tier limits configuration (fallback if database unavailable)
    */
   static LIMITS = {
     free: {
@@ -48,25 +48,27 @@ class UsageService {
    */
   static async logUsage(userId, action, metadata = {}) {
     await pool.query(
-      'INSERT INTO usage_logs (user_id, action, metadata) VALUES (?, ?, ?)',
+      'INSERT INTO usage_logs (user_id, action, metadata) VALUES ($1, $2, $3)',
       [userId, action, JSON.stringify(metadata)]
     );
 
-    // Update daily usage summary
+    // Update daily usage summary using PostgreSQL UPSERT
     const today = new Date().toISOString().split('T')[0];
     
     if (action === 'query') {
       await pool.query(
         `INSERT INTO daily_usage (user_id, date, queries) 
-         VALUES (?, ?, 1) 
-         ON DUPLICATE KEY UPDATE queries = queries + 1`,
+         VALUES ($1, $2, 1) 
+         ON CONFLICT (user_id, date) DO UPDATE 
+         SET queries = daily_usage.queries + 1`,
         [userId, today]
       );
     } else if (action === 'upload') {
       await pool.query(
         `INSERT INTO daily_usage (user_id, date, uploads) 
-         VALUES (?, ?, 1) 
-         ON DUPLICATE KEY UPDATE uploads = uploads + 1`,
+         VALUES ($1, $2, 1) 
+         ON CONFLICT (user_id, date) DO UPDATE 
+         SET uploads = daily_usage.uploads + 1`,
         [userId, today]
       );
     }
@@ -78,12 +80,12 @@ class UsageService {
   static async getTodayUsage(userId) {
     const today = new Date().toISOString().split('T')[0];
     
-    const [rows] = await pool.query(
-      'SELECT queries, uploads FROM daily_usage WHERE user_id = ? AND date = ?',
+    const result = await pool.query(
+      'SELECT queries, uploads FROM daily_usage WHERE user_id = $1 AND date = $2',
       [userId, today]
     );
 
-    return rows[0] || { queries: 0, uploads: 0 };
+    return result.rows[0] || { queries: 0, uploads: 0 };
   }
 
   /**
@@ -94,16 +96,20 @@ class UsageService {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const [rows] = await pool.query(
+    const result = await pool.query(
       `SELECT 
-        SUM(queries) as queries,
-        SUM(uploads) as uploads
+        COALESCE(SUM(queries), 0) as queries,
+        COALESCE(SUM(uploads), 0) as uploads
        FROM daily_usage 
-       WHERE user_id = ? AND date >= ?`,
+       WHERE user_id = $1 AND date >= $2`,
       [userId, startOfMonth.toISOString().split('T')[0]]
     );
 
-    return rows[0] || { queries: 0, uploads: 0 };
+    const row = result.rows[0];
+    return { 
+      queries: parseInt(row.queries) || 0, 
+      uploads: parseInt(row.uploads) || 0 
+    };
   }
 
   /**
