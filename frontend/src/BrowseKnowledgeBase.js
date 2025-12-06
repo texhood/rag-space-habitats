@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_URL from './config';
 import AppNavbar from './AppNavbar';
+import SubmitContent from './SubmitContent';
+import AdminPanel from './AdminPanel';
+import PricingPage from './PricingPage';
 import './AppNavbar.css';
 import './BrowseKnowledgeBase.css';
 
@@ -153,7 +156,7 @@ function BrowseKnowledgeBase() {
 
   const getLicenseInfo = (licenseType) => {
     const licenses = {
-      'cc-by': { icon: '🌍', label: 'CC BY 4.0' },
+      'cc-by': { icon: '🌐', label: 'CC BY 4.0' },
       'cc-by-sa': { icon: '🔄', label: 'CC BY-SA 4.0' },
       'cc-by-nc': { icon: '🚫💰', label: 'CC BY-NC 4.0' },
       'private': { icon: '🔒', label: 'Private' }
@@ -287,7 +290,7 @@ function BrowseKnowledgeBase() {
             </div>
           ) : submissions.length === 0 ? (
             <div className="no-results">
-              <span className="no-results-icon">📭</span>
+              <span className="no-results-icon">🔭</span>
               <h3>No documents found</h3>
               <p>Try adjusting your search or filters</p>
             </div>
@@ -435,6 +438,25 @@ function BrowseKnowledgeBase() {
             <p>Loading document...</p>
           </div>
         </div>
+      )}
+
+      {/* Modals from navbar actions */}
+      {showAdmin && user?.role === 'admin' && (
+        <AdminPanel onClose={() => setShowAdmin(false)} />
+      )}
+
+      {showSubmit && (
+        <SubmitContent 
+          user={user}
+          onClose={() => setShowSubmit(false)}
+        />
+      )}
+
+      {showPricing && (
+        <PricingPage
+          user={user}
+          onClose={() => setShowPricing(false)}
+        />
       )}
     </div>
   );

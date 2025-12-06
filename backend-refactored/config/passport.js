@@ -9,13 +9,13 @@ passport.use(new LocalStrategy(
   { usernameField: 'username' },
   async (username, password, done) => {
     try {
-      const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+      const result = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
       
-      if (!rows.length) {
+      if (!result.rows.length) {
         return done(null, false, { message: 'Invalid username or password' });
       }
       
-      const user = rows[0];
+      const user = result.rows[0];
       const match = await bcrypt.compare(password, user.password);
       
       if (!match) {
@@ -37,16 +37,16 @@ passport.serializeUser((user, done) => {
 // Deserialize user from session
 passport.deserializeUser(async (id, done) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT id, username, role FROM users WHERE id = ?',
+    const result = await pool.query(
+      'SELECT id, username, role FROM users WHERE id = $1',
       [id]
     );
     
-    if (!rows.length) {
+    if (!result.rows.length) {
       return done(new Error('User not found'));
     }
     
-    done(null, rows[0]);
+    done(null, result.rows[0]);
   } catch (err) {
     done(err);
   }

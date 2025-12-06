@@ -7,43 +7,43 @@ class User {
    * Find user by username
    */
   static async findByUsername(username) {
-    const [rows] = await pool.query(
-      'SELECT * FROM users WHERE username = ?',
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
       [username]
     );
-    return rows[0];
+    return result.rows[0];
   }
 
-    /**
+  /**
    * Find user by email
    */
   static async findByEmail(email) {
-    const [rows] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
       [email]
     );
-    return rows[0];
+    return result.rows[0];
   }
 
   /**
    * Find user by ID
    */
   static async findById(id) {
-    const [rows] = await pool.query(
-      'SELECT id, username, email, role, subscription_tier, subscription_status FROM users WHERE id = ?',
+    const result = await pool.query(
+      'SELECT id, username, email, role, subscription_tier, subscription_status FROM users WHERE id = $1',
       [id]
     );
-    return rows[0] || null;
+    return result.rows[0] || null;
   }
 
   /**
    * Get all users
    */
   static async findAll() {
-    const [rows] = await pool.query(
+    const result = await pool.query(
       'SELECT id, username, role, created_at FROM users ORDER BY created_at DESC'
     );
-    return rows;
+    return result.rows;
   }
 
   /**
@@ -51,41 +51,41 @@ class User {
    */
   static async create(username, password, role = 'user', email = null) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [result] = await pool.query(
-      'INSERT INTO users (username, password, role, email) VALUES (?, ?, ?, ?)',
+    const result = await pool.query(
+      'INSERT INTO users (username, password, role, email) VALUES ($1, $2, $3, $4) RETURNING id',
       [username, hashedPassword, role, email]
     );
-    return result.insertId;
+    return result.rows[0].id;
   }
 
   /**
    * Update user role
    */
   static async updateRole(id, role) {
-    const [result] = await pool.query(
-      'UPDATE users SET role = ? WHERE id = ?',
+    const result = await pool.query(
+      'UPDATE users SET role = $1 WHERE id = $2',
       [role, id]
     );
-    return result.affectedRows > 0;
+    return result.rowCount > 0;
   }
 
   /**
    * Delete user
    */
   static async delete(id) {
-    const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
-    return result.affectedRows > 0;
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    return result.rowCount > 0;
   }
 
   /**
    * Check if user exists
    */
   static async exists(username) {
-    const [rows] = await pool.query(
-      'SELECT COUNT(*) as count FROM users WHERE username = ?',
+    const result = await pool.query(
+      'SELECT COUNT(*) as count FROM users WHERE username = $1',
       [username]
     );
-    return rows[0].count > 0;
+    return parseInt(result.rows[0].count) > 0;
   }
 
   /**
@@ -97,22 +97,22 @@ class User {
       throw new Error('Invalid LLM preference. Must be: grok, claude, or both');
     }
     
-    const [result] = await pool.query(
-      'UPDATE users SET llm_preference = ? WHERE id = ?',
+    const result = await pool.query(
+      'UPDATE users SET llm_preference = $1 WHERE id = $2',
       [preference, id]
     );
-    return result.affectedRows > 0;
+    return result.rowCount > 0;
   }
 
   /**
    * Get user's LLM preference
    */
   static async getLLMPreference(id) {
-    const [rows] = await pool.query(
-      'SELECT llm_preference FROM users WHERE id = ?',
+    const result = await pool.query(
+      'SELECT llm_preference FROM users WHERE id = $1',
       [id]
     );
-    return rows[0]?.llm_preference || 'grok';
+    return result.rows[0]?.llm_preference || 'grok';
   }
 }
 

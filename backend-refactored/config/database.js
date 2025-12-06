@@ -1,26 +1,31 @@
 // config/database.js
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'rag_user',
-  port: process.env.DB_PORT || 3306,
-  password: process.env.DB_PASSWORD || 'Supervisor1956',
-  database: process.env.DB_NAME || 'space_habitats_rag',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' 
+    ? { rejectUnauthorized: false } 
+    : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
 });
 
 // Test connection on startup
-pool.getConnection()
-  .then(connection => {
-    console.log('✅ Database connected successfully');
-    connection.release();
+pool.query('SELECT NOW()')
+  .then(() => {
+    console.log('✅ PostgreSQL connected successfully');
   })
   .catch(err => {
-    console.error('❌ Database connection failed:', err.message);
+    console.error('❌ PostgreSQL connection failed:', err.message);
     process.exit(1);
   });
+
+// Helper to make PostgreSQL results more MySQL-like for easier migration
+// This wrapper handles the common pattern of expecting [rows] from mysql2
+pool.queryRows = async function(text, params) {
+  const result = await this.query(text, params);
+  return [result.rows, result];
+};
 
 module.exports = pool;

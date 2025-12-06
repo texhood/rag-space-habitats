@@ -31,3 +31,20 @@ Thumbs.db
 # Uploads
 uploads/*
 !uploads/.gitkeep
+
+# Data migration
+postgres-migration/
+migrations/
+
+# Miscellaneous
+check_documents.js
+check-submission.js
+cleanup_embeddings.sql
+MIGRATION_GUIDE.md
+reprocess_all.js
+reset_submissions.js
+verify-status.js
+verify-submissions.js
+fix-api-urls.js
+restore_working_components.sh
+export-mysql.js

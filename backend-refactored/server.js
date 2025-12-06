@@ -55,10 +55,6 @@ app.post('/api/subscriptions/webhook',
           );
           
           console.log(`[Stripe] User ${session.metadata.user_id} upgraded to ${session.metadata.tier_key}`);
-          
-          // Force passport to reload user on next request
-          // (This will happen automatically when user makes next authenticated request)
-          
           break;
         }
 
@@ -88,8 +84,9 @@ app.post('/api/subscriptions/webhook',
           const userId = subscription.metadata.user_id;
           
           if (userId) {
+            // PostgreSQL parameterized query
             await pool.query(
-              'UPDATE users SET subscription_tier = ?, subscription_status = ? WHERE id = ?',
+              'UPDATE users SET subscription_tier = $1, subscription_status = $2 WHERE id = $3',
               ['free', 'cancelled', parseInt(userId)]
             );
             
@@ -150,16 +147,6 @@ app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// // Debug session
-// app.use((req, res, next) => {
-//   if (req.path.includes('/auth/') || req.path.includes('/rag/')) {
-//     console.log(`[Session] ${req.method} ${req.path}`);
-//     console.log(`[Session] Authenticated: ${req.isAuthenticated ? req.isAuthenticated() : 'N/A'}`);
-//     console.log(`[Session] User: ${req.user?.username || 'None'}`);
-//   }
-//   next();
-// });
-
 // Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -175,7 +162,8 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: 'PostgreSQL + pgvector'
   });
 });
 
@@ -191,7 +179,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rag', ragRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
-app.use('/api', subscriptionRoutes); // For /pricing, /beta-mode, /subscriptions/create-checkout
+app.use('/api', subscriptionRoutes);
 
 // Legacy compatibility routes
 app.post('/register', (req, res, next) => {
@@ -240,19 +228,19 @@ async function startServer() {
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Database: PostgreSQL with pgvector`);
       
       const embeddingService = require('./services/embeddingService');
       embeddingService.checkHealth()
         .then(healthy => {
           if (healthy) {
-            console.log('✅ Embedding service ready on port 5001');
+            console.log('✅ Embedding service ready');
           } else {
             console.log('⚠️  Embedding service not available - will use keyword search fallback');
           }
         })
         .catch(err => {
           console.log('⚠️  Could not connect to embedding service:', err.message);
-          console.log('   Start it with: python python-services/embedding_server.py');
         });
     });
   } catch (err) {

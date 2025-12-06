@@ -6,28 +6,28 @@ class Pricing {
    * Get tier info with pricing and features
    */
   static async getByTierKey(tierKey) {
-    const [tiers] = await pool.query(`
+    const tierResult = await pool.query(`
       SELECT t.*, p.price, p.currency, p.billing_period, p.stripe_price_id
       FROM subscription_tiers t
       LEFT JOIN tier_pricing p ON t.id = p.tier_id AND p.is_active = TRUE
-      WHERE t.tier_key = ? AND t.is_active = TRUE
+      WHERE t.tier_key = $1 AND t.is_active = TRUE
       LIMIT 1
     `, [tierKey]);
 
-    if (tiers.length === 0) return null;
+    if (tierResult.rows.length === 0) return null;
 
-    const tier = tiers[0];
+    const tier = tierResult.rows[0];
 
     // Get features for this tier
-    const [features] = await pool.query(`
+    const featuresResult = await pool.query(`
       SELECT feature_key, feature_value
       FROM tier_features
-      WHERE tier_id = ?
+      WHERE tier_id = $1
     `, [tier.id]);
 
     // Convert features array to object
     const featureObj = {};
-    features.forEach(f => {
+    featuresResult.rows.forEach(f => {
       const key = f.feature_key;
       let value = f.feature_value;
       
@@ -51,7 +51,7 @@ class Pricing {
    * Get all active tiers with pricing
    */
   static async getAllTiers() {
-    const [tiers] = await pool.query(`
+    const tierResult = await pool.query(`
       SELECT t.*, p.price, p.currency, p.billing_period, p.stripe_price_id
       FROM subscription_tiers t
       LEFT JOIN tier_pricing p ON t.id = p.tier_id AND p.is_active = TRUE
@@ -61,15 +61,15 @@ class Pricing {
 
     // Get features for all tiers
     const tiersWithFeatures = [];
-    for (const tier of tiers) {
-      const [features] = await pool.query(`
+    for (const tier of tierResult.rows) {
+      const featuresResult = await pool.query(`
         SELECT feature_key, feature_value
         FROM tier_features
-        WHERE tier_id = ?
+        WHERE tier_id = $1
       `, [tier.id]);
 
       const featureObj = {};
-      features.forEach(f => {
+      featuresResult.rows.forEach(f => {
         const key = f.feature_key;
         let value = f.feature_value;
         
@@ -97,9 +97,11 @@ class Pricing {
   static async updatePrice(tierKey, price, stripeId = null) {
     await pool.query(`
       UPDATE tier_pricing p
-      JOIN subscription_tiers t ON p.tier_id = t.id
-      SET p.price = ?, p.stripe_price_id = ?
-      WHERE t.tier_key = ? AND p.is_active = TRUE
+      SET price = $1, stripe_price_id = $2
+      FROM subscription_tiers t
+      WHERE p.tier_id = t.id 
+        AND t.tier_key = $3 
+        AND p.is_active = TRUE
     `, [price, stripeId, tierKey]);
   }
 
@@ -113,9 +115,11 @@ class Pricing {
 
     await pool.query(`
       UPDATE tier_features f
-      JOIN subscription_tiers t ON f.tier_id = t.id
-      SET f.feature_value = ?
-      WHERE t.tier_key = ? AND f.feature_key = ?
+      SET feature_value = $1
+      FROM subscription_tiers t
+      WHERE f.tier_id = t.id 
+        AND t.tier_key = $2 
+        AND f.feature_key = $3
     `, [valueStr, tierKey, featureKey]);
   }
 

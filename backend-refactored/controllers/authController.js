@@ -132,18 +132,18 @@ class AuthController {
     }
 
     try {
-      // Fetch fresh user data from database
+      // Fetch fresh user data from database (PostgreSQL)
       const pool = require('../config/database');
-      const [users] = await pool.query(
-        'SELECT id, username, email, role, subscription_tier, subscription_status FROM users WHERE id = ?',
+      const result = await pool.query(
+        'SELECT id, username, email, role, subscription_tier, subscription_status FROM users WHERE id = $1',
         [req.user.id]
       );
       
-      if (users.length === 0) {
+      if (result.rows.length === 0) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const freshUser = users[0];
+      const freshUser = result.rows[0];
       
       console.log(`[Auth] Returning user data for ${freshUser.username}:`, {
         tier: freshUser.subscription_tier,

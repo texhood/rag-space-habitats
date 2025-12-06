@@ -6,30 +6,40 @@ class SystemSettings {
    * Get a setting by key
    */
   static async get(key) {
-    const [rows] = await pool.query(
-      'SELECT setting_value FROM system_settings WHERE setting_key = ?',
+    const result = await pool.query(
+      'SELECT setting_value FROM system_settings WHERE setting_key = $1',
       [key]
     );
     
-    if (rows.length === 0) return null;
+    if (result.rows.length === 0) return null;
     
-    // Parse JSON properly - MariaDB returns JSON as object
-    const value = rows[0].setting_value;
-    return typeof value === 'string' ? JSON.parse(value) : value;
+    // PostgreSQL JSONB returns as object, TEXT needs parsing
+    const value = result.rows[0].setting_value;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
   }
 
   /**
-   * Update a setting
+   * Update a setting (upsert)
    */
   static async set(key, value, updatedBy) {
+    // For PostgreSQL JSONB, we can store objects directly
+    // But to maintain compatibility, we'll use JSON string
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
     
     await pool.query(
       `INSERT INTO system_settings (setting_key, setting_value, updated_by)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE 
-         setting_value = VALUES(setting_value),
-         updated_by = VALUES(updated_by)`,
+       VALUES ($1, $2, $3)
+       ON CONFLICT (setting_key) DO UPDATE 
+       SET setting_value = EXCLUDED.setting_value,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = NOW()`,
       [key, jsonValue, updatedBy]
     );
   }
@@ -81,14 +91,24 @@ class SystemSettings {
    * Get all settings
    */
   static async getAll() {
-    const [rows] = await pool.query(
+    const result = await pool.query(
       'SELECT setting_key, setting_value, description, updated_at FROM system_settings'
     );
     
-    return rows.map(row => ({
-      ...row,
-      setting_value: typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value
-    }));
+    return result.rows.map(row => {
+      let value = row.setting_value;
+      if (typeof value === 'string') {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          // Keep as string if not valid JSON
+        }
+      }
+      return {
+        ...row,
+        setting_value: value
+      };
+    });
   }
 }
 

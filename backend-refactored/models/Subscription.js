@@ -6,10 +6,11 @@ class Subscription {
    * Create a new subscription
    */
   static async create(userId, tier, stripeData = {}) {
-    const [result] = await pool.query(
+    const result = await pool.query(
       `INSERT INTO subscriptions 
        (user_id, tier, status, stripe_customer_id, stripe_subscription_id, stripe_price_id, current_period_start, current_period_end) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
       [
         userId,
         tier,
@@ -24,36 +25,41 @@ class Subscription {
 
     // Update user's subscription tier
     await pool.query(
-      'UPDATE users SET subscription_tier = ?, subscription_status = ? WHERE id = ?',
+      'UPDATE users SET subscription_tier = $1, subscription_status = $2 WHERE id = $3',
       [tier, 'active', userId]
     );
 
-    return result.insertedId;
+    return result.rows[0].id;
   }
 
   /**
    * Get user's current subscription
    */
   static async getByUserId(userId) {
-    const [rows] = await pool.query(
-      'SELECT * FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+    const result = await pool.query(
+      'SELECT * FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
       [userId]
     );
-    return rows[0] || null;
+    return result.rows[0] || null;
   }
 
   /**
    * Update subscription
    */
   static async update(subscriptionId, updates) {
-    const setClause = Object.keys(updates)
-      .map(key => `${key} = ?`)
+    const keys = Object.keys(updates);
+    const values = Object.values(updates);
+    
+    // Build parameterized SET clause: "key1 = $1, key2 = $2, ..."
+    const setClause = keys
+      .map((key, idx) => `${key} = $${idx + 1}`)
       .join(', ');
     
-    const values = [...Object.values(updates), subscriptionId];
+    // subscriptionId is the last parameter
+    values.push(subscriptionId);
 
     await pool.query(
-      `UPDATE subscriptions SET ${setClause} WHERE id = ?`,
+      `UPDATE subscriptions SET ${setClause} WHERE id = $${values.length}`,
       values
     );
   }
@@ -63,12 +69,12 @@ class Subscription {
    */
   static async cancel(userId) {
     await pool.query(
-      'UPDATE subscriptions SET status = ?, cancel_at_period_end = TRUE WHERE user_id = ?',
+      'UPDATE subscriptions SET status = $1, cancel_at_period_end = TRUE WHERE user_id = $2',
       ['canceling', userId]
     );
 
     await pool.query(
-      'UPDATE users SET subscription_status = ? WHERE id = ?',
+      'UPDATE users SET subscription_status = $1 WHERE id = $2',
       ['canceling', userId]
     );
   }
@@ -85,14 +91,17 @@ class Subscription {
 
     const conditions = [];
     const values = [];
+    let paramCount = 0;
 
     if (filters.tier) {
-      conditions.push('s.tier = ?');
+      paramCount++;
+      conditions.push(`s.tier = $${paramCount}`);
       values.push(filters.tier);
     }
 
     if (filters.status) {
-      conditions.push('s.status = ?');
+      paramCount++;
+      conditions.push(`s.status = $${paramCount}`);
       values.push(filters.status);
     }
 
@@ -102,15 +111,15 @@ class Subscription {
 
     query += ' ORDER BY s.created_at DESC';
 
-    const [rows] = await pool.query(query, values);
-    return rows;
+    const result = await pool.query(query, values);
+    return result.rows;
   }
 
   /**
    * Get subscription statistics
    */
   static async getStats() {
-    const [stats] = await pool.query(`
+    const result = await pool.query(`
       SELECT 
         tier,
         COUNT(*) as count,
@@ -119,7 +128,7 @@ class Subscription {
       GROUP BY tier
     `);
 
-    return stats;
+    return result.rows;
   }
 }
 

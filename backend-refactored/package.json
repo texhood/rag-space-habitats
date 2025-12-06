@@ -1,7 +1,7 @@
 {
   "name": "space-habitats-rag-backend",
-  "version": "2.0.0",
-  "description": "Space Habitats RAG with AdminJS",
+  "version": "3.0.0",
+  "description": "Space Habitats RAG with PostgreSQL + pgvector",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -20,10 +20,10 @@
     "mammoth": "^1.11.0",
     "mongodb": "^7.0.0",
     "multer": "^2.0.2",
-    "mysql2": "^3.6.5",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pdf-parse": "^1.1.1",
+    "pg": "^8.16.3",
     "stripe": "^19.3.0"
   },
   "devDependencies": {

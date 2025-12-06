@@ -126,7 +126,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const subscription = await stripe.subscriptions.retrieve(session.subscription);
         
         // Update user subscription in database
-        const pool = require('../config/database');
         const Subscription = require('../models/Subscription');
         
         await Subscription.create(
@@ -174,9 +173,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         if (userId) {
           const pool = require('../config/database');
           
-          // Downgrade user to free tier
+          // Downgrade user to free tier (PostgreSQL parameterized query)
           await pool.query(
-            'UPDATE users SET subscription_tier = ?, subscription_status = ? WHERE id = ?',
+            'UPDATE users SET subscription_tier = $1, subscription_status = $2 WHERE id = $3',
             ['free', 'cancelled', parseInt(userId)]
           );
           

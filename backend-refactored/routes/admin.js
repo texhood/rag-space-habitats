@@ -7,6 +7,7 @@ const documentProcessor = require('../services/documentProcessor');
 const SystemSettings = require('../models/SystemSettings');
 const UsageService = require('../services/usageService');
 const Pricing = require('../models/Pricing');
+const pool = require('../config/database');
 
 // Admin authentication middleware
 function isAdmin(req, res, next) {
@@ -150,27 +151,28 @@ router.get('/processing-stats', isAdmin, async (req, res) => {
   }
 });
 
-const pool = require('../config/database');
-
 // GET /api/admin/embedding-status - Check embedding service status
-// GET /api/admin/embedding-status
 router.get('/embedding-status', isAdmin, async (req, res) => {
   try {
     const embeddingService = require('../services/embeddingService');
     const healthy = await embeddingService.checkHealth();
 
-    // Count chunks with/without embeddings
-    const [stats] = await pool.query(`
+    // Count chunks with/without embeddings (pgvector style)
+    const stats = await pool.query(`
       SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN has_embedding = TRUE THEN 1 ELSE 0 END) as embedded,
-        SUM(CASE WHEN has_embedding = FALSE THEN 1 ELSE 0 END) as not_embedded
+        SUM(CASE WHEN embedding IS NOT NULL THEN 1 ELSE 0 END) as embedded,
+        SUM(CASE WHEN embedding IS NULL THEN 1 ELSE 0 END) as not_embedded
       FROM document_chunks
     `);
 
     res.json({
       server_healthy: healthy,
-      chunks: stats[0]
+      chunks: {
+        total: parseInt(stats.rows[0].total) || 0,
+        embedded: parseInt(stats.rows[0].embedded) || 0,
+        not_embedded: parseInt(stats.rows[0].not_embedded) || 0
+      }
     });
   } catch (err) {
     console.error('Embedding status error:', err);
@@ -179,7 +181,6 @@ router.get('/embedding-status', isAdmin, async (req, res) => {
 });
 
 // POST /api/admin/embed-all - Generate embeddings for all chunks
-// POST /api/admin/embed-all
 router.post('/embed-all', isAdmin, async (req, res) => {
   try {
     const embeddingService = require('../services/embeddingService');
@@ -188,17 +189,19 @@ router.post('/embed-all', isAdmin, async (req, res) => {
     if (!healthy) {
       return res.status(503).json({
         error: 'Embedding service not available',
-        details: 'Make sure Python embedding server is running on port 5001'
+        details: 'Make sure Python embedding server is running on port 5001 or HuggingFace API key is set'
       });
     }
 
-    // Get chunks without embeddings
-    const [chunks] = await pool.query(`
+    // Get chunks without embeddings (pgvector style)
+    const result = await pool.query(`
       SELECT id, content 
       FROM document_chunks 
-      WHERE has_embedding = FALSE
+      WHERE embedding IS NULL
       LIMIT 500
     `);
+
+    const chunks = result.rows;
 
     if (chunks.length === 0) {
       return res.json({
@@ -215,12 +218,15 @@ router.post('/embed-all', isAdmin, async (req, res) => {
 
     let updated = 0;
     for (let i = 0; i < chunks.length; i++) {
-      const embeddingJson = JSON.stringify(embeddings[i]);
-      await pool.query(
-        'UPDATE document_chunks SET embedding_vector = ?, has_embedding = TRUE WHERE id = ?',
-        [embeddingJson, chunks[i].id]
-      );
-      updated++;
+      if (embeddings[i] && Array.isArray(embeddings[i])) {
+        // Convert to pgvector format
+        const embeddingStr = `[${embeddings[i].join(',')}]`;
+        await pool.query(
+          'UPDATE document_chunks SET embedding = $1::vector WHERE id = $2',
+          [embeddingStr, chunks[i].id]
+        );
+        updated++;
+      }
     }
 
     res.json({
@@ -255,13 +261,13 @@ router.get('/beta-mode', isAdmin, async (req, res) => {
     }
     
     // Count beta users
-    const [betaUsers] = await pool.query(
+    const betaUsers = await pool.query(
       'SELECT COUNT(*) as count FROM users WHERE is_beta_user = TRUE'
     );
     
     res.json({
       ...betaConfig,
-      beta_users_count: betaUsers[0].count,
+      beta_users_count: parseInt(betaUsers.rows[0].count) || 0,
       tier_limits: tierLimits
     });
   } catch (err) {
@@ -307,7 +313,7 @@ router.post('/beta-mode', isAdmin, async (req, res) => {
 // GET /api/admin/beta-users - Get list of beta users
 router.get('/beta-users', isAdmin, async (req, res) => {
   try {
-    const [users] = await pool.query(`
+    const result = await pool.query(`
       SELECT 
         u.id,
         u.username,
@@ -323,7 +329,7 @@ router.get('/beta-users', isAdmin, async (req, res) => {
       ORDER BY u.beta_enrolled_at DESC
     `);
     
-    res.json({ beta_users: users });
+    res.json({ beta_users: result.rows });
   } catch (err) {
     console.error('Beta users fetch error:', err);
     res.status(500).json({ error: err.message });
@@ -339,7 +345,7 @@ router.post('/grant-beta/:userId', isAdmin, async (req, res) => {
            beta_enrolled_at = NOW(),
            subscription_tier = 'beta',
            subscription_status = 'active'
-       WHERE id = ?`,
+       WHERE id = $1`,
       [req.params.userId]
     );
     
@@ -351,36 +357,6 @@ router.post('/grant-beta/:userId', isAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error('Grant beta error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/admin/beta-mode - Get beta mode status
-router.get('/beta-mode', isAdmin, async (req, res) => {
-  try {
-    const betaConfig = await SystemSettings.getBetaMode();
-    
-    // Get pricing from UsageService.LIMITS
-    const allLimits = {
-      free: UsageService.LIMITS.free,
-      basic: UsageService.LIMITS.basic,
-      pro: UsageService.LIMITS.pro,
-      enterprise: UsageService.LIMITS.enterprise,
-      beta: UsageService.LIMITS.beta
-    };
-    
-    // Count beta users
-    const [betaUsers] = await pool.query(
-      'SELECT COUNT(*) as count FROM users WHERE is_beta_user = TRUE'
-    );
-    
-    res.json({
-      ...betaConfig,
-      beta_users_count: betaUsers[0].count,
-      tier_limits: allLimits  // Include all tier pricing
-    });
-  } catch (err) {
-    console.error('Beta mode fetch error:', err);
     res.status(500).json({ error: err.message });
   }
 });
