@@ -12,6 +12,9 @@ package-lock.json
 .env.local
 .env.production
 
+# Markdown files
+*.md
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -23,3 +26,7 @@ yarn-error.log*
 # IDE
 .vscode/
 .idea/
+
+# Miscellaneous
+fix-api-urls.js
+restore_working_components.sh

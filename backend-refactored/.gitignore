@@ -12,6 +12,9 @@ logs/
 *.log
 npm-debug.log*
 
+# Markdown files
+*.md
+
 # Python
 __pycache__/
 *.py[cod]
@@ -40,11 +43,10 @@ migrations/
 check_documents.js
 check-submission.js
 cleanup_embeddings.sql
-MIGRATION_GUIDE.md
 reprocess_all.js
 reset_submissions.js
 verify-status.js
 verify-submissions.js
-fix-api-urls.js
-restore_working_components.sh
 export-mysql.js
+import-postgres.js
+cookies.txt

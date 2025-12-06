@@ -14,3 +14,9 @@ rag-app-frontend/build/
 
 # CAD models
 CAD_Models/
+
+# Folders
+migration/
+
+# Miscellaneous
+cookies.txt
