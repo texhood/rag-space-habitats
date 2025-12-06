@@ -9,7 +9,7 @@ passport.use(new LocalStrategy(
   { usernameField: 'username' },
   async (username, password, done) => {
     try {
-      const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+      const result = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
       
       if (!result.rows.length) {
         return done(null, false, { message: 'Invalid username or password' });
