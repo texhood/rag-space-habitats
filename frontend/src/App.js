@@ -1,6 +1,6 @@
-// App.js
+// App.js - With Conversation Support
 import API_URL from './config';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
@@ -37,6 +37,17 @@ function Dashboard() {
   // LLM preference state
   const [llmPreference, setLlmPreference] = useState('grok');
   const [availableLLMs, setAvailableLLMs] = useState({ grok: true, claude: false });
+
+  // =====================
+  // CONVERSATION STATE - NEW
+  // =====================
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to bottom when conversation updates
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversationHistory]);
 
   useEffect(() => {
     checkAuth();
@@ -144,6 +155,7 @@ function Dashboard() {
       });
       setUser(null);
       setResponse('');
+      setConversationHistory([]); // Clear conversation on logout
       navigate('/'); // Redirect to landing page after logout
     } catch (err) {
       console.error('Logout error:', err);
@@ -166,24 +178,56 @@ function Dashboard() {
     }
   };
 
+  // =====================
+  // UPDATED handleAsk WITH CONVERSATION HISTORY
+  // =====================
   const handleAsk = async (e) => {
     e.preventDefault();
     if (!question.trim()) return;
 
     setLoading(true);
-    setResponse('');
 
     try {
       const res = await axios.post(`${API_URL}/api/rag/ask`, {
-        question: question
+        question: question,
+        conversationHistory: conversationHistory  // Send conversation history
       }, { withCredentials: true });
 
+      // Add this exchange to history
+      const newHistory = [
+        ...conversationHistory,
+        { role: 'user', content: question },
+        { role: 'assistant', content: res.data.answer }
+      ];
+      setConversationHistory(newHistory);
+
+      // Keep response for backward compatibility
       setResponse(res.data.answer);
+      
+      // Clear input for next question
+      setQuestion('');
+
     } catch (err) {
-      setResponse('Error: ' + (err.response?.data?.error || err.message));
+      const errorMsg = 'Error: ' + (err.response?.data?.error || err.message);
+      setResponse(errorMsg);
+      // Also add error to conversation
+      setConversationHistory(prev => [
+        ...prev,
+        { role: 'user', content: question },
+        { role: 'assistant', content: errorMsg }
+      ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // =====================
+  // NEW: Start New Conversation
+  // =====================
+  const startNewConversation = () => {
+    setConversationHistory([]);
+    setResponse('');
+    setQuestion('');
   };
 
   return (
@@ -200,7 +244,7 @@ function Dashboard() {
       <main className="App-main">
         {user ? (
           <>
-            {/* LLM SELECTOR */}
+            {/* LLM SELECTOR + NEW CONVERSATION BUTTON */}
             <div className="llm-selector">
               <label>AI Model:</label>
               <div className="llm-options">
@@ -232,15 +276,77 @@ function Dashboard() {
                   Current: <strong>{llmPreference.charAt(0).toUpperCase() + llmPreference.slice(1)}</strong>
                 </span>
               )}
+              
+              {/* NEW CONVERSATION BUTTON */}
+              <button 
+                onClick={startNewConversation}
+                className="new-conversation-btn"
+                disabled={conversationHistory.length === 0}
+                title="Start a new conversation"
+              >
+                🔄 New Conversation
+              </button>
             </div>
 
             <div className="chat-container">
+              {/* ===================== */}
+              {/* CONVERSATION DISPLAY - NEW */}
+              {/* ===================== */}
+              {conversationHistory.length > 0 && (
+                <div className="conversation-container">
+                  <div className="conversation-header">
+                    <span className="conversation-stats">
+                      {conversationHistory.length / 2} exchange{conversationHistory.length > 2 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="conversation-thread">
+                    {conversationHistory.map((msg, idx) => (
+                      <div key={idx} className={`message ${msg.role}`}>
+                        <div className="message-role">
+                          {msg.role === 'user' ? '👤 You' : '🤖 Assistant'}
+                        </div>
+                        <div className="message-content">
+                          {msg.role === 'assistant' ? (
+                            <ReactMarkdown
+                              remarkPlugins={[remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                            >
+                              {msg.content}
+                            </ReactMarkdown>
+                          ) : (
+                            <p>{msg.content}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Loading indicator */}
+                    {loading && (
+                      <div className="message assistant loading">
+                        <div className="message-role">🤖 Assistant</div>
+                        <div className="message-content">Thinking...</div>
+                      </div>
+                    )}
+                    {/* Auto-scroll anchor */}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state when no conversation */}
+              {conversationHistory.length === 0 && !loading && (
+                <div className="empty-conversation">
+                  <p>🚀 Ask a question about space habitats to start a conversation.</p>
+                  <p className="hint">Try: "What is the recommended rotation rate for artificial gravity?"</p>
+                </div>
+              )}
+
+              {/* Question input form */}
               <form onSubmit={handleAsk} className="question-form">
                 <input
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask about space habitats..."
+                  placeholder={conversationHistory.length > 0 ? "Ask a follow-up question..." : "Ask about space habitats..."}
                   className="question-input"
                   disabled={loading}
                 />
@@ -248,20 +354,6 @@ function Dashboard() {
                   {loading ? 'Thinking...' : 'Ask'}
                 </button>
               </form>
-
-              {response && (
-                <div className="response-container">
-                  <h3>Response:</h3>
-                  <div className="response-text">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                    >
-                      {response}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              )}
             </div>
           </>
         ) : (

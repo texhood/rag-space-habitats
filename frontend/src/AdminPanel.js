@@ -20,6 +20,13 @@ function AdminPanel({ onClose }) {
   const [viewingDocument, setViewingDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Crawler state - ADD THESE
+  const [crawlerStatus, setCrawlerStatus] = useState(null);
+  const [crawlerSettings, setCrawlerSettings] = useState(null);
+  const [crawlerHistory, setCrawlerHistory] = useState([]);
+  const [crawlerStats, setCrawlerStats] = useState(null);
+  const [newSearchTerm, setNewSearchTerm] = useState('');
 
   useEffect(() => {
     if (activeTab === 'users') {
@@ -37,6 +44,11 @@ function AdminPanel({ onClose }) {
       fetchBetaMode();
     } else if (activeTab === 'pricing') {
       fetchPricing();
+    } else if (activeTab === 'crawler') {  // ADD THIS
+      fetchCrawlerStatus();
+      fetchCrawlerSettings();
+      fetchCrawlerHistory();
+      fetchCrawlerStats();
     }
   }, [activeTab]);
 
@@ -170,6 +182,168 @@ function AdminPanel({ onClose }) {
       setLoading(false);
     }
   };
+
+  // =====================
+  // CRAWLER FETCH FUNCTIONS - ADD THESE
+  // =====================
+
+  const fetchCrawlerStatus = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(`${API_URL}/api/crawler/status`, {
+        withCredentials: true
+      });
+      setCrawlerStatus(res.data);
+    } catch (err) {
+      console.error('Failed to fetch crawler status:', err);
+      setError('Failed to load crawler status');
+      setCrawlerStatus(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCrawlerSettings = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/crawler/settings`, {
+        withCredentials: true
+      });
+      setCrawlerSettings(res.data);
+    } catch (err) {
+      console.error('Failed to fetch crawler settings:', err);
+      setCrawlerSettings(null);
+    }
+  };
+
+  const fetchCrawlerHistory = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/crawler/history?limit=20`, {
+        withCredentials: true
+      });
+      setCrawlerHistory(res.data.documents || []);
+    } catch (err) {
+      console.error('Failed to fetch crawler history:', err);
+      setCrawlerHistory([]);
+    }
+  };
+
+  const fetchCrawlerStats = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/crawler/stats`, {
+        withCredentials: true
+      });
+      setCrawlerStats(res.data);
+    } catch (err) {
+      console.error('Failed to fetch crawler stats:', err);
+      setCrawlerStats(null);
+    }
+  };
+
+  // =====================
+  // CRAWLER HANDLER FUNCTIONS - ADD THESE
+  // =====================
+
+  const handleToggleCrawler = async () => {
+    const enable = !crawlerStatus?.enabled;
+    const action = enable ? 'enable' : 'disable';
+    
+    if (!window.confirm(`${enable ? 'Enable' : 'Disable'} the document crawler?`)) {
+      return;
+    }
+    
+    try {
+      const res = await axios.post(`${API_URL}/api/crawler/toggle`, {}, {
+        withCredentials: true
+      });
+      alert(res.data.message);
+      fetchCrawlerStatus();
+    } catch (err) {
+      alert('Failed to toggle crawler: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleRunCrawler = async () => {
+    if (!window.confirm('Run the crawler now? This will fetch documents from NASA NTRS and arXiv.')) {
+      return;
+    }
+    
+    try {
+      const res = await axios.post(`${API_URL}/api/crawler/run`, {}, {
+        withCredentials: true
+      });
+      alert(res.data.message + '\n\nCheck server logs for progress.');
+      fetchCrawlerStatus();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        alert('Crawler is already running!');
+      } else {
+        alert('Failed to start crawler: ' + (err.response?.data?.error || err.message));
+      }
+    }
+  };
+
+  const handleStopCrawler = async () => {
+    if (!window.confirm('Stop the crawler? It will finish the current document before stopping.')) {
+      return;
+    }
+    
+    try {
+      const res = await axios.post(`${API_URL}/api/crawler/stop`, {}, {
+        withCredentials: true
+      });
+      alert(res.data.message);
+      fetchCrawlerStatus();
+    } catch (err) {
+      alert('Failed to stop crawler: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleUpdateDailyLimit = async (newLimit) => {
+    try {
+      await axios.patch(`${API_URL}/api/crawler/settings`, 
+        { dailyLimit: parseInt(newLimit) },
+        { withCredentials: true }
+      );
+      fetchCrawlerSettings();
+      fetchCrawlerStatus();
+    } catch (err) {
+      alert('Failed to update limit: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleAddSearchTerm = async () => {
+    if (!newSearchTerm.trim()) return;
+    
+    try {
+      const res = await axios.post(`${API_URL}/api/crawler/search-terms`,
+        { terms: [newSearchTerm.trim()] },
+        { withCredentials: true }
+      );
+      alert(res.data.message);
+      setNewSearchTerm('');
+      fetchCrawlerSettings();
+    } catch (err) {
+      alert('Failed to add term: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleRemoveSearchTerm = async (term) => {
+    if (!window.confirm(`Remove search term "${term}"?`)) return;
+    
+    try {
+      await axios.delete(`${API_URL}/api/crawler/search-terms/${encodeURIComponent(term)}`, {
+        withCredentials: true
+      });
+      fetchCrawlerSettings();
+    } catch (err) {
+      alert('Failed to remove term: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  // =====================
+  // EXISTING HANDLER FUNCTIONS
+  // =====================
 
   const updateUserRole = async (userId, newRole) => {
     try {
@@ -338,6 +512,10 @@ function AdminPanel({ onClose }) {
     }
   };
 
+  // =====================
+  // RENDER
+  // =====================
+
   return (
     <div className="admin-panel">
       <div className="admin-header">
@@ -378,6 +556,12 @@ function AdminPanel({ onClose }) {
             ⚙️ Processing
           </button>
           <button 
+            className={activeTab === 'crawler' ? 'active' : ''}
+            onClick={() => setActiveTab('crawler')}
+          >
+            🕷️ Crawler
+          </button>
+          <button 
             className={activeTab === 'pricing' ? 'active' : ''}
             onClick={() => setActiveTab('pricing')}
           >
@@ -399,22 +583,18 @@ function AdminPanel({ onClose }) {
             {loading && <p>Loading users...</p>}
             
             {error && (
-              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px', marginBottom: '15px' }}>
-                {error}
-              </div>
+              <div className="message error">{error}</div>
             )}
             
-            {!loading && !error && users.length === 0 && (
-              <p>No users found.</p>
-            )}
-            
-            {!loading && !error && users.length > 0 && (
-              <table className="admin-table">
+            {!loading && users.length > 0 && (
+              <table className="users-table">
                 <thead>
                   <tr>
                     <th>ID</th>
                     <th>Username</th>
+                    <th>Email</th>
                     <th>Role</th>
+                    <th>Tier</th>
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -424,20 +604,25 @@ function AdminPanel({ onClose }) {
                     <tr key={user.id}>
                       <td>{user.id}</td>
                       <td>{user.username}</td>
+                      <td>{user.email}</td>
                       <td>
-                        <select
-                          value={user.role}
-                          onChange={(e) => updateUserRole(user.id, e.target.value)}
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                        <span className={`role-badge ${user.role}`}>
+                          {user.role}
+                        </span>
                       </td>
+                      <td>{user.subscription_tier || 'free'}</td>
                       <td>{new Date(user.created_at).toLocaleDateString()}</td>
                       <td>
-                        <button
+                        <button 
+                          className="btn-small"
+                          onClick={() => updateUserRole(user.id, user.role === 'admin' ? 'user' : 'admin')}
+                        >
+                          Toggle Role
+                        </button>
+                        <button 
+                          className="btn-small btn-danger"
                           onClick={() => deleteUser(user.id)}
-                          className="delete-btn"
+                          disabled={user.role === 'admin'}
                         >
                           Delete
                         </button>
@@ -447,90 +632,67 @@ function AdminPanel({ onClose }) {
                 </tbody>
               </table>
             )}
+            
+            {!loading && users.length === 0 && !error && (
+              <p>No users found.</p>
+            )}
           </div>
         )}
 
         {/* ANALYTICS TAB */}
         {activeTab === 'analytics' && (
           <div className="admin-section">
-            <h3>Analytics (Last 7 Days)</h3>
+            <h3>Analytics Dashboard</h3>
             
             {loading && <p>Loading analytics...</p>}
             
-            {error && (
-              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
-                {error}
-              </div>
-            )}
+            {error && <div className="message error">{error}</div>}
             
             {!loading && analytics && (
-              <>
-                <div className="stats-grid">
-                  <div className="stat-card">
-                    <div className="stat-value">{analytics.total_queries || 0}</div>
-                    <div className="stat-label">Total Queries</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">{analytics.active_users || 0}</div>
-                    <div className="stat-label">Active Users</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">
-                      {analytics.avg_response_time ? Math.round(analytics.avg_response_time) : 0}ms
-                    </div>
-                    <div className="stat-label">Avg Response Time</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">
-                      {(() => {
-                        const chunks = analytics?.avg_chunks_retrieved;
-                        if (!chunks) return '0.0';
-                        const num = typeof chunks === 'number' ? chunks : parseFloat(chunks);
-                        return isNaN(num) ? '0.0' : num.toFixed(1);
-                      })()}
-                    </div>
-                    <div className="stat-label">Avg Chunks Retrieved</div>
-                  </div>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.totalUsers}</div>
+                  <div className="stat-label">Total Users</div>
                 </div>
-              </>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.totalQueries}</div>
+                  <div className="stat-label">Total Queries</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{analytics.avgResponseTime}ms</div>
+                  <div className="stat-label">Avg Response Time</div>
+                </div>
+              </div>
             )}
           </div>
         )}
 
-        {/* QUERY HISTORY TAB */}
+        {/* QUERIES TAB */}
         {activeTab === 'queries' && (
           <div className="admin-section">
-            <h3>Recent Queries</h3>
+            <h3>Query History</h3>
             
-            {loading && <p>Loading query history...</p>}
+            {loading && <p>Loading queries...</p>}
             
-            {error && (
-              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
-                {error}
-              </div>
-            )}
-            
-            {!loading && queries.length === 0 && <p>No queries yet.</p>}
+            {error && <div className="message error">{error}</div>}
             
             {!loading && queries.length > 0 && (
-              <table className="admin-table">
+              <table className="queries-table">
                 <thead>
                   <tr>
+                    <th>Time</th>
                     <th>User</th>
                     <th>Question</th>
                     <th>Response Time</th>
-                    <th>Chunks</th>
-                    <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {queries.map(q => (
-                    <tr key={q.id}>
-                      <td>{q.username}</td>
-                      <td>{q.question}</td>
-                      <td>{q.response_time_ms}ms</td>
-                      <td>{q.chunks_retrieved}</td>
+                  {queries.map((q, idx) => (
+                    <tr key={idx}>
                       <td>{new Date(q.created_at).toLocaleString()}</td>
+                      <td>{q.username || 'Anonymous'}</td>
+                      <td className="question-cell" title={q.question}>{q.question}</td>
+                      <td>{q.response_time}ms</td>
                     </tr>
                   ))}
                 </tbody>
@@ -539,66 +701,46 @@ function AdminPanel({ onClose }) {
           </div>
         )}
 
-        {/* REVIEW SUBMISSIONS TAB */}
+        {/* SUBMISSIONS TAB */}
         {activeTab === 'submissions' && (
           <div className="admin-section">
-            <h3>Pending Submissions</h3>
+            <h3>Review Submissions</h3>
             
             {loading && <p>Loading submissions...</p>}
             
-            {error && (
-              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
-                {error}
-              </div>
-            )}
+            {error && <div className="message error">{error}</div>}
             
             {!loading && submissions.length === 0 && (
-              <p>No pending submissions</p>
+              <p>No pending submissions to review.</p>
             )}
             
-            {!loading && submissions.length > 0 && (
-              <div className="submissions-review">
-                {submissions.map(sub => (
-                  <div key={sub._id} className="submission-review-card">
-                    <h4>{sub.title}</h4>
-                    <p><strong>By:</strong> {sub.submitted_by_username}</p>
-                    <p><strong>Category:</strong> {sub.category}</p>
-                    <p><strong>Submitted:</strong> {new Date(sub.submitted_at).toLocaleString()}</p>
-                    {sub.tags && sub.tags.length > 0 && (
-                      <p><strong>Tags:</strong> {sub.tags.join(', ')}</p>
-                    )}
-                    {sub.description && (
-                      <p><strong>Description:</strong> {sub.description}</p>
-                    )}
-                    <p><strong>Content length:</strong> {sub.content?.length || 0} characters</p>
-                    {sub.file_info && (
-                      <p><strong>File:</strong> {sub.file_info.original_name} ({sub.file_info.size_readable})</p>
-                    )}
-                    <details>
-                      <summary>Preview Content</summary>
-                      <div className="content-preview">
-                        {sub.content?.substring(0, 500)}...
-                      </div>
-                    </details>
-                    <div className="review-actions">
-                      <button 
-                        onClick={() => setViewingDocument(sub._id)} 
-                        className="btn-primary"
-                        style={{ marginRight: '10px' }}
-                      >
-                        👁️ View Document
-                      </button>
-                      <button onClick={() => handleApprove(sub._id)} className="approve-btn">
-                        ✅ Approve
-                      </button>
-                      <button onClick={() => handleReject(sub._id)} className="reject-btn">
-                        ❌ Reject
-                      </button>
-                    </div>
+            <div className="submissions-review">
+              {submissions.map(sub => (
+                <div key={sub._id} className="submission-review-card">
+                  <h4>{sub.title}</h4>
+                  <p><strong>Category:</strong> {sub.category}</p>
+                  <p><strong>Submitted by:</strong> {sub.submitted_by_username}</p>
+                  <p><strong>Date:</strong> {new Date(sub.submitted_at).toLocaleString()}</p>
+                  {sub.description && <p><strong>Description:</strong> {sub.description}</p>}
+                  
+                  <div className="content-preview">
+                    {sub.content?.substring(0, 500)}...
                   </div>
-                ))}
-              </div>
-            )}
+                  
+                  <div className="review-actions">
+                    <button className="approve-btn" onClick={() => handleApprove(sub._id)}>
+                      ✓ Approve
+                    </button>
+                    <button className="reject-btn" onClick={() => handleReject(sub._id)}>
+                      ✕ Reject
+                    </button>
+                    <button className="btn-small" onClick={() => setViewingDocument(sub._id)}>
+                      👁️ View Full
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -607,355 +749,481 @@ function AdminPanel({ onClose }) {
           <div className="admin-section">
             <h3>Document Processing</h3>
             
-            {loading && <p>Loading processing stats...</p>}
+            {loading && <p>Loading stats...</p>}
             
-            {error && (
-              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
-                {error}
-              </div>
-            )}
+            {error && <div className="message error">{error}</div>}
             
             {!loading && processingStats && (
-              <div className="processing-stats">
-                <h4>Submission Status</h4>
+              <>
                 <div className="stats-grid">
                   <div className="stat-card">
-                    <div className="stat-value">{processingStats.submissions.pending}</div>
-                    <div className="stat-label">Pending Review</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">{processingStats.submissions.approved}</div>
+                    <div className="stat-value">{processingStats.approved || 0}</div>
                     <div className="stat-label">Approved</div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-value">{processingStats.submissions.processed}</div>
+                    <div className="stat-value">{processingStats.processed || 0}</div>
                     <div className="stat-label">Processed</div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-value">{processingStats.submissions.failed}</div>
+                    <div className="stat-value">{processingStats.failed || 0}</div>
                     <div className="stat-label">Failed</div>
                   </div>
                 </div>
-
-                <h4 style={{ marginTop: '30px' }}>Chunks in Database</h4>
-                <div className="stats-grid">
-                  <div className="stat-card">
-                    <div className="stat-value">{processingStats.chunks.total}</div>
-                    <div className="stat-label">Total Chunks</div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '30px' }}>
-                  <button onClick={handleProcessAll} className="process-btn">
-                    ⚙️ Process All Approved Submissions
+                
+                <div className="tool-card">
+                  <h4>Process Approved Submissions</h4>
+                  <p>Process all approved submissions into searchable chunks.</p>
+                  <button className="process-btn" onClick={handleProcessAll}>
+                    Process All Approved
                   </button>
-                  <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-                    This will convert all approved submissions into searchable chunks
-                  </p>
                 </div>
-
+                
                 {embeddingStatus && (
-                  <div style={{ marginTop: '30px', padding: '20px', background: '#f0f8ff', borderRadius: '8px', border: '2px solid #4a90e2' }}>
-                    <h4>🔬 Vector Embeddings</h4>
-                    <div className="stats-grid">
-                      <div className="stat-card">
-                        <div className="stat-value" style={{ fontSize: '32px' }}>
-                          {embeddingStatus.server_healthy ? '✅' : '❌'}
-                        </div>
-                        <div className="stat-label">Embedding Server</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="stat-value">{embeddingStatus.chunks?.embedded || 0}</div>
-                        <div className="stat-label">Chunks with Embeddings</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="stat-value">{embeddingStatus.chunks?.not_embedded || 0}</div>
-                        <div className="stat-label">Need Embeddings</div>
-                      </div>
-                    </div>
-                    
-                    <button 
-                      onClick={handleGenerateEmbeddings}
-                      className="process-btn"
-                      style={{ marginTop: '15px' }}
-                      disabled={!embeddingStatus.server_healthy}
-                    >
-                      🔬 Generate Embeddings for Existing Chunks
-                    </button>
-                    
-                    {!embeddingStatus.server_healthy && (
-                      <p style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
-                        ⚠️ Embedding server not running. Start it with: python python-services/embedding_server.py
-                      </p>
+                  <div className="tool-card">
+                    <h4>Embedding Status</h4>
+                    <p>Total chunks: {embeddingStatus.total}</p>
+                    <p>With embeddings: {embeddingStatus.with_embeddings}</p>
+                    <p>Without embeddings: {embeddingStatus.without_embeddings}</p>
+                    {embeddingStatus.without_embeddings > 0 && (
+                      <button className="btn-primary" onClick={handleGenerateEmbeddings}>
+                        Generate Missing Embeddings
+                      </button>
                     )}
-                    
-                    <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-                      Free local embeddings • No API costs • 1024 dimensions • Semantic search
-                    </p>
                   </div>
                 )}
-
-                <div style={{ marginTop: '30px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <h4>Legacy Processing (File System)</h4>
-                  <button onClick={runPreprocess} style={{ marginBottom: '10px' }}>
-                    Run Preprocessing
-                  </button>
-                  {preprocessStatus && <p>{preprocessStatus}</p>}
-                </div>
-              </div>
+              </>
             )}
           </div>
         )}
 
+        {/* ===================== */}
+        {/* CRAWLER TAB - ADD THIS ENTIRE SECTION */}
+        {/* ===================== */}
+        {activeTab === 'crawler' && (
+          <div className="admin-section">
+            <div className="tab-header">
+              <h3>🕷️ Document Crawler</h3>
+              <button className="refresh-btn" onClick={() => {
+                fetchCrawlerStatus();
+                fetchCrawlerSettings();
+                fetchCrawlerHistory();
+                fetchCrawlerStats();
+              }}>
+                🔄 Refresh
+              </button>
+            </div>
+            
+            {loading && <p>Loading crawler status...</p>}
+            
+            {error && <div className="message error">{error}</div>}
+            
+            {!loading && crawlerStatus && (
+              <>
+                {/* Status Banner */}
+                <div className={`beta-status ${crawlerStatus.enabled ? 'enabled' : 'disabled'}`}>
+                  <h4>
+                    {crawlerStatus.enabled ? '🟢 CRAWLER ENABLED' : '🔴 CRAWLER DISABLED'}
+                  </h4>
+                  <p>
+                    {crawlerStatus.enabled 
+                      ? 'Crawler will run automatically at 23:00 CT daily'
+                      : 'Crawler is currently disabled'
+                    }
+                    {crawlerStatus.isRunning && ' — Currently running...'}
+                  </p>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="stats-grid" style={{ marginTop: '20px' }}>
+                  <div className="stat-card">
+                    <div className="stat-value">{crawlerStatus.documentsToday || 0}</div>
+                    <div className="stat-label">Documents Today</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">{crawlerStatus.dailyLimit}</div>
+                    <div className="stat-label">Daily Limit</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">{crawlerStatus.remainingToday}</div>
+                    <div className="stat-label">Remaining Today</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">{crawlerStatus.searchTermsCount || 0}</div>
+                    <div className="stat-label">Search Terms</div>
+                  </div>
+                </div>
+
+                {/* Last Run Info */}
+                {crawlerStatus.lastRun && (
+                  <div className="tool-card" style={{ marginTop: '20px' }}>
+                    <h4>Last Run</h4>
+                    <p><strong>Time:</strong> {new Date(crawlerStatus.lastRun).toLocaleString()}</p>
+                    <p><strong>Status:</strong> {crawlerStatus.lastRunStatus}</p>
+                    <p><strong>Documents:</strong> {crawlerStatus.lastRunDocuments || 0}</p>
+                    {crawlerStatus.lastRunError && (
+                      <p style={{ color: 'red' }}><strong>Error:</strong> {crawlerStatus.lastRunError}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Controls */}
+                <div className="tool-card" style={{ marginTop: '20px' }}>
+                  <h4>Crawler Controls</h4>
+                  <div style={{ display: 'flex', gap: '15px', marginTop: '15px', flexWrap: 'wrap' }}>
+                    <button 
+                      onClick={handleToggleCrawler}
+                      className={crawlerStatus.enabled ? 'reject-btn' : 'approve-btn'}
+                      style={{ fontSize: '16px', padding: '12px 24px' }}
+                    >
+                      {crawlerStatus.enabled ? '⏹️ Disable Crawler' : '▶️ Enable Crawler'}
+                    </button>
+                    <button 
+                      onClick={handleRunCrawler}
+                      className="btn-primary"
+                      disabled={crawlerStatus.isRunning}
+                      style={{ fontSize: '16px', padding: '12px 24px' }}
+                    >
+                      {crawlerStatus.isRunning ? '⏳ Running...' : '🚀 Run Now'}
+                    </button>
+                    {crawlerStatus.isRunning && (
+                      <button 
+                        onClick={handleStopCrawler}
+                        className="reject-btn"
+                        disabled={crawlerStatus.stopPending}
+                        style={{ fontSize: '16px', padding: '12px 24px' }}
+                      >
+                        {crawlerStatus.stopPending ? '⏳ Stopping...' : '🛑 Stop'}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Daily Limit Setting */}
+                  <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <label><strong>Daily Limit:</strong></label>
+                    <input 
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={crawlerStatus.dailyLimit}
+                      onChange={(e) => handleUpdateDailyLimit(e.target.value)}
+                      style={{ 
+                        width: '80px', 
+                        padding: '8px', 
+                        border: '2px solid #667eea',
+                        borderRadius: '4px'
+                      }}
+                    />
+                    <span style={{ color: '#666' }}>documents per day</span>
+                  </div>
+                </div>
+
+                {/* Sources */}
+                {crawlerStatus.sources && (
+                  <div className="tool-card" style={{ marginTop: '20px' }}>
+                    <h4>Data Sources</h4>
+                    <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                      <div style={{ 
+                        padding: '15px', 
+                        background: crawlerStatus.sources.ntrs?.enabled ? '#d4edda' : '#f8f9fa',
+                        borderRadius: '8px',
+                        flex: 1
+                      }}>
+                        <strong>🚀 NASA NTRS</strong>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>
+                          {crawlerStatus.sources.ntrs?.enabled ? '✅ Enabled' : '❌ Disabled'}
+                        </p>
+                      </div>
+                      <div style={{ 
+                        padding: '15px', 
+                        background: crawlerStatus.sources.arxiv?.enabled ? '#d4edda' : '#f8f9fa',
+                        borderRadius: '8px',
+                        flex: 1
+                      }}>
+                        <strong>📚 arXiv</strong>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>
+                          {crawlerStatus.sources.arxiv?.enabled ? '✅ Enabled' : '❌ Disabled'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Search Terms */}
+                {crawlerSettings && (
+                  <div className="tool-card" style={{ marginTop: '20px' }}>
+                    <h4>Search Terms</h4>
+                    
+                    {/* Add new term */}
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                      <input 
+                        type="text"
+                        placeholder="Add new search term..."
+                        value={newSearchTerm}
+                        onChange={(e) => setNewSearchTerm(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddSearchTerm()}
+                        style={{ 
+                          flex: 1, 
+                          padding: '10px', 
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      />
+                      <button onClick={handleAddSearchTerm} className="btn-primary">
+                        + Add
+                      </button>
+                    </div>
+                    
+                    {/* Seed Terms */}
+                    <div style={{ marginTop: '15px' }}>
+                      <strong>Seed Terms ({crawlerSettings.searchTerms?.seedCount || 0}):</strong>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                        {crawlerSettings.searchTerms?.seed?.map((term, idx) => (
+                          <span 
+                            key={idx}
+                            style={{
+                              background: '#667eea',
+                              color: 'white',
+                              padding: '4px 12px',
+                              borderRadius: '20px',
+                              fontSize: '13px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {term}
+                            <button 
+                              onClick={() => handleRemoveSearchTerm(term)}
+                              style={{
+                                background: 'rgba(255,255,255,0.3)',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '18px',
+                                height: '18px',
+                                cursor: 'pointer',
+                                color: 'white',
+                                fontSize: '12px'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Learned Terms */}
+                    {crawlerSettings.searchTerms?.learned?.length > 0 && (
+                      <div style={{ marginTop: '15px' }}>
+                        <strong>Learned Terms ({crawlerSettings.searchTerms?.learnedCount || 0}):</strong>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                          {crawlerSettings.searchTerms?.learned?.map((term, idx) => (
+                            <span 
+                              key={idx}
+                              style={{
+                                background: '#6c757d',
+                                color: 'white',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                fontSize: '13px'
+                              }}
+                            >
+                              {term}
+                            </span>
+                          ))}
+                        </div>
+                        {crawlerSettings.searchTerms?.lastCorpusExtraction && (
+                          <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                            Last extracted: {new Date(crawlerSettings.searchTerms.lastCorpusExtraction).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Statistics */}
+                {crawlerStats && (
+                  <div className="tool-card" style={{ marginTop: '20px' }}>
+                    <h4>Crawler Statistics</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '10px' }}>
+                      <div>
+                        <strong>By Source:</strong>
+                        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                          {Object.entries(crawlerStats.bySource || {}).map(([source, count]) => (
+                            <li key={source}>{source}: {count}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <strong>By Category:</strong>
+                        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                          {Object.entries(crawlerStats.byCategory || {}).map(([cat, count]) => (
+                            <li key={cat}>{cat}: {count}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <strong>Chunks:</strong>
+                        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                          <li>Total: {crawlerStats.chunks?.totalChunks || 0}</li>
+                          <li>Avg per doc: {(crawlerStats.chunks?.avgChunks || 0).toFixed(1)}</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Crawled Documents */}
+                {crawlerHistory.length > 0 && (
+                  <div className="tool-card" style={{ marginTop: '20px' }}>
+                    <h4>Recently Crawled Documents</h4>
+                    <table className="queries-table" style={{ marginTop: '10px' }}>
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Source</th>
+                          <th>Category</th>
+                          <th>Chunks</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {crawlerHistory.map((doc, idx) => (
+                          <tr key={idx}>
+                            <td style={{ maxWidth: '300px' }}>
+                              <a href={doc.url} target="_blank" rel="noopener noreferrer" 
+                                 style={{ color: '#667eea', textDecoration: 'none' }}>
+                                {doc.title?.substring(0, 60)}{doc.title?.length > 60 ? '...' : ''}
+                              </a>
+                            </td>
+                            <td>
+                              <span style={{
+                                background: doc.source === 'ntrs' ? '#0d6efd' : '#6f42c1',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px'
+                              }}>
+                                {doc.source?.toUpperCase()}
+                              </span>
+                            </td>
+                            <td>{doc.category}</td>
+                            <td>{doc.chunk_count || '-'}</td>
+                            <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {/* ===================== */}
+        {/* END CRAWLER TAB */}
+        {/* ===================== */}
+
         {/* PRICING TAB */}
         {activeTab === 'pricing' && (
-          <div className="admin-section">
-            <h3>💰 Pricing Management</h3>
+          <div className="admin-section pricing-management">
+            <h3>Pricing Management</h3>
             
             {loading && <p>Loading pricing...</p>}
             
-            {error && (
-              <div style={{ color: 'red', padding: '10px', background: '#fee', borderRadius: '6px' }}>
-                {error}
-              </div>
-            )}
+            {error && <div className="message error">{error}</div>}
             
             {!loading && pricing.length > 0 && (
-              <div className="pricing-management">
-                <div style={{ marginBottom: '20px', padding: '15px', background: '#e3f2fd', borderRadius: '8px' }}>
-                  <p style={{ margin: 0, fontSize: '14px' }}>
-                    💡 <strong>Tip:</strong> Changes here affect what users see on the pricing page and what they're charged via Stripe.
-                  </p>
-                </div>
-
-                <div className="pricing-table-container">
-                  <table className="pricing-table">
-                    <thead>
-                      <tr>
-                        <th>Tier</th>
-                        <th>Price/Month</th>
-                        <th>Queries/Day</th>
-                        <th>Uploads/Month</th>
-                        <th>File Size</th>
-                        <th>LLMs</th>
-                        <th>Stripe ID</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pricing.map(tier => (
-                        <tr key={tier.id} style={{ 
-                          background: tier.tier_key === 'beta' ? '#d4edda' : 'white',
-                          opacity: tier.is_active ? 1 : 0.5
-                        }}>
-                          <td>
-                            <strong>{tier.name}</strong>
-                            <br />
-                            <span style={{ fontSize: '12px', color: '#666' }}>{tier.tier_key}</span>
-                          </td>
-                          <td>
-                            {editingTier === tier.tier_key ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                defaultValue={tier.price}
-                                id={`price-${tier.tier_key}`}
-                                style={{ width: '80px', padding: '4px' }}
-                              />
-                            ) : (
-                              <span style={{ fontSize: '18px', fontWeight: 'bold', color: tier.price === 0 ? '#28a745' : '#333' }}>
-                                {tier.price === 0 ? 'FREE' : `$${parseFloat(tier.price).toFixed(2)}`}
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            {editingTier === tier.tier_key ? (
-                              <input
-                                type="number"
-                                min="-1"
-                                defaultValue={tier.features.queries_per_day}
-                                id={`queries-${tier.tier_key}`}
-                                style={{ width: '80px', padding: '4px' }}
-                              />
-                            ) : (
-                              tier.features.queries_per_day === -1 ? '∞ Unlimited' : tier.features.queries_per_day
-                            )}
-                          </td>
-                          <td>
-                            {editingTier === tier.tier_key ? (
-                              <input
-                                type="number"
-                                min="-1"
-                                defaultValue={tier.features.uploads_per_month}
-                                id={`uploads-${tier.tier_key}`}
-                                style={{ width: '80px', padding: '4px' }}
-                              />
-                            ) : (
-                              tier.features.uploads_per_month === -1 ? '∞ Unlimited' : tier.features.uploads_per_month
-                            )}
-                          </td>
-                          <td>
-                            {editingTier === tier.tier_key ? (
-                              <input
-                                type="number"
-                                min="0"
-                                defaultValue={tier.features.max_file_size_mb}
-                                id={`filesize-${tier.tier_key}`}
-                                style={{ width: '80px', padding: '4px' }}
-                              />
-                            ) : (
-                              tier.features.max_file_size_mb ? `${tier.features.max_file_size_mb}MB` : 'N/A'
-                            )}
-                          </td>
-                          <td>
-                            <div style={{ fontSize: '12px' }}>
-                              {tier.features.llm_access?.join(', ') || 'None'}
-                            </div>
-                          </td>
-                          <td>
-                            {editingTier === tier.tier_key ? (
-                              <input
-                                type="text"
-                                defaultValue={tier.stripe_price_id || ''}
-                                placeholder="price_..."
-                                id={`stripe-${tier.tier_key}`}
-                                style={{ width: '120px', padding: '4px', fontSize: '11px' }}
-                              />
-                            ) : (
-                              <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#666' }}>
-                                {tier.stripe_price_id || '—'}
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            {editingTier === tier.tier_key ? (
-                              <div style={{ display: 'flex', gap: '5px' }}>
-                                <button
-                                  onClick={() => {
-                                    const updates = {
-                                      price: parseFloat(document.getElementById(`price-${tier.tier_key}`).value),
-                                      stripe_price_id: document.getElementById(`stripe-${tier.tier_key}`).value || null,
-                                      features: {
-                                        queries_per_day: parseInt(document.getElementById(`queries-${tier.tier_key}`).value),
-                                        uploads_per_month: parseInt(document.getElementById(`uploads-${tier.tier_key}`).value),
-                                        max_file_size_mb: parseInt(document.getElementById(`filesize-${tier.tier_key}`).value)
-                                      }
-                                    };
-                                    handleUpdatePricing(tier.tier_key, updates);
-                                  }}
-                                  className="approve-btn"
-                                  style={{ padding: '5px 10px', fontSize: '12px' }}
-                                >
-                                  💾 Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingTier(null)}
-                                  className="reject-btn"
-                                  style={{ padding: '5px 10px', fontSize: '12px' }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setEditingTier(tier.tier_key)}
-                                className="process-btn"
-                                style={{ padding: '5px 15px', fontSize: '12px' }}
+              <div className="pricing-table-container">
+                <table className="pricing-table">
+                  <thead>
+                    <tr>
+                      <th>Tier</th>
+                      <th>Price</th>
+                      <th>Queries/Day</th>
+                      <th>Uploads/Month</th>
+                      <th>Max File Size</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pricing.map(tier => (
+                      <tr key={tier.tier_key}>
+                        <td><strong>{tier.tier_name}</strong></td>
+                        <td>
+                          {editingTier === tier.tier_key ? (
+                            <input 
+                              type="number" 
+                              defaultValue={tier.price}
+                              style={{ width: '80px' }}
+                              id={`price-${tier.tier_key}`}
+                            />
+                          ) : (
+                            `$${tier.price}/mo`
+                          )}
+                        </td>
+                        <td>
+                          {editingTier === tier.tier_key ? (
+                            <input 
+                              type="number" 
+                              defaultValue={tier.queries_per_day}
+                              style={{ width: '80px' }}
+                              id={`queries-${tier.tier_key}`}
+                            />
+                          ) : (
+                            tier.queries_per_day === -1 ? 'Unlimited' : tier.queries_per_day
+                          )}
+                        </td>
+                        <td>
+                          {editingTier === tier.tier_key ? (
+                            <input 
+                              type="number" 
+                              defaultValue={tier.uploads_per_month}
+                              style={{ width: '80px' }}
+                              id={`uploads-${tier.tier_key}`}
+                            />
+                          ) : (
+                            tier.uploads_per_month === -1 ? 'Unlimited' : tier.uploads_per_month
+                          )}
+                        </td>
+                        <td>{tier.max_file_size_mb}MB</td>
+                        <td>
+                          {editingTier === tier.tier_key ? (
+                            <>
+                              <button 
+                                className="btn-small"
+                                onClick={() => {
+                                  const updates = {
+                                    price: parseFloat(document.getElementById(`price-${tier.tier_key}`).value),
+                                    queries_per_day: parseInt(document.getElementById(`queries-${tier.tier_key}`).value),
+                                    uploads_per_month: parseInt(document.getElementById(`uploads-${tier.tier_key}`).value)
+                                  };
+                                  handleUpdatePricing(tier.tier_key, updates);
+                                }}
                               >
-                                ✏️ Edit
+                                Save
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pricing Summary Cards */}
-                <div style={{ marginTop: '30px' }}>
-                  <h4>Quick Stats</h4>
-                  <div className="stats-grid">
-                    <div className="stat-card">
-                      <div className="stat-value">{pricing.length}</div>
-                      <div className="stat-label">Active Tiers</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">
-                        ${Math.min(...pricing.map(t => parseFloat(t.price)))}
-                      </div>
-                      <div className="stat-label">Lowest Price</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">
-                        ${Math.max(...pricing.map(t => parseFloat(t.price)))}
-                      </div>
-                      <div className="stat-label">Highest Price</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">
-                        {pricing.filter(t => t.stripe_price_id).length}/{pricing.length}
-                      </div>
-                      <div className="stat-label">Stripe Connected</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Feature Legend */}
-                <div style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <h4>Feature Reference</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', fontSize: '14px' }}>
-                    <div>
-                      <strong>Queries/Day:</strong>
-                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                        <li>-1 = Unlimited</li>
-                        <li>Number = Daily limit</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <strong>Uploads/Month:</strong>
-                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                        <li>-1 = Unlimited</li>
-                        <li>0 = View only</li>
-                        <li>Number = Monthly limit</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <strong>File Size:</strong>
-                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                        <li>Value in MB</li>
-                        <li>0 = No uploads allowed</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <strong>Stripe Price ID:</strong>
-                      <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                        <li>From Stripe dashboard</li>
-                        <li>Format: price_xxxxx</li>
-                        <li>Required for paid tiers</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* LLM Access Editor */}
-                <div style={{ marginTop: '30px', padding: '20px', background: '#fff3cd', borderRadius: '8px', border: '2px solid #ffc107' }}>
-                  <h4>⚠️ LLM Access Configuration</h4>
-                  <p style={{ fontSize: '14px', marginBottom: '10px' }}>
-                    LLM access cannot be edited here yet. Currently set in database:
-                  </p>
-                  <ul style={{ fontSize: '14px', margin: 0 }}>
-                    {pricing.map(t => (
-                      <li key={t.id}>
-                        <strong>{t.name}:</strong> {t.features.llm_access?.join(', ') || 'None'}
-                      </li>
+                              <button 
+                                className="btn-small"
+                                onClick={() => setEditingTier(null)}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button 
+                              className="btn-small"
+                              onClick={() => setEditingTier(tier.tier_key)}
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                  </ul>
-                  <p style={{ fontSize: '12px', color: '#666', marginTop: '10px', marginBottom: 0 }}>
-                    To change LLM access, update the tier_features table directly or we can add an editor UI.
-                  </p>
-                </div>
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -964,7 +1232,7 @@ function AdminPanel({ onClose }) {
         {/* BETA MODE TAB */}
         {activeTab === 'beta' && (
           <div className="admin-section">
-            <h3>🚀 Beta Mode Control</h3>
+            <h3>Beta Mode Control</h3>
             
             {loading && <p>Loading beta mode settings...</p>}
             
@@ -1054,76 +1322,6 @@ function AdminPanel({ onClose }) {
                   </button>
                 </div>
 
-                {/* Pricing Table */}
-                {betaMode.tier_limits && (
-                  <div style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
-                    <h4>Current Pricing Structure</h4>
-                    <table style={{ width: '100%', marginTop: '15px', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ background: '#667eea', color: 'white' }}>
-                          <th style={{ padding: '12px', textAlign: 'left' }}>Tier</th>
-                          <th style={{ padding: '12px', textAlign: 'right' }}>Price</th>
-                          <th style={{ padding: '12px', textAlign: 'center' }}>Queries/Day</th>
-                          <th style={{ padding: '12px', textAlign: 'center' }}>Uploads/Month</th>
-                          <th style={{ padding: '12px', textAlign: 'center' }}>LLMs</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr style={{ background: 'white', borderBottom: '1px solid #ddd' }}>
-                          <td style={{ padding: '12px' }}><strong>Free</strong></td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>$0</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.free.queries_per_day}</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.free.uploads_per_month}</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Grok</td>
-                        </tr>
-                        <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #ddd' }}>
-                          <td style={{ padding: '12px' }}><strong>Basic</strong></td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>$9</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.basic.queries_per_day}</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.basic.uploads_per_month}</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Grok</td>
-                        </tr>
-                        <tr style={{ background: 'white', borderBottom: '1px solid #ddd' }}>
-                          <td style={{ padding: '12px' }}><strong>Pro</strong></td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>$29</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.pro.uploads_per_month}</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Both</td>
-                        </tr>
-                        <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #ddd' }}>
-                          <td style={{ padding: '12px' }}><strong>Enterprise</strong></td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>$99</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>Both + API</td>
-                        </tr>
-                        {betaMode.enabled && (
-                          <tr style={{ background: '#d4edda', borderBottom: '2px solid #28a745', fontWeight: 'bold' }}>
-                            <td style={{ padding: '12px' }}><strong>🚀 Beta (ACTIVE)</strong></td>
-                            <td style={{ padding: '12px', textAlign: 'right' }}>${betaMode.tier_limits.beta.price}</td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>Unlimited</td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>{betaMode.tier_limits.beta.uploads_per_month}</td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>Both</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Beta Features Details */}
-                <div style={{ marginTop: '30px', padding: '20px', background: '#f0f8ff', borderRadius: '8px' }}>
-                  <h4>Beta Mode Details</h4>
-                  <ul style={{ textAlign: 'left', lineHeight: '1.8' }}>
-                    <li><strong>Price:</strong> ${betaMode.tier_limits?.beta?.price || betaMode.price}/month</li>
-                    <li><strong>Features:</strong> {betaMode.benefits}</li>
-                    <li><strong>Queries:</strong> Unlimited</li>
-                    <li><strong>Uploads:</strong> {betaMode.tier_limits?.beta?.uploads_per_month || 50}/month</li>
-                    <li><strong>LLMs:</strong> Both Grok & Claude</li>
-                    <li><strong>File Size:</strong> 100MB max</li>
-                  </ul>
-                </div>
-
                 {/* Warning when enabled */}
                 {betaMode.enabled && (
                   <div style={{ marginTop: '20px', padding: '15px', background: '#fff3cd', borderRadius: '8px', border: '2px solid #ffc107' }}>
@@ -1135,6 +1333,7 @@ function AdminPanel({ onClose }) {
           </div>
         )}
       </div>
+      
       {/* Document Viewer Modal */}
       {viewingDocument && (
         <DocumentViewer

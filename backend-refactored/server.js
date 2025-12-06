@@ -2,6 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cron = require('node-cron');  // <-- ADD: for scheduled crawler
 const passport = require('./config/passport');
 const sessionMiddleware = require('./config/session');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -173,6 +174,7 @@ const ragRoutes = require('./routes/rag');
 const adminRoutes = require('./routes/admin');
 const submissionRoutes = require('./routes/submissions');
 const subscriptionRoutes = require('./routes/subscriptions');
+const crawlerRoutes = require('./routes/crawler');  // <-- ADD: crawler routes
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -180,6 +182,7 @@ app.use('/api/rag', ragRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api', subscriptionRoutes);
+app.use('/api/crawler', crawlerRoutes);  // <-- ADD: mount crawler routes
 
 // Legacy compatibility routes
 app.post('/register', (req, res, next) => {
@@ -222,6 +225,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+// Crawler scheduler reference (for graceful shutdown)
+let crawlerScheduler = null;
+
 async function startServer() {
   try {
     await mongoClient.connect();
@@ -230,6 +236,7 @@ async function startServer() {
       console.log(`Server running on port ${PORT}`);
       console.log(`Database: PostgreSQL with pgvector`);
       
+      // Check embedding service
       const embeddingService = require('./services/embeddingService');
       embeddingService.checkHealth()
         .then(healthy => {
@@ -242,6 +249,34 @@ async function startServer() {
         .catch(err => {
           console.log('⚠️  Could not connect to embedding service:', err.message);
         });
+
+      // ======================
+      // CRAWLER SCHEDULER - ADD THIS SECTION
+      // ======================
+      
+      // Schedule crawler to run at 23:00 CT (Central Time) daily
+      const crawlerService = require('./services/crawlerService');
+      
+      crawlerScheduler = cron.schedule('0 23 * * *', async () => {
+        console.log('\n[Scheduler] Triggering scheduled crawler run...');
+        try {
+          const result = await crawlerService.run();
+          console.log('[Scheduler] Crawler completed:', result.status);
+          if (result.documentsProcessed) {
+            console.log(`[Scheduler] Documents processed: ${result.documentsProcessed}`);
+          }
+        } catch (err) {
+          console.error('[Scheduler] Crawler error:', err.message);
+        }
+      }, {
+        scheduled: true,
+        timezone: 'America/Chicago'
+      });
+
+      console.log('✅ Crawler scheduled for 23:00 CT daily');
+      // ======================
+      // END CRAWLER SCHEDULER
+      // ======================
     });
   } catch (err) {
     console.error('Failed to start server:', err);
@@ -253,10 +288,18 @@ startServer();
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
+  if (crawlerScheduler) {
+    crawlerScheduler.stop();  // <-- ADD: stop scheduler on shutdown
+    console.log('Crawler scheduler stopped');
+  }
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
+  if (crawlerScheduler) {
+    crawlerScheduler.stop();  // <-- ADD: stop scheduler on shutdown
+    console.log('Crawler scheduler stopped');
+  }
   process.exit(0);
 });

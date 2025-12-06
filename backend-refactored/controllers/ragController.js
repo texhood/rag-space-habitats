@@ -1,66 +1,85 @@
-// controllers/ragController.js
+// controllers/ragController.js - With Conversation History Support
 const RAGService = require('../services/ragService');
 const QueryLog = require('../models/QueryLog');
-const User = require('../models/User');
 
 class RAGController {
   /**
-   * Handle question asking with user's LLM preference
+   * POST /api/rag/ask
+   * Handle RAG question with optional conversation history
    */
   static async ask(req, res, next) {
-    const startTime = Date.now();
-    
     try {
-      const { question } = req.body;
-
-      // Validation
-      if (!question || !question.trim()) {
-        return res.status(400).json({ 
-          error: 'Missing question',
-          message: 'Please provide a question'
-        });
+      const { question, conversationHistory = [] } = req.body;
+      
+      if (!question || question.trim().length === 0) {
+        return res.status(400).json({ error: 'Question is required' });
       }
 
-      console.log(`[${req.user.username}] Question: "${question}"`);
+      console.log(`[RAG] Question: "${question.substring(0, 50)}..."`);
+      console.log(`[RAG] Conversation history: ${conversationHistory.length} messages`);
 
-      // Get user's LLM preference
-      const llmPreference = await User.getLLMPreference(req.user.id);
-      console.log(`[${req.user.username}] LLM preference: ${llmPreference}`);
+      const startTime = Date.now();
 
-      // Get relevant chunks and generate answer with user's preferred LLM
+      // Set user's LLM preference if available
+      if (req.user?.llm_preference) {
+        RAGService.setUserPreference(req.user.llm_preference);
+      }
+
+      // Retrieve relevant chunks (using the current question only for retrieval)
       const chunks = await RAGService.retrieveRelevantChunks(question);
-      const answer = await RAGService.generateAnswer(question, chunks, llmPreference);
+
+      // Generate answer with conversation history
+      const answer = await RAGService.generateAnswer(question, chunks, conversationHistory);
+
+      const responseTime = Date.now() - startTime;
+      console.log(`[${req.user?.username || 'Anonymous'}] Response time: ${responseTime}ms`);
 
       // Log the query
-      const responseTime = Date.now() - startTime;
-      await QueryLog.create(req.user.id, question, responseTime, chunks.length);
+      if (req.user) {
+        try {
+          await QueryLog.create(req.user.id, question, responseTime, chunks.length);
+        } catch (logErr) {
+          console.error('[RAG] Failed to log query:', logErr.message);
+        }
+      }
 
-      console.log(`[${req.user.username}] Response time: ${responseTime}ms`);
-
-      res.json({ 
+      res.json({
         answer,
         metadata: {
-          chunksRetrieved: chunks.length,
-          responseTimeMs: responseTime,
-          llmUsed: llmPreference
+          chunks_used: chunks.length,
+          response_time: responseTime,
+          conversation_length: conversationHistory.length + 2  // +2 for current Q&A
         }
       });
+
     } catch (err) {
-      console.error('RAG error:', err);
+      console.error('[RAG] Error:', err);
       next(err);
     }
   }
 
   /**
+   * GET /api/rag/history
    * Get user's query history
    */
   static async getHistory(req, res, next) {
     try {
       const limit = parseInt(req.query.limit) || 20;
-      const queries = await QueryLog.getByUser(req.user.id, limit);
+      const offset = parseInt(req.query.offset) || 0;
 
-      res.json({ queries });
+      const history = await QueryLog.getByUserId(req.user.id, limit, offset);
+
+      res.json({
+        history,
+        pagination: {
+          limit,
+          offset,
+          count: history.length
+        }
+      });
+
     } catch (err) {
+      console.error('[RAG] History error:', err);
       next(err);
     }
   }

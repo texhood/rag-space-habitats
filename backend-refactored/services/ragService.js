@@ -1,44 +1,38 @@
-// services/ragService.js
+// services/ragService.js - With Conversation History Support
 const pool = require('../config/database');
 const embeddingService = require('./embeddingService');
 const axios = require('axios');
-
-// System prompt with strict LaTeX formatting rules for BOTH Grok and Claude
-const SYSTEM_PROMPT = `You are a helpful AI assistant with expertise in space habitats and orbital engineering.
-
-CRITICAL: MATHEMATICAL NOTATION FORMATTING RULES
-When including mathematical formulas or equations in your response, you MUST follow these rules exactly:
-
-1. Use $...$ for inline math (e.g., "The radius $r = 500$ meters")
-2. Use $$...$$ for display equations on their own line
-3. Do NOT use square brackets [ ] or \\[ \\] for math
-4. Do NOT use \\( \\) notation
-5. Do NOT wrap math in HTML tags like <p>, <span>, etc.
-6. Always use proper LaTeX syntax inside the delimiters
-
-CORRECT EXAMPLES:
-✓ "The centripetal acceleration is $a = \\omega^2 r$ where $\\omega$ is angular velocity."
-✓ "The rotation period is:
-
-$$T = \\frac{2\\pi}{\\omega}$$
-
-where $T$ is in seconds."
-
-INCORRECT EXAMPLES (NEVER DO THIS):
-✗ "[ a = \\omega^2 r ]"
-✗ "<p>$$a = \\omega^2 r$$</p>"
-✗ "\\[ a = \\omega^2 r \\]"
-✗ "\\( a = \\omega^2 r \\)"
-
-Answer questions accurately using the provided context. Use proper mathematical notation as specified above.`;
+const Anthropic = require('@anthropic-ai/sdk');
 
 class RAGService {
+  constructor() {
+    // Initialize Claude
+    this.anthropic = null;
+    this.useClaude = false;
+    if (process.env.ANTHROPIC_API_KEY) {
+      this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      this.useClaude = true;
+      console.log('✅ Claude API initialized');
+    }
+
+    // Initialize Grok
+    this.useGrok = !!process.env.XAI_API_KEY;
+    if (this.useGrok) {
+      console.log('✅ Grok API initialized');
+    }
+
+    this.currentUserPreference = 'both';
+  }
+
+  setUserPreference(preference) {
+    this.currentUserPreference = preference;
+  }
+
   /**
-   * Retrieve relevant chunks using vector similarity or keyword search
+   * Retrieve relevant chunks using vector similarity
    */
   async retrieveRelevantChunks(question, limit = 5) {
     try {
-      // Try vector search first
       const vectorResults = await this.vectorSearch(question, limit);
       
       if (vectorResults.length > 0) {
@@ -46,7 +40,6 @@ class RAGService {
         return vectorResults;
       }
       
-      // Fallback to keyword search
       console.log('[RAG] Falling back to keyword search');
       return await this.keywordSearch(question, limit);
       
@@ -57,331 +50,295 @@ class RAGService {
   }
 
   /**
-   * Generate answer using selected LLM(s)
-   */
-  async generateAnswer(question, chunks, llmPreference = 'grok') {
-    if (!chunks || chunks.length === 0) {
-      return "I don't have enough information to answer that question.";
-    }
-
-    // Build context from chunks
-    const context = chunks.join('\n\n---\n\n');
-
-    // Check which APIs are available
-    const hasGrok = !!(process.env.XAI_API_KEY && process.env.XAI_API_KEY !== 'xai_key');
-    const hasClaude = !!(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'not_yet_available');
-
-    console.log(`[RAG] User preference: ${llmPreference}, Available - Grok: ${hasGrok}, Claude: ${hasClaude}`);
-
-    // Handle "both" mode - get answers from both and compare
-    if (llmPreference === 'both' && hasClaude && hasGrok) {
-      console.log('[RAG] Using BOTH LLMs for comparison');
-      return await this._generateWithBoth(question, context);
-    }
-
-    // Handle specific preference
-    if (llmPreference === 'claude' && hasClaude) {
-      console.log('[RAG] Using Claude (user preference)');
-      return await this._generateWithClaude(question, context);
-    }
-
-    if (llmPreference === 'grok' && hasGrok) {
-      console.log('[RAG] Using Grok (user preference)');
-      return await this._generateWithGrok(question, context);
-    }
-
-    // Fallback: use whatever is available
-    if (hasGrok) {
-      console.log('[RAG] Falling back to Grok');
-      return await this._generateWithGrok(question, context);
-    }
-
-    if (hasClaude) {
-      console.log('[RAG] Falling back to Claude');
-      return await this._generateWithClaude(question, context);
-    }
-
-    // No LLM available
-    return `Based on the available information:\n\n${chunks[0].substring(0, 500)}...\n\n(No LLM available)`;
-  }
-
-  /**
-   * Generate answer using Grok API
-   */
-  async _generateWithGrok(question, context) {
-    const prompt = `${SYSTEM_PROMPT}
-
-Context from knowledge base:
-${context}
-
-Question: ${question}
-
-Answer:`;
-
-    try {
-      console.log('[Grok] Calling API...');
-      
-      const response = await axios.post(
-        'https://api.x.ai/v1/chat/completions',
-        {
-          messages: [
-            {
-              role: 'system',
-              content: SYSTEM_PROMPT
-            },
-            {
-              role: 'user',
-              content: `Context from knowledge base:\n${context}\n\nQuestion: ${question}\n\nAnswer:`
-            }
-          ],
-          model: 'grok-3',
-          stream: false,
-          temperature: 0.7,
-          max_tokens: 2000
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.XAI_API_KEY}`
-          },
-          timeout: 60000
-        }
-      );
-
-      const answer = response.data.choices[0].message.content;
-      console.log('[Grok] Response received');
-      return answer;
-
-    } catch (err) {
-      console.error('[Grok] API error:', err.response?.data || err.message);
-      throw err;
-    }
-  }
-
-  /**
-   * Generate answer using Claude API
-   */
-  async _generateWithClaude(question, context) {
-    try {
-      console.log('[Claude] Calling API...');
-      
-      const response = await axios.post(
-        'https://api.anthropic.com/v1/messages',
-        {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          system: SYSTEM_PROMPT,
-          messages: [
-            {
-              role: 'user',
-              content: `Context from knowledge base:\n${context}\n\nQuestion: ${question}\n\nAnswer:`
-            }
-          ]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01'
-          },
-          timeout: 60000
-        }
-      );
-
-      const answer = response.data.content[0].text;
-      console.log('[Claude] Response received');
-      return answer;
-
-    } catch (err) {
-      console.error('[Claude] API error:', err.response?.data || err.message);
-      throw err;
-    }
-  }
-
-  /**
-   * Generate answers from BOTH LLMs and present comparison
-   */
-  async _generateWithBoth(question, context) {
-    try {
-      console.log('[Both] Requesting answers from both Claude and Grok...');
-      
-      // Run both in parallel
-      const [grokResult, claudeResult] = await Promise.allSettled([
-        this._generateWithGrok(question, context),
-        this._generateWithClaude(question, context)
-      ]);
-
-      let response = '## Comparison of Responses\n\n';
-
-      // Add Grok's response
-      if (grokResult.status === 'fulfilled') {
-        response += '### 🔵 Grok\'s Answer:\n\n';
-        response += grokResult.value + '\n\n';
-      } else {
-        response += '### 🔵 Grok\'s Answer:\n\n';
-        response += '_Grok API unavailable_\n\n';
-      }
-
-      response += '---\n\n';
-
-      // Add Claude's response
-      if (claudeResult.status === 'fulfilled') {
-        response += '### 🟣 Claude\'s Answer:\n\n';
-        response += claudeResult.value + '\n\n';
-      } else {
-        response += '### 🟣 Claude\'s Answer:\n\n';
-        response += '_Claude API unavailable_\n\n';
-      }
-
-      return response;
-
-    } catch (err) {
-      console.error('[Both] Error getting responses:', err);
-      // Fall back to whichever one works
-      try {
-        return await this._generateWithGrok(question, context);
-      } catch {
-        return await this._generateWithClaude(question, context);
-      }
-    }
-  }
-
-  /**
-   * Vector similarity search using native pgvector
-   * This is the key improvement - the database handles similarity calculation
+   * Vector search using embeddings
    */
   async vectorSearch(question, limit = 5) {
     try {
-      // Smart query expansion based on detected keywords
-      let expandedQuery = question;
+      const embeddings = await embeddingService.generateEmbeddings([question]);
+      const queryEmbedding = embeddings[0];
       
-      const lowerQuestion = question.toLowerCase();
-      
-      // Gravity-related queries
-      if (lowerQuestion.includes('gravity') || lowerQuestion.includes('g-force') || 
-          lowerQuestion.includes('simulate') || lowerQuestion.includes('artificial')) {
-        expandedQuery += ' rotation centrifugal spinning angular velocity';
-      }
-      
-      // Radiation-related queries
-      if (lowerQuestion.includes('radiation') || lowerQuestion.includes('shielding') || 
-          lowerQuestion.includes('protection') || lowerQuestion.includes('cosmic')) {
-        expandedQuery += ' shield protection water regolith magnetic field';
-      }
-      
-      // Habitat structure queries
-      if (lowerQuestion.includes('habitat') || lowerQuestion.includes('station') || 
-          lowerQuestion.includes('cylinder') || lowerQuestion.includes('torus')) {
-        expandedQuery += ' structure design colony settlement spacecraft';
-      }
-      
-      // Life support queries
-      if (lowerQuestion.includes('life support') || lowerQuestion.includes('oxygen') || 
-          lowerQuestion.includes('air') || lowerQuestion.includes('water')) {
-        expandedQuery += ' recycling atmosphere breathing closed-loop';
-      }
-      
-      // Agriculture/food queries
-      if (lowerQuestion.includes('food') || lowerQuestion.includes('farm') || 
-          lowerQuestion.includes('agriculture') || lowerQuestion.includes('grow')) {
-        expandedQuery += ' hydroponics plants crops cultivation greenhouse';
-      }
-      
-      // Structural/engineering queries
-      if (lowerQuestion.includes('material') || lowerQuestion.includes('structure') || 
-          lowerQuestion.includes('stress') || lowerQuestion.includes('strength')) {
-        expandedQuery += ' steel aluminum composite tension compression engineering';
-      }
-      
-      console.log('[RAG] Original query:', question);
-      console.log('[RAG] Expanded query:', expandedQuery);
-      
-      // Generate embedding for the expanded question
-      const queryEmbedding = await embeddingService.generateEmbedding(expandedQuery);
-      
-      if (!queryEmbedding || queryEmbedding.length === 0) {
+      if (!queryEmbedding) {
         console.log('[RAG] Failed to generate query embedding');
         return [];
       }
-      
-      // Format embedding as pgvector string
+
       const embeddingStr = `[${queryEmbedding.join(',')}]`;
-      
-      // Native pgvector similarity search - the database does the heavy lifting!
-      // <=> is the cosine distance operator (1 - cosine_similarity)
+
       const result = await pool.query(`
-        SELECT 
-          id,
-          content,
-          source_id,
-          metadata,
-          1 - (embedding <=> $1::vector) as similarity
+        SELECT content, metadata, 
+               1 - (embedding <=> $1::vector) as similarity
         FROM document_chunks
         WHERE embedding IS NOT NULL
         ORDER BY embedding <=> $1::vector
         LIMIT $2
       `, [embeddingStr, limit]);
+
+      console.log(`[RAG] Vector search found ${result.rows.length} chunks`);
       
-      const chunks = result.rows;
-      
-      if (chunks.length === 0) {
-        console.log('[RAG] No embedded chunks found');
-        return [];
+      if (result.rows.length > 0) {
+        const similarities = result.rows.map(r => r.similarity.toFixed(3));
+        console.log(`[RAG] Top similarities: ${similarities.join(', ')}`);
       }
-      
-      console.log(`[RAG] Found ${chunks.length} chunks via vector search`);
-      console.log(`[RAG] Top ${limit} similarities:`, 
-        chunks.map(c => c.similarity.toFixed(3)).join(', '));
-      
-      // Return just the content strings (what the controller expects)
-      return chunks.map(c => c.content);
-      
+
+      return result.rows.map(row => row.content);
+
     } catch (err) {
-      console.error('[RAG] Vector search error:', err.message);
+      console.error('[RAG] Vector search error:', err);
       return [];
     }
   }
 
   /**
-   * Fallback keyword search using PostgreSQL full-text search
+   * Keyword search fallback
    */
   async keywordSearch(question, limit = 5) {
-    console.log('[RAG] Using keyword search');
-    
     try {
-      // PostgreSQL full-text search is more powerful than LIKE
-      const result = await pool.query(`
-        SELECT content,
-               ts_rank(to_tsvector('english', content), plainto_tsquery('english', $1)) as rank
-        FROM document_chunks
-        WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $1)
-        ORDER BY rank DESC
-        LIMIT $2
-      `, [question, limit]);
-
-      if (result.rows.length > 0) {
-        console.log(`[RAG] Full-text search found ${result.rows.length} chunks`);
-        return result.rows.map(row => row.content);
+      const keywords = question.toLowerCase()
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+        .slice(0, 5);
+      
+      if (keywords.length === 0) {
+        return [];
       }
 
-      // Fallback to ILIKE if full-text search returns nothing
-      const keywords = question.toLowerCase().split(' ').filter(w => w.length > 3);
-      const searchPattern = `%${keywords.join('%')}%`;
-
-      const likeResult = await pool.query(`
-        SELECT content 
-        FROM document_chunks 
-        WHERE LOWER(content) LIKE $1
+      const searchPattern = keywords.join(' | ');
+      
+      const result = await pool.query(`
+        SELECT content, metadata
+        FROM document_chunks
+        WHERE to_tsvector('english', content) @@ to_tsquery('english', $1)
         LIMIT $2
       `, [searchPattern, limit]);
 
-      console.log(`[RAG] LIKE search found ${likeResult.rows.length} chunks`);
-      return likeResult.rows.map(row => row.content);
-      
+      console.log(`[RAG] Keyword search found ${result.rows.length} chunks`);
+      return result.rows.map(row => row.content);
+
     } catch (err) {
-      console.error('[RAG] Keyword search error:', err.message);
+      console.error('[RAG] Keyword search error:', err);
       return [];
     }
+  }
+
+  /**
+   * Generate answer from chunks using LLM - NOW WITH CONVERSATION HISTORY
+   */
+  async generateAnswer(question, chunks, conversationHistory = []) {
+    if (!chunks || chunks.length === 0) {
+      return "I don't have enough information to answer that question. Could you please rephrase or ask something else about space habitats?";
+    }
+
+    const context = chunks.map((c, i) => `[Source ${i + 1}]\n${c}`).join('\n\n---\n\n');
+    const userPreference = this.currentUserPreference || 'both';
+
+    console.log(`[RAG] User preference: ${userPreference}, Available - Grok: ${this.useGrok}, Claude: ${this.useClaude}`);
+    console.log(`[RAG] Conversation history: ${conversationHistory.length} messages`);
+
+    // Determine which LLM(s) to use
+    if (userPreference === 'both' && this.useClaude && this.useGrok) {
+      console.log('[RAG] Using BOTH LLMs for comparison');
+      return await this._generateWithBoth(question, context, conversationHistory);
+    } else if ((userPreference === 'claude' || userPreference === 'both') && this.useClaude) {
+      console.log('[RAG] Using Claude API');
+      return await this._generateWithClaude(question, context, conversationHistory);
+    } else if ((userPreference === 'grok' || userPreference === 'both') && this.useGrok) {
+      console.log('[RAG] Using Grok API');
+      return await this._generateWithGrok(question, context, conversationHistory);
+    }
+
+    return this._formatChunksAsAnswer(chunks);
+  }
+
+  /**
+   * Generate with Claude - WITH CONVERSATION HISTORY
+   */
+  async _generateWithClaude(question, context, conversationHistory = []) {
+    try {
+      console.log('[Claude] Calling API...');
+      
+      const systemPrompt = `You are an expert assistant specializing in space habitats, orbital engineering, and extraterrestrial settlement design. 
+
+Your knowledge comes from NASA SP-413 "Space Settlements: A Design Study" and related research.
+
+CRITICAL FORMATTING RULES:
+- Use $ for inline math: $x = 2$
+- Use $$ for display math: $$E = mc^2$$
+- NEVER use \\( \\) or \\[ \\] delimiters
+- Use proper markdown formatting
+- Be conversational and remember previous context in the conversation
+
+Use the following retrieved context to help answer questions:
+
+${context}`;
+
+      // Build messages array with conversation history
+      const messages = [];
+      
+      // Add previous conversation (trimmed if too long)
+      const trimmedHistory = this._trimHistory(conversationHistory, 8000);
+      messages.push(...trimmedHistory);
+      
+      // Add current question
+      messages.push({
+        role: 'user',
+        content: question
+      });
+
+      const response = await this.anthropic.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 8000,
+        temperature: 0.3,
+        system: systemPrompt,
+        messages: messages
+      });
+
+      console.log('[Claude] Response received');
+      return response.content[0].text;
+
+    } catch (err) {
+      console.error('[Claude] Error:', err.message);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate with Grok - WITH CONVERSATION HISTORY
+   */
+  async _generateWithGrok(question, context, conversationHistory = []) {
+    try {
+      console.log('[Grok] Calling API...');
+
+      const systemPrompt = `You are an expert assistant specializing in space habitats, orbital engineering, and extraterrestrial settlement design.
+
+Your knowledge comes from NASA SP-413 "Space Settlements: A Design Study" and related research.
+
+CRITICAL FORMATTING RULES:
+- Use $ for inline math: $x = 2$
+- Use $$ for display math: $$E = mc^2$$
+- NEVER use \\( \\) or \\[ \\] delimiters
+- Use proper markdown formatting
+- Be conversational and remember previous context in the conversation
+
+Use the following retrieved context to help answer questions:
+
+${context}`;
+
+      // Build messages array
+      const messages = [
+        { role: 'system', content: systemPrompt }
+      ];
+      
+      // Add previous conversation (trimmed if too long)
+      const trimmedHistory = this._trimHistory(conversationHistory, 8000);
+      messages.push(...trimmedHistory);
+      
+      // Add current question
+      messages.push({
+        role: 'user',
+        content: question
+      });
+
+      const res = await axios.post(
+        'https://api.x.ai/v1/chat/completions',
+        {
+          model: 'grok-2-latest',
+          messages: messages,
+          max_tokens: 8000,
+          temperature: 0.3
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.XAI_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('[Grok] Response received');
+      return res.data.choices[0].message.content.trim();
+
+    } catch (err) {
+      console.error('[Grok] Error:', err.response?.data || err.message);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate with both LLMs - WITH CONVERSATION HISTORY
+   */
+  async _generateWithBoth(question, context, conversationHistory = []) {
+    console.log('[Both] Requesting answers from both Claude and Grok...');
+
+    try {
+      const [claudeAnswer, grokAnswer] = await Promise.all([
+        this._generateWithClaude(question, context, conversationHistory),
+        this._generateWithGrok(question, context, conversationHistory)
+      ]);
+
+      return `## 🔵 Grok's Answer:\n\n${grokAnswer}\n\n---\n\n## 🟣 Claude's Answer:\n\n${claudeAnswer}`;
+
+    } catch (err) {
+      console.error('[Both] Error:', err.message);
+      
+      // Try individual fallbacks
+      if (this.useClaude) {
+        try {
+          console.log('[Both] Falling back to Claude only');
+          return await this._generateWithClaude(question, context, conversationHistory);
+        } catch (e) { /* continue */ }
+      }
+      if (this.useGrok) {
+        try {
+          console.log('[Both] Falling back to Grok only');
+          return await this._generateWithGrok(question, context, conversationHistory);
+        } catch (e) { /* continue */ }
+      }
+      
+      throw err;
+    }
+  }
+
+  /**
+   * Trim conversation history to fit within token limits
+   * Keeps most recent messages, drops oldest if too long
+   */
+  _trimHistory(history, maxTokens = 8000) {
+    if (!history || history.length === 0) return [];
+    
+    // Rough estimate: 4 chars per token
+    const estimateTokens = (text) => Math.ceil((text || '').length / 4);
+    
+    let tokenCount = 0;
+    const trimmed = [];
+    
+    // Work backwards from most recent
+    for (let i = history.length - 1; i >= 0; i--) {
+      const msg = history[i];
+      const msgTokens = estimateTokens(msg.content);
+      
+      if (tokenCount + msgTokens > maxTokens) {
+        console.log(`[RAG] Trimmed conversation history from ${history.length} to ${trimmed.length} messages`);
+        break;
+      }
+      
+      trimmed.unshift(msg);
+      tokenCount += msgTokens;
+    }
+    
+    return trimmed;
+  }
+
+  /**
+   * Format chunks as basic answer when no LLM available
+   */
+  _formatChunksAsAnswer(chunks) {
+    if (chunks.length === 0) {
+      return 'No relevant information found in the database.';
+    }
+
+    return chunks
+      .map((chunk, i) => `**[Source ${i + 1}]**\n\n${chunk}`)
+      .join('\n\n---\n\n');
   }
 }
 
