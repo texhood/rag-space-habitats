@@ -1150,44 +1150,45 @@ function AdminPanel({ onClose }) {
                   <tbody>
                     {pricing.map(tier => (
                       <tr key={tier.tier_key}>
-                        <td><strong>{tier.tier_name}</strong></td>
+                        <td><strong>{tier.name}</strong></td>
                         <td>
                           {editingTier === tier.tier_key ? (
                             <input 
                               type="number" 
+                              step="0.01"
                               defaultValue={tier.price}
                               style={{ width: '80px' }}
                               id={`price-${tier.tier_key}`}
                             />
                           ) : (
-                            `$${tier.price}/mo`
+                            `$${parseFloat(tier.price).toFixed(2)}/mo`
                           )}
                         </td>
                         <td>
                           {editingTier === tier.tier_key ? (
                             <input 
                               type="number" 
-                              defaultValue={tier.queries_per_day}
+                              defaultValue={tier.features?.queries_per_day}
                               style={{ width: '80px' }}
                               id={`queries-${tier.tier_key}`}
                             />
                           ) : (
-                            tier.queries_per_day === -1 ? 'Unlimited' : tier.queries_per_day
+                            tier.features?.queries_per_day === -1 ? 'Unlimited' : tier.features?.queries_per_day
                           )}
                         </td>
                         <td>
                           {editingTier === tier.tier_key ? (
                             <input 
                               type="number" 
-                              defaultValue={tier.uploads_per_month}
+                              defaultValue={tier.features?.uploads_per_month}
                               style={{ width: '80px' }}
                               id={`uploads-${tier.tier_key}`}
                             />
                           ) : (
-                            tier.uploads_per_month === -1 ? 'Unlimited' : tier.uploads_per_month
+                            tier.features?.uploads_per_month === -1 ? 'Unlimited' : tier.features?.uploads_per_month
                           )}
                         </td>
-                        <td>{tier.max_file_size_mb}MB</td>
+                        <td>{tier.features?.max_file_size_mb} MB</td>
                         <td>
                           {editingTier === tier.tier_key ? (
                             <>
@@ -1196,8 +1197,10 @@ function AdminPanel({ onClose }) {
                                 onClick={() => {
                                   const updates = {
                                     price: parseFloat(document.getElementById(`price-${tier.tier_key}`).value),
-                                    queries_per_day: parseInt(document.getElementById(`queries-${tier.tier_key}`).value),
-                                    uploads_per_month: parseInt(document.getElementById(`uploads-${tier.tier_key}`).value)
+                                    features: {
+                                      queries_per_day: parseInt(document.getElementById(`queries-${tier.tier_key}`).value),
+                                      uploads_per_month: parseInt(document.getElementById(`uploads-${tier.tier_key}`).value)
+                                    }
                                   };
                                   handleUpdatePricing(tier.tier_key, updates);
                                 }}
