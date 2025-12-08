@@ -1,9 +1,9 @@
-// AppNavbar.js
+// AppNavbar.js - With User Profile Support
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './AppNavbar.css';
 
-function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing }) {
+function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, onShowProfile }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -76,7 +76,17 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
                 <div className="mobile-user-info">
                   <span className="user-avatar" role="img" aria-label="user">&#128100;</span>
                   <span className="user-name">{user.username}</span>
+                  <span className="user-tier">{user.subscription_tier?.toUpperCase() || 'FREE'}</span>
                 </div>
+                {onShowProfile && (
+                  <button
+                    className="nav-link"
+                    onClick={() => handleActionClick(onShowProfile)}
+                  >
+                    <span className="nav-icon" role="img" aria-label="profile">&#128100;</span>
+                    <span className="nav-text">My Account</span>
+                  </button>
+                )}
                 {onShowPricing && (
                   <button
                     className="nav-link"
@@ -122,14 +132,20 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing })
               >
                 <span className="user-avatar" role="img" aria-label="user">&#128100;</span>
                 <span className="user-name">{user.username}</span>
+                <span className="user-tier-badge">{user.subscription_tier?.toUpperCase() || 'FREE'}</span>
                 <span className="menu-arrow">{userMenuOpen ? '\u25B2' : '\u25BC'}</span>
               </button>
 
               {userMenuOpen && (
                 <div className="user-dropdown">
+                  {onShowProfile && (
+                    <button onClick={() => { setUserMenuOpen(false); onShowProfile(true); }}>
+                      <span role="img" aria-label="profile">&#128100;</span> My Account
+                    </button>
+                  )}
                   {onShowPricing && (
                     <button onClick={() => { setUserMenuOpen(false); onShowPricing(true); }}>
-                      <span role="img" aria-label="lightning">&#9889;</span> Upgrade
+                      <span role="img" aria-label="lightning">&#9889;</span> Upgrade Plan
                     </button>
                   )}
                   {user.role === 'admin' && onShowAdmin && (

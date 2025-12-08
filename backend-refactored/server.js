@@ -6,6 +6,7 @@ const cron = require('node-cron');  // <-- ADD: for scheduled crawler
 const passport = require('./config/passport');
 const sessionMiddleware = require('./config/session');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const accountRoutes = require('./routes/account');
 const mongoClient = require('./config/mongodb');
 
 // Initialize Express
@@ -183,6 +184,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api', subscriptionRoutes);
 app.use('/api/crawler', crawlerRoutes);  // <-- ADD: mount crawler routes
+app.use('/api/account', accountRoutes);
 
 // Legacy compatibility routes
 app.post('/register', (req, res, next) => {

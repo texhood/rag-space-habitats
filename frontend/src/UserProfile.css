@@ -1,0 +1,513 @@
+/* UserProfile.css */
+
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.profile-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #f5f5f5;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.close-btn:hover {
+  background: #e0e0e0;
+  transform: scale(1.1);
+}
+
+/* Header */
+.profile-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 30px 30px;
+  text-align: center;
+  color: white;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 auto 15px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-header h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.tier-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* Navigation */
+.profile-nav {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+}
+
+.profile-nav button {
+  flex: 1;
+  padding: 15px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.profile-nav button:hover {
+  color: #667eea;
+  background: #f0f4ff;
+}
+
+.profile-nav button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: white;
+}
+
+/* Messages */
+.message {
+  margin: 15px 20px 0;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.message.error {
+  background: #fee;
+  color: #c00;
+  border: 1px solid #fcc;
+}
+
+.message.success {
+  background: #efe;
+  color: #060;
+  border: 1px solid #cfc;
+}
+
+/* Section Content */
+.profile-section {
+  padding: 25px 30px 30px;
+}
+
+.profile-section h2 {
+  margin: 0 0 20px;
+  font-size: 20px;
+  color: #333;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.profile-section h3 {
+  margin: 25px 0 15px;
+  font-size: 16px;
+  color: #333;
+}
+
+/* Info Groups */
+.info-group {
+  margin-bottom: 20px;
+}
+
+.info-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.info-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+
+.info-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.info-value {
+  padding: 12px 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #333;
+}
+
+.info-hint {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #f0f4ff;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Subscription Card */
+.subscription-card {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.subscription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.subscription-header h3 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  color: #667eea;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.cancelled,
+.status-badge.canceled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.past_due {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.subscription-price {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+}
+
+.billing-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-top: 1px solid #e9ecef;
+}
+
+.billing-info-row .label {
+  color: #666;
+}
+
+.billing-info-row .value {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Pending Change Alert */
+.pending-change-alert {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.pending-change-alert h4 {
+  margin: 0 0 10px;
+  color: #856404;
+}
+
+.pending-change-alert p {
+  margin: 0 0 15px;
+  color: #856404;
+}
+
+.pending-change-alert button {
+  margin-top: 5px;
+}
+
+/* Features Summary */
+.features-summary {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.features-summary h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #555;
+}
+
+.features-summary ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.features-summary li {
+  font-size: 14px;
+  color: #28a745;
+}
+
+/* Subscription Actions */
+.subscription-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.subscription-actions button {
+  flex: 1;
+}
+
+/* Danger Zone */
+.danger-zone {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.danger-zone h4 {
+  margin: 0 0 8px;
+  color: #dc3545;
+  font-size: 16px;
+}
+
+.danger-zone p {
+  margin: 0 0 15px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Confirm Overlay */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.confirm-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 450px;
+  width: 100%;
+}
+
+.confirm-modal h2 {
+  margin: 0 0 15px;
+  font-size: 20px;
+  color: #333;
+}
+
+.confirm-modal p {
+  margin: 0 0 10px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.confirm-modal p.highlight {
+  background: #e8f5e9;
+  padding: 12px;
+  border-radius: 6px;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.confirm-modal p.warning {
+  background: #fff3cd;
+  padding: 12px;
+  border-radius: 6px;
+  color: #856404;
+  font-weight: 500;
+}
+
+.confirm-modal .info-group {
+  margin: 20px 0;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.delete-modal h2 {
+  color: #dc3545;
+}
+
+/* Loading */
+.loading-text {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .profile-modal {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .profile-nav button {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+
+  .profile-section {
+    padding: 20px;
+  }
+
+  .subscription-header {
+    flex-direction: column;
+  }
+
+  .subscription-price {
+    margin-top: 10px;
+  }
+
+  .features-summary ul {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-actions {
+    flex-direction: column;
+  }
+}

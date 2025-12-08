@@ -30,6 +30,241 @@ router.get('/beta-mode', async (req, res) => {
   }
 });
 
+// GET /api/subscriptions/current - Get current subscription info
+router.get('/current', isAuthenticated, async (req, res) => {
+  try {
+    const Subscription = require('../models/Subscription');
+    const Pricing = require('../models/Pricing');
+    
+    const subscription = await Subscription.getByUserId(req.user.id);
+    
+    if (!subscription) {
+      // Return free tier info
+      const freeTier = await Pricing.getByTierKey('free');
+      return res.json({
+        tier: 'free',
+        status: 'active',
+        features: freeTier?.features || {},
+        price: 0
+      });
+    }
+
+    // Get tier features
+    const tierInfo = await Pricing.getByTierKey(subscription.tier);
+    
+    res.json({
+      ...subscription,
+      features: tierInfo?.features || {},
+      price: tierInfo?.price || 0
+    });
+
+  } catch (err) {
+    console.error('[Subscription] Current fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/subscriptions/cancel-scheduled-change - Cancel a pending downgrade or cancellation
+router.post('/cancel-scheduled-change', isAuthenticated, async (req, res) => {
+  try {
+    const Subscription = require('../models/Subscription');
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    const subscription = await Subscription.getByUserId(req.user.id);
+    
+    if (!subscription || !subscription.stripe_subscription_id) {
+      return res.status(400).json({ error: 'No active subscription found' });
+    }
+
+    // If cancellation was scheduled, undo it
+    if (subscription.cancel_at_period_end) {
+      await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+        cancel_at_period_end: false
+      });
+      
+      console.log(`[Stripe] Cancelled scheduled cancellation for user ${req.user.id}`);
+    }
+
+    // Clear scheduled change in database
+    await pool.query(
+      `UPDATE subscriptions 
+       SET scheduled_tier = NULL, 
+           scheduled_change_date = NULL,
+           cancel_at_period_end = false
+       WHERE user_id = $1`,
+      [req.user.id]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Scheduled change cancelled. Your current plan will continue.' 
+    });
+
+  } catch (err) {
+    console.error('[Subscription] Cancel scheduled change error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/subscriptions/create-portal-session - Create Stripe Customer Portal session
+router.post('/create-portal-session', isAuthenticated, async (req, res) => {
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    // Get user's Stripe customer ID
+    const userResult = await pool.query(
+      'SELECT stripe_customer_id FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    let customerId = userResult.rows[0]?.stripe_customer_id;
+
+    // Also check subscriptions table
+    if (!customerId) {
+      const subResult = await pool.query(
+        'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [req.user.id]
+      );
+      customerId = subResult.rows[0]?.stripe_customer_id;
+    }
+
+    if (!customerId) {
+      return res.status(400).json({ error: 'No billing information found. Please subscribe to a plan first.' });
+    }
+
+    // Create portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${process.env.FRONTEND_URL}/app?profile=billing`
+    });
+
+    res.json({ url: session.url });
+
+  } catch (err) {
+    console.error('[Stripe] Portal session error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/subscriptions/cancel - Cancel subscription at period end
+router.post('/cancel', isAuthenticated, async (req, res) => {
+  try {
+    const Subscription = require('../models/Subscription');
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    const subscription = await Subscription.getByUserId(req.user.id);
+    
+    if (!subscription || !subscription.stripe_subscription_id) {
+      return res.status(400).json({ error: 'No active subscription to cancel' });
+    }
+
+    // Cancel at period end (not immediately)
+    await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+      cancel_at_period_end: true
+    });
+
+    // Update local record
+    await pool.query(
+      `UPDATE subscriptions 
+       SET cancel_at_period_end = true,
+           scheduled_tier = 'free',
+           scheduled_change_date = current_period_end
+       WHERE user_id = $1`,
+      [req.user.id]
+    );
+
+    console.log(`[Stripe] User ${req.user.id} cancelled subscription, effective ${subscription.current_period_end}`);
+
+    res.json({ 
+      success: true, 
+      message: 'Subscription cancelled',
+      effective_date: subscription.current_period_end
+    });
+
+  } catch (err) {
+    console.error('[Subscription] Cancel error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// UPDATED schedule-downgrade route with persistence
+// ============================================
+
+// POST /api/subscriptions/schedule-downgrade - Schedule downgrade at period end
+router.post('/schedule-downgrade', isAuthenticated, async (req, res) => {
+  try {
+    const { tier } = req.body;
+    const Subscription = require('../models/Subscription');
+    const Pricing = require('../models/Pricing');
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    if (!tier) {
+      return res.status(400).json({ error: 'Tier is required' });
+    }
+
+    const currentSub = await Subscription.getByUserId(req.user.id);
+    
+    if (!currentSub || !currentSub.stripe_subscription_id) {
+      return res.status(400).json({ error: 'No active subscription found' });
+    }
+
+    const targetTier = await Pricing.getByTierKey(tier);
+    
+    if (!targetTier) {
+      return res.status(404).json({ error: 'Target tier not found' });
+    }
+
+    console.log(`[Stripe] Scheduling downgrade for user ${req.user.id} to ${tier}`);
+
+    if (parseFloat(targetTier.price) === 0) {
+      // Downgrading to free - cancel subscription at period end
+      await stripe.subscriptions.update(currentSub.stripe_subscription_id, {
+        cancel_at_period_end: true,
+        metadata: { downgrade_to: tier }
+      });
+
+      console.log(`[Stripe] Subscription will cancel at period end, downgrade to ${tier}`);
+    } else {
+      // Downgrading to a paid tier - schedule price change
+      const stripeSubscription = await stripe.subscriptions.retrieve(currentSub.stripe_subscription_id);
+
+      await stripe.subscriptions.update(currentSub.stripe_subscription_id, {
+        items: [{
+          id: stripeSubscription.items.data[0].id,
+          price: targetTier.stripe_price_id,
+        }],
+        proration_behavior: 'none',
+        billing_cycle_anchor: 'unchanged',
+        metadata: { downgrade_to: tier, scheduled: 'true' }
+      });
+
+      console.log(`[Stripe] Scheduled downgrade to ${tier} at period end`);
+    }
+
+    // Update local subscription record with scheduled change
+    await pool.query(
+      `UPDATE subscriptions 
+       SET scheduled_tier = $1,
+           scheduled_change_date = current_period_end,
+           cancel_at_period_end = $2
+       WHERE user_id = $3`,
+      [tier, parseFloat(targetTier.price) === 0, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Downgrade scheduled',
+      scheduled_tier: tier,
+      effective_date: currentSub.current_period_end
+    });
+
+  } catch (err) {
+    console.error('[Stripe] Downgrade scheduling error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/subscriptions/create-checkout - Create Stripe checkout session
 router.post('/subscriptions/create-checkout', isAuthenticated, async (req, res) => {
   try {

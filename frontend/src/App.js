@@ -1,4 +1,4 @@
-// App.js - With Conversation Support
+// App.js - With Conversation Support and User Profile
 import API_URL from './config';
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import './App.css';
 import AdminPanel from './AdminPanel';
 import SubmitContent from './SubmitContent';
 import PricingPage from './PricingPage';
+import UserProfile from './UserProfile';
 import LandingPage from './LandingPage';
 import AppNavbar from './AppNavbar';
 import BrowseKnowledgeBase from './BrowseKnowledgeBase';
@@ -33,13 +34,14 @@ function Dashboard() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   
   // LLM preference state
   const [llmPreference, setLlmPreference] = useState('grok');
   const [availableLLMs, setAvailableLLMs] = useState({ grok: true, claude: false });
 
   // =====================
-  // CONVERSATION STATE - NEW
+  // CONVERSATION STATE
   // =====================
   const [conversationHistory, setConversationHistory] = useState([]);
   const messagesEndRef = useRef(null);
@@ -77,6 +79,7 @@ function Dashboard() {
     const urlParams = new URLSearchParams(window.location.search);
     const checkoutStatus = urlParams.get('checkout');
     const tier = urlParams.get('tier');
+    const profileParam = urlParams.get('profile');
 
     if (checkoutStatus === 'success') {
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -85,6 +88,12 @@ function Dashboard() {
     } else if (checkoutStatus === 'cancelled') {
       window.history.replaceState({}, document.title, window.location.pathname);
       alert('Checkout was cancelled. You can upgrade anytime!');
+    }
+
+    // Open profile if returning from Stripe billing portal
+    if (profileParam === 'billing') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setShowProfile(true);
     }
   }, []);
 
@@ -222,12 +231,19 @@ function Dashboard() {
   };
 
   // =====================
-  // NEW: Start New Conversation
+  // Start New Conversation
   // =====================
   const startNewConversation = () => {
     setConversationHistory([]);
     setResponse('');
     setQuestion('');
+  };
+
+  // =====================
+  // Handle user update from profile
+  // =====================
+  const handleUserUpdate = (updatedUser) => {
+    setUser(prev => ({ ...prev, ...updatedUser }));
   };
 
   return (
@@ -239,6 +255,7 @@ function Dashboard() {
         onShowAdmin={setShowAdmin}
         onShowSubmit={setShowSubmit}
         onShowPricing={setShowPricing}
+        onShowProfile={setShowProfile}
       />
 
       <main className="App-main">
@@ -290,7 +307,7 @@ function Dashboard() {
 
             <div className="chat-container">
               {/* ===================== */}
-              {/* CONVERSATION DISPLAY - NEW */}
+              {/* CONVERSATION DISPLAY */}
               {/* ===================== */}
               {conversationHistory.length > 0 && (
                 <div className="conversation-container">
@@ -372,6 +389,7 @@ function Dashboard() {
         )}
       </main>
 
+      {/* Login Modal */}
       {showLogin && (
         <div className="modal-overlay" onClick={() => setShowLogin(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -400,6 +418,7 @@ function Dashboard() {
         </div>
       )}
 
+      {/* Register Modal */}
       {showRegister && (
         <div className="modal-overlay" onClick={() => setShowRegister(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -428,10 +447,12 @@ function Dashboard() {
         </div>
       )}
 
+      {/* Admin Panel Modal */}
       {showAdmin && user?.role === 'admin' && (
         <AdminPanel onClose={() => setShowAdmin(false)} />
       )}
 
+      {/* Submit Content Modal */}
       {showSubmit && (
         <SubmitContent 
           user={user}
@@ -439,10 +460,20 @@ function Dashboard() {
         />
       )}
 
+      {/* Pricing Page Modal */}
       {showPricing && (
         <PricingPage
           user={user}
           onClose={() => setShowPricing(false)}
+        />
+      )}
+
+      {/* User Profile Modal */}
+      {showProfile && (
+        <UserProfile
+          user={user}
+          onClose={() => setShowProfile(false)}
+          onUserUpdate={handleUserUpdate}
         />
       )}
     </div>
