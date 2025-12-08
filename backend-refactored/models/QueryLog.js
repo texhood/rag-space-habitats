@@ -21,7 +21,7 @@ class QueryLog {
       SELECT 
         ql.id,
         ql.question,
-        ql.response_time_ms,
+        ql.response_time_ms as response_time,
         ql.chunks_retrieved,
         ql.created_at,
         u.username
@@ -37,7 +37,8 @@ class QueryLog {
    * Get analytics for time period
    */
   static async getAnalytics(days = 7) {
-    const result = await pool.query(`
+    // Get query stats
+    const queryResult = await pool.query(`
       SELECT 
         COUNT(*) as total_queries,
         COUNT(DISTINCT user_id) as active_users,
@@ -49,15 +50,21 @@ class QueryLog {
       WHERE created_at > NOW() - INTERVAL '1 day' * $1
     `, [days]);
 
-    // Ensure numbers are actually numbers
-    const row = result.rows[0];
+    // Get total users count (separate query)
+    const usersResult = await pool.query('SELECT COUNT(*) as total_users FROM users');
+
+    const row = queryResult.rows[0];
+    const totalUsers = parseInt(usersResult.rows[0].total_users) || 0;
+
+    // Return camelCase properties to match frontend expectations
     return {
-      total_queries: parseInt(row.total_queries) || 0,
-      active_users: parseInt(row.active_users) || 0,
-      avg_response_time: parseFloat(row.avg_response_time) || 0,
-      avg_chunks_retrieved: parseFloat(row.avg_chunks_retrieved) || 0,
-      period_start: row.period_start,
-      period_end: row.period_end
+      totalUsers: totalUsers,
+      totalQueries: parseInt(row.total_queries) || 0,
+      activeUsers: parseInt(row.active_users) || 0,
+      avgResponseTime: Math.round(parseFloat(row.avg_response_time) || 0),
+      avgChunksRetrieved: parseFloat(row.avg_chunks_retrieved) || 0,
+      periodStart: row.period_start,
+      periodEnd: row.period_end
     };
   }
 
