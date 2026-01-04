@@ -41,7 +41,7 @@ class User {
    */
   static async findAll() {
     const result = await pool.query(
-      'SELECT id, username, role, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, username, email, role, subscription_tier, created_at FROM users ORDER BY created_at DESC'
     );
     return result.rows;
   }
