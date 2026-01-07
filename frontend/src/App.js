@@ -11,8 +11,11 @@ import UserProfile from './UserProfile';
 import LandingPage from './LandingPage';
 import AppNavbar from './AppNavbar';
 import BrowseKnowledgeBase from './BrowseKnowledgeBase';
+import ProjectsPage from './ProjectsPage';
 import './AppNavbar.css';
 import './BrowseKnowledgeBase.css';
+import './ProjectList.css';
+import FeedbackPanel from './FeedbackPanel';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -39,6 +42,12 @@ function Dashboard() {
   // LLM preference state
   const [llmPreference, setLlmPreference] = useState('grok');
   const [availableLLMs, setAvailableLLMs] = useState({ grok: true, claude: false });
+
+  // =====================
+  // PROJECT CONTEXT STATE
+  // =====================
+  const [activeProject, setActiveProject] = useState(null);
+  const [projectLoading, setProjectLoading] = useState(false);
 
   // =====================
   // CONVERSATION STATE
@@ -111,6 +120,40 @@ function Dashboard() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [user]);
+
+  // Check for project parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('project');
+
+    if (projectId && user) {
+      loadProject(projectId);
+    } else {
+      setActiveProject(null);
+    }
+  }, [user]);
+
+  const loadProject = async (projectId) => {
+    setProjectLoading(true);
+    try {
+      const res = await axios.get(`${API_URL}/api/projects/${projectId}`, {
+        withCredentials: true
+      });
+      setActiveProject(res.data);
+    } catch (err) {
+      console.error('Failed to load project:', err);
+      alert('Failed to load project: ' + (err.response?.data?.error || err.message));
+      setActiveProject(null);
+    } finally {
+      setProjectLoading(false);
+    }
+  };
+
+  const closeProject = () => {
+    setActiveProject(null);
+    window.history.replaceState({}, document.title, '/app');
+    navigate('/app');
+  };
 
   const checkAuth = async () => {
     try {
@@ -188,7 +231,7 @@ function Dashboard() {
   };
 
   // =====================
-  // UPDATED handleAsk WITH CONVERSATION HISTORY
+  // UPDATED handleAsk WITH CONVERSATION HISTORY & PROJECT CONTEXT
   // =====================
   const handleAsk = async (e) => {
     e.preventDefault();
@@ -197,33 +240,43 @@ function Dashboard() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/rag/ask`, {
+      // Use project-specific endpoint if project is active, otherwise use general RAG endpoint
+      const endpoint = activeProject
+        ? `${API_URL}/api/projects/${activeProject.id}/query`
+        : `${API_URL}/api/rag/ask`;
+
+      const res = await axios.post(endpoint, {
         question: question,
         conversationHistory: conversationHistory  // Send conversation history
       }, { withCredentials: true });
 
-      // Add this exchange to history
+      // Add this exchange to history (include queryId for feedback)
       const newHistory = [
         ...conversationHistory,
         { role: 'user', content: question },
-        { role: 'assistant', content: res.data.answer }
+        {
+          role: 'assistant',
+          content: res.data.answer,
+          queryId: res.data.queryId,  // Include queryId for feedback system
+          projectId: activeProject?.id  // Track which project this query was from
+        }
       ];
       setConversationHistory(newHistory);
 
       // Keep response for backward compatibility
       setResponse(res.data.answer);
-      
+
       // Clear input for next question
       setQuestion('');
 
     } catch (err) {
       const errorMsg = 'Error: ' + (err.response?.data?.error || err.message);
       setResponse(errorMsg);
-      // Also add error to conversation
+      // Also add error to conversation (no queryId for errors)
       setConversationHistory(prev => [
         ...prev,
         { role: 'user', content: question },
-        { role: 'assistant', content: errorMsg }
+        { role: 'assistant', content: errorMsg, queryId: null, projectId: activeProject?.id }
       ]);
     } finally {
       setLoading(false);
@@ -261,6 +314,24 @@ function Dashboard() {
       <main className="App-main">
         {user ? (
           <>
+            {/* PROJECT CONTEXT BANNER */}
+            {activeProject && (
+              <div className="project-context-banner">
+                <div className="project-info">
+                  <span className="project-badge">📁 Project Active</span>
+                  <div className="project-details">
+                    <h3>{activeProject.name}</h3>
+                    {activeProject.objectives && (
+                      <p className="project-objectives">Objectives: {activeProject.objectives}</p>
+                    )}
+                  </div>
+                </div>
+                <button className="close-project-btn" onClick={closeProject} title="Close project">
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* LLM SELECTOR + NEW CONVERSATION BUTTON */}
             <div className="llm-selector">
               <label>AI Model:</label>
@@ -318,22 +389,34 @@ function Dashboard() {
                   </div>
                   <div className="conversation-thread">
                     {conversationHistory.map((msg, idx) => (
-                      <div key={idx} className={`message ${msg.role}`}>
-                        <div className="message-role">
-                          {msg.role === 'user' ? '👤 You' : '🤖 Assistant'}
+                      <div key={idx}>
+                        <div className={`message ${msg.role}`}>
+                          <div className="message-role">
+                            {msg.role === 'user' ? '👤 You' : '🤖 Assistant'}
+                          </div>
+                          <div className="message-content">
+                            {msg.role === 'assistant' ? (
+                              <ReactMarkdown
+                                remarkPlugins={[remarkMath]}
+                                rehypePlugins={[rehypeKatex]}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            ) : (
+                              <p>{msg.content}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="message-content">
-                          {msg.role === 'assistant' ? (
-                            <ReactMarkdown
-                              remarkPlugins={[remarkMath]}
-                              rehypePlugins={[rehypeKatex]}
-                            >
-                              {msg.content}
-                            </ReactMarkdown>
-                          ) : (
-                            <p>{msg.content}</p>
-                          )}
-                        </div>
+
+                        {/* Add feedback panel below assistant responses */}
+                        {msg.role === 'assistant' && msg.queryId && (
+                          <FeedbackPanel
+                            queryId={msg.queryId}
+                            onFeedbackSubmitted={() => {
+                              // Optional: Could refresh stats or show confirmation
+                            }}
+                          />
+                        )}
                       </div>
                     ))}
                     {/* Loading indicator */}
@@ -487,13 +570,16 @@ function App() {
       <Routes>
         {/* Landing page as home */}
         <Route path="/" element={<LandingPage />} />
-        
+
         {/* Main application dashboard */}
         <Route path="/app" element={<Dashboard />} />
-        
+
         {/* Browse knowledge base */}
         <Route path="/browse" element={<BrowseKnowledgeBase />} />
-        
+
+        {/* Projects (Enterprise users and admins only) */}
+        <Route path="/projects" element={<ProjectsPage />} />
+
         {/* Redirect old routes to new structure */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

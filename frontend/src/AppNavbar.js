@@ -59,6 +59,16 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
             <span className="nav-text">Browse</span>
           </button>
 
+          {user && (user.subscription_tier === 'enterprise' || user.role === 'admin') && (
+            <button
+              className={`nav-link ${isActive('/projects') ? 'active' : ''}`}
+              onClick={() => handleNavClick('/projects')}
+            >
+              <span className="nav-icon" role="img" aria-label="briefcase">&#128188;</span>
+              <span className="nav-text">Projects</span>
+            </button>
+          )}
+
           {user && onShowSubmit && (
             <button
               className="nav-link"

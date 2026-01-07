@@ -54,9 +54,8 @@ class RAGService {
    */
   async vectorSearch(question, limit = 5) {
     try {
-      const embeddings = await embeddingService.generateEmbeddings([question]);
-      const queryEmbedding = embeddings[0];
-      
+      const queryEmbedding = await embeddingService.generateEmbedding(question);
+
       if (!queryEmbedding) {
         console.log('[RAG] Failed to generate query embedding');
         return [];
@@ -123,7 +122,7 @@ class RAGService {
   /**
    * Generate answer from chunks using LLM - NOW WITH CONVERSATION HISTORY
    */
-  async generateAnswer(question, chunks, conversationHistory = []) {
+  async generateAnswer(question, chunks, conversationHistory = [], projectContext = null) {
     if (!chunks || chunks.length === 0) {
       return "I don't have enough information to answer that question. Could you please rephrase or ask something else about space habitats?";
     }
@@ -133,30 +132,40 @@ class RAGService {
 
     console.log(`[RAG] User preference: ${userPreference}, Available - Grok: ${this.useGrok}, Claude: ${this.useClaude}`);
     console.log(`[RAG] Conversation history: ${conversationHistory.length} messages`);
+    if (projectContext) {
+      console.log(`\n========== PROJECT CONTEXT DETECTED ==========`);
+      console.log(`Project Name: ${projectContext.name}`);
+      console.log(`Description: ${projectContext.description || 'N/A'}`);
+      console.log(`Objectives: ${projectContext.objectives || 'N/A'}`);
+      console.log(`Constraints: ${projectContext.constraints || 'N/A'}`);
+      console.log(`==============================================\n`);
+    } else {
+      console.log(`[RAG] No project context (regular query)`);
+    }
 
     // Determine which LLM(s) to use
     if (userPreference === 'both' && this.useClaude && this.useGrok) {
       console.log('[RAG] Using BOTH LLMs for comparison');
-      return await this._generateWithBoth(question, context, conversationHistory);
+      return await this._generateWithBoth(question, context, conversationHistory, projectContext);
     } else if ((userPreference === 'claude' || userPreference === 'both') && this.useClaude) {
       console.log('[RAG] Using Claude API');
-      return await this._generateWithClaude(question, context, conversationHistory);
+      return await this._generateWithClaude(question, context, conversationHistory, projectContext);
     } else if ((userPreference === 'grok' || userPreference === 'both') && this.useGrok) {
       console.log('[RAG] Using Grok API');
-      return await this._generateWithGrok(question, context, conversationHistory);
+      return await this._generateWithGrok(question, context, conversationHistory, projectContext);
     }
 
     return this._formatChunksAsAnswer(chunks);
   }
 
   /**
-   * Generate with Claude - WITH CONVERSATION HISTORY
+   * Generate with Claude - WITH CONVERSATION HISTORY AND PROJECT CONTEXT
    */
-  async _generateWithClaude(question, context, conversationHistory = []) {
+  async _generateWithClaude(question, context, conversationHistory = [], projectContext = null) {
     try {
       console.log('[Claude] Calling API...');
-      
-      const systemPrompt = `You are an expert assistant specializing in space habitats, orbital engineering, and extraterrestrial settlement design. 
+
+      let systemPrompt = `You are an expert assistant specializing in space habitats, orbital engineering, and extraterrestrial settlement design.
 
 Your knowledge comes from NASA SP-413 "Space Settlements: A Design Study" and related research.
 
@@ -165,11 +174,66 @@ CRITICAL FORMATTING RULES:
 - Use $$ for display math: $$E = mc^2$$
 - NEVER use \\( \\) or \\[ \\] delimiters
 - Use proper markdown formatting
-- Be conversational and remember previous context in the conversation
+- Be conversational and remember previous context in the conversation`;
 
-Use the following retrieved context to help answer questions:
+      // Add project context as primary instructions if present
+      if (projectContext) {
+        systemPrompt += `\n\n=== PROJECT CONTEXT ===
+You are currently working within a specific project with the following parameters:
 
-${context}`;
+PROJECT: ${projectContext.name}`;
+
+        if (projectContext.description) {
+          systemPrompt += `\nDESCRIPTION: ${projectContext.description}`;
+        }
+
+        if (projectContext.objectives) {
+          systemPrompt += `\n\nOBJECTIVES (FOCUS AREAS):
+${projectContext.objectives}
+
+Apply these objectives when answering - prioritize information that aligns with these goals.`;
+        }
+
+        if (projectContext.constraints) {
+          systemPrompt += `\n\nCONSTRAINTS (LIMITS & EXCLUSIONS):
+${projectContext.constraints}
+
+Strictly apply these constraints when formulating your response.`;
+        }
+
+        systemPrompt += `\n\n🚨 CRITICAL OVERRIDE INSTRUCTION:
+When this PROJECT CONTEXT is provided, you MUST use ONLY the dimensions, parameters, and specifications from the project objectives and constraints above.
+
+DO NOT substitute dimensions from the retrieved documents below.
+DO NOT use generic O'Neill Cylinder dimensions (5 miles × 20 miles).
+DO NOT use any dimensions other than those specified in this project.
+
+The retrieved documents below are for reference only. If there is ANY conflict between the project specifications above and the retrieved documents below, ALWAYS use the project specifications.
+
+=== END PROJECT CONTEXT ===\n`;
+      }
+
+      systemPrompt += `\n\nUse the following retrieved context to help answer questions:\n\n${context}`;
+
+      // Add another reminder AFTER the RAG context if project context exists
+      if (projectContext) {
+        systemPrompt += `\n\n🚨 REMINDER: You are working within the project "${projectContext.name}". Use ONLY the project-specific dimensions and parameters specified in the PROJECT CONTEXT section above. Do not use dimensions from the retrieved documents.`;
+      }
+
+      // LOG THE FULL SYSTEM PROMPT
+      console.log(`\n========== CLAUDE SYSTEM PROMPT ==========`);
+      console.log(systemPrompt.substring(0, 1500)); // First 1500 chars
+      console.log(`\n... (truncated for readability) ...`);
+      if (projectContext) {
+        console.log(`\n[PROJECT CONTEXT SECTION IN PROMPT]:`);
+        const projectSection = systemPrompt.match(/=== PROJECT CONTEXT ===[\s\S]*?=== END PROJECT CONTEXT ===/);
+        if (projectSection) {
+          console.log(projectSection[0]);
+        } else {
+          console.log('WARNING: Project context section NOT FOUND in prompt!');
+        }
+      }
+      console.log(`==========================================\n`);
 
       // Build messages array with conversation history
       const messages = [];
@@ -202,13 +266,13 @@ ${context}`;
   }
 
   /**
-   * Generate with Grok - WITH CONVERSATION HISTORY
+   * Generate with Grok - WITH CONVERSATION HISTORY AND PROJECT CONTEXT
    */
-  async _generateWithGrok(question, context, conversationHistory = []) {
+  async _generateWithGrok(question, context, conversationHistory = [], projectContext = null) {
     try {
       console.log('[Grok] Calling API...');
 
-      const systemPrompt = `You are an expert assistant specializing in space habitats, orbital engineering, and extraterrestrial settlement design.
+      let systemPrompt = `You are an expert assistant specializing in space habitats, orbital engineering, and extraterrestrial settlement design.
 
 Your knowledge comes from NASA SP-413 "Space Settlements: A Design Study" and related research.
 
@@ -217,11 +281,66 @@ CRITICAL FORMATTING RULES:
 - Use $$ for display math: $$E = mc^2$$
 - NEVER use \\( \\) or \\[ \\] delimiters
 - Use proper markdown formatting
-- Be conversational and remember previous context in the conversation
+- Be conversational and remember previous context in the conversation`;
 
-Use the following retrieved context to help answer questions:
+      // Add project context as primary instructions if present
+      if (projectContext) {
+        systemPrompt += `\n\n=== PROJECT CONTEXT ===
+You are currently working within a specific project with the following parameters:
 
-${context}`;
+PROJECT: ${projectContext.name}`;
+
+        if (projectContext.description) {
+          systemPrompt += `\nDESCRIPTION: ${projectContext.description}`;
+        }
+
+        if (projectContext.objectives) {
+          systemPrompt += `\n\nOBJECTIVES (FOCUS AREAS):
+${projectContext.objectives}
+
+Apply these objectives when answering - prioritize information that aligns with these goals.`;
+        }
+
+        if (projectContext.constraints) {
+          systemPrompt += `\n\nCONSTRAINTS (LIMITS & EXCLUSIONS):
+${projectContext.constraints}
+
+Strictly apply these constraints when formulating your response.`;
+        }
+
+        systemPrompt += `\n\n🚨 CRITICAL OVERRIDE INSTRUCTION:
+When this PROJECT CONTEXT is provided, you MUST use ONLY the dimensions, parameters, and specifications from the project objectives and constraints above.
+
+DO NOT substitute dimensions from the retrieved documents below.
+DO NOT use generic O'Neill Cylinder dimensions (5 miles × 20 miles).
+DO NOT use any dimensions other than those specified in this project.
+
+The retrieved documents below are for reference only. If there is ANY conflict between the project specifications above and the retrieved documents below, ALWAYS use the project specifications.
+
+=== END PROJECT CONTEXT ===\n`;
+      }
+
+      systemPrompt += `\n\nUse the following retrieved context to help answer questions:\n\n${context}`;
+
+      // Add another reminder AFTER the RAG context if project context exists
+      if (projectContext) {
+        systemPrompt += `\n\n🚨 REMINDER: You are working within the project "${projectContext.name}". Use ONLY the project-specific dimensions and parameters specified in the PROJECT CONTEXT section above. Do not use dimensions from the retrieved documents.`;
+      }
+
+      // LOG THE FULL SYSTEM PROMPT
+      console.log(`\n========== GROK SYSTEM PROMPT ==========`);
+      console.log(systemPrompt.substring(0, 1500)); // First 1500 chars
+      console.log(`\n... (truncated for readability) ...`);
+      if (projectContext) {
+        console.log(`\n[PROJECT CONTEXT SECTION IN PROMPT]:`);
+        const projectSection = systemPrompt.match(/=== PROJECT CONTEXT ===[\s\S]*?=== END PROJECT CONTEXT ===/);
+        if (projectSection) {
+          console.log(projectSection[0]);
+        } else {
+          console.log('WARNING: Project context section NOT FOUND in prompt!');
+        }
+      }
+      console.log(`==========================================\n`);
 
       // Build messages array
       const messages = [
@@ -241,7 +360,7 @@ ${context}`;
       const res = await axios.post(
         'https://api.x.ai/v1/chat/completions',
         {
-          model: 'grok-2-latest',
+          model: 'grok-4-fast-reasoning',
           messages: messages,
           max_tokens: 8000,
           temperature: 0.3
@@ -264,36 +383,36 @@ ${context}`;
   }
 
   /**
-   * Generate with both LLMs - WITH CONVERSATION HISTORY
+   * Generate with both LLMs - WITH CONVERSATION HISTORY AND PROJECT CONTEXT
    */
-  async _generateWithBoth(question, context, conversationHistory = []) {
+  async _generateWithBoth(question, context, conversationHistory = [], projectContext = null) {
     console.log('[Both] Requesting answers from both Claude and Grok...');
 
     try {
       const [claudeAnswer, grokAnswer] = await Promise.all([
-        this._generateWithClaude(question, context, conversationHistory),
-        this._generateWithGrok(question, context, conversationHistory)
+        this._generateWithClaude(question, context, conversationHistory, projectContext),
+        this._generateWithGrok(question, context, conversationHistory, projectContext)
       ]);
 
       return `## 🔵 Grok's Answer:\n\n${grokAnswer}\n\n---\n\n## 🟣 Claude's Answer:\n\n${claudeAnswer}`;
 
     } catch (err) {
       console.error('[Both] Error:', err.message);
-      
-      // Try individual fallbacks
+
+      // Try individual fallbacks - MUST include projectContext!
       if (this.useClaude) {
         try {
-          console.log('[Both] Falling back to Claude only');
-          return await this._generateWithClaude(question, context, conversationHistory);
+          console.log('[Both] Falling back to Claude only (with project context)');
+          return await this._generateWithClaude(question, context, conversationHistory, projectContext);
         } catch (e) { /* continue */ }
       }
       if (this.useGrok) {
         try {
-          console.log('[Both] Falling back to Grok only');
-          return await this._generateWithGrok(question, context, conversationHistory);
+          console.log('[Both] Falling back to Grok only (with project context)');
+          return await this._generateWithGrok(question, context, conversationHistory, projectContext);
         } catch (e) { /* continue */ }
       }
-      
+
       throw err;
     }
   }

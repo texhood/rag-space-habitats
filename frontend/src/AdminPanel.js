@@ -3,6 +3,7 @@ import API_URL from './config';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DocumentViewer from './DocumentViewer';
+import AdminFeedbackDashboard from './AdminFeedbackDashboard';
 import './AdminPanel.css';
 
 function AdminPanel({ onClose }) {
@@ -567,11 +568,17 @@ function AdminPanel({ onClose }) {
           >
             💰 Pricing
           </button>
-          <button 
+          <button
             className={activeTab === 'beta' ? 'active' : ''}
             onClick={() => setActiveTab('beta')}
           >
             🚀 Beta Mode
+          </button>
+          <button
+            className={activeTab === 'feedback' ? 'active' : ''}
+            onClick={() => setActiveTab('feedback')}
+          >
+            💬 Feedback
           </button>
         </div>
 
@@ -1335,8 +1342,15 @@ function AdminPanel({ onClose }) {
             )}
           </div>
         )}
+
+        {/* FEEDBACK TAB */}
+        {activeTab === 'feedback' && (
+          <div className="admin-section">
+            <AdminFeedbackDashboard />
+          </div>
+        )}
       </div>
-      
+
       {/* Document Viewer Modal */}
       {viewingDocument && (
         <DocumentViewer

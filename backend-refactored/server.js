@@ -1,5 +1,6 @@
-// server.js - Main application entry point
 require('dotenv').config();
+
+// server.js - Main application entry point
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');  // <-- ADD: for scheduled crawler
@@ -176,6 +177,8 @@ const adminRoutes = require('./routes/admin');
 const submissionRoutes = require('./routes/submissions');
 const subscriptionRoutes = require('./routes/subscriptions');
 const crawlerRoutes = require('./routes/crawler');  // <-- ADD: crawler routes
+const feedbackRoutes = require('./routes/feedback');  // <-- ADD: feedback routes
+const projectsRoutes = require('./routes/projects');  // <-- ADD: projects routes
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -184,6 +187,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api', subscriptionRoutes);
 app.use('/api/crawler', crawlerRoutes);  // <-- ADD: mount crawler routes
+app.use('/api/feedback', feedbackRoutes);  // <-- ADD: mount feedback routes
+app.use('/api/projects', projectsRoutes);  // <-- ADD: mount projects routes
 app.use('/api/account', accountRoutes);
 
 // Legacy compatibility routes

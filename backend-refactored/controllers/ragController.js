@@ -35,9 +35,10 @@ class RAGController {
       console.log(`[${req.user?.username || 'Anonymous'}] Response time: ${responseTime}ms`);
 
       // Log the query
+      let queryId = null;
       if (req.user) {
         try {
-          await QueryLog.create(req.user.id, question, responseTime, chunks.length);
+          queryId = await QueryLog.create(req.user.id, question, responseTime, chunks.length);
         } catch (logErr) {
           console.error('[RAG] Failed to log query:', logErr.message);
         }
@@ -45,6 +46,7 @@ class RAGController {
 
       res.json({
         answer,
+        queryId,  // Return query ID for feedback system
         metadata: {
           chunks_used: chunks.length,
           response_time: responseTime,
