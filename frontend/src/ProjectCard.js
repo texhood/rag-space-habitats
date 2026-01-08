@@ -64,17 +64,26 @@ function ProjectCard({ project, onDelete }) {
         <span className="card-date">Created {formatDate(project.created_at)}</span>
         <div className="card-actions">
           <button
+            className="btn-manage"
+            onClick={() => navigate(`/projects/${project.id}`)}
+            title="Manage project settings, documents, and bookmarks"
+          >
+            ⚙️ Manage
+          </button>
+          <button
             className="btn-open"
             onClick={() => navigate(`/app?project=${project.id}`)}
+            title="Open project chat"
           >
-            Open
+            💬 Chat
           </button>
           <button
             className="btn-delete"
             onClick={handleDelete}
             disabled={deleting}
+            title="Delete project"
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? '...' : '🗑️'}
           </button>
         </div>
       </div>

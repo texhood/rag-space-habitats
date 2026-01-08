@@ -1,0 +1,116 @@
+/* PinnedDocumentsList.css */
+
+.pinned-documents-list {
+  margin: 20px 0;
+}
+
+.pinned-docs-loading,
+.pinned-docs-error {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.pinned-docs-error {
+  color: #c33;
+  background: #fee;
+  border-radius: 4px;
+}
+
+.pinned-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pinned-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.pin-count {
+  background: #667eea;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.no-pinned-docs {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.no-pinned-docs .hint {
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.pinned-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.pinned-doc-card {
+  background: white;
+  border: 2px solid #e0e7ff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pinned-doc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pin-icon {
+  font-size: 20px;
+}
+
+.btn-unpin {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.btn-unpin:hover {
+  color: #c33;
+}
+
+.pinned-doc-card h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.doc-source {
+  margin: 5px 0;
+  font-size: 13px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.doc-pinned-date {
+  margin: 5px 0 0 0;
+  font-size: 12px;
+  color: #999;
+}

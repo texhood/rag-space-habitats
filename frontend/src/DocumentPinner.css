@@ -1,0 +1,148 @@
+/* DocumentPinner.css */
+
+.document-pinner {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.pinner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pinner-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.pin-limit {
+  font-size: 14px;
+  color: #666;
+  background: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.search-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-form input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.search-form input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn-search {
+  padding: 10px 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-search:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.btn-search:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.search-error {
+  padding: 10px;
+  background: #fee;
+  color: #c33;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.search-results h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.result-info {
+  flex: 1;
+}
+
+.result-info h5 {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.result-source {
+  margin: 5px 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.result-keywords {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.keyword-tag {
+  background: #e0e7ff;
+  color: #667eea;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.btn-pin {
+  padding: 8px 16px;
+  background: #00b894;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-pin:hover:not(:disabled) {
+  background: #00a884;
+}
+
+.btn-pin:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}

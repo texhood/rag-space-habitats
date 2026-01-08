@@ -88,16 +88,16 @@ class ProjectDocument {
    * Update document with extracted content and embedding
    */
   static async updateContent(docId, contentText, embedding = null) {
-    const result = await pool.query(
-      `UPDATE project_documents
-       SET content_text = $1, embedding = $2, processing_status = 'completed'
-       WHERE id = $3
-       RETURNING *`,
-      [contentText, embedding ? JSON.stringify(embedding) : null, docId]
-    );
+      const result = await pool.query(
+        `UPDATE project_documents
+        SET content_text = $1, embedding = $2, processing_status = 'completed'
+        WHERE id = $3
+        RETURNING *`,
+        [contentText, embedding || null, docId]  // Remove JSON.stringify
+      );
 
-    return result.rows[0];
-  }
+      return result.rows[0];
+    }
 
   /**
    * Delete document

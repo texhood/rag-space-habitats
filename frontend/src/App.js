@@ -12,6 +12,7 @@ import LandingPage from './LandingPage';
 import AppNavbar from './AppNavbar';
 import BrowseKnowledgeBase from './BrowseKnowledgeBase';
 import ProjectsPage from './ProjectsPage';
+import ProjectWorkspace from './ProjectWorkspace';
 import './AppNavbar.css';
 import './BrowseKnowledgeBase.css';
 import './ProjectList.css';
@@ -579,6 +580,9 @@ function App() {
 
         {/* Projects (Enterprise users and admins only) */}
         <Route path="/projects" element={<ProjectsPage />} />
+
+        {/* Individual project workspace */}
+        <Route path="/projects/:id" element={<ProjectWorkspace />} />
 
         {/* Redirect old routes to new structure */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -239,6 +239,10 @@ async function startServer() {
   try {
     await mongoClient.connect();
 
+    // Initialize GridFS for project document uploads
+    const gridfsService = require('./services/gridfsService');
+    await gridfsService.initialize();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Database: PostgreSQL with pgvector`);

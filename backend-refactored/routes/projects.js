@@ -1,10 +1,13 @@
 // routes/projects.js - Projects API endpoints
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const Project = require('../models/Project');
 const ProjectDocument = require('../models/ProjectDocument');
 const ProjectBookmark = require('../models/ProjectBookmark');
 const { requireEnterprise } = require('../middleware/enterpriseAuth');
+const gridfsService = require('../services/gridfsService');
+const projectDocProcessor = require('../services/projectDocumentProcessor');
 
 // Constants
 const PROJECT_LIMITS = {
@@ -12,6 +15,14 @@ const PROJECT_LIMITS = {
   maxFileSizeMB: 200,
   maxFileSizeBytes: 200 * 1024 * 1024  // 209,715,200 bytes
 };
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: PROJECT_LIMITS.maxFileSizeBytes
+  }
+});
 
 // ========== PROJECT CRUD ==========
 
@@ -73,6 +84,60 @@ router.post('/', requireEnterprise, async (req, res) => {
     });
   } catch (err) {
     console.error('[Projects] Create error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/projects/knowledge-base/search
+ * Search knowledge base documents (PostgreSQL) for pinning to projects
+ */
+router.get('/knowledge-base/search', requireEnterprise, async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    }
+
+    const pool = require('../config/database');
+    
+    // Search document_chunks in PostgreSQL
+    // Group by source_id to get unique documents
+    const result = await pool.query(`
+      SELECT DISTINCT ON (source_id)
+        source_id as _id,
+        metadata->>'title' as title,
+        metadata->>'source' as source,
+        metadata->'tags' as tags,
+        metadata->>'category' as category
+      FROM document_chunks
+      WHERE 
+        metadata->>'title' ILIKE $1
+        OR content ILIKE $1
+        OR metadata->>'category' ILIKE $1
+        OR metadata::text ILIKE $1
+      ORDER BY source_id
+      LIMIT 20
+    `, [`%${query}%`]);
+
+    const documents = result.rows.map(row => ({
+      _id: row._id,
+      title: row.title || 'Untitled Document',
+      source: row.source || 'Unknown',
+      keywords: row.tags || [],
+      category: row.category
+    }));
+
+    console.log(`[Projects] KB search for "${query}" found ${documents.length} results`);
+
+    res.json({ 
+      documents,
+      count: documents.length,
+      query
+    });
+  } catch (err) {
+    console.error('[Projects] KB search error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -377,6 +442,81 @@ router.get('/:id/documents', requireEnterprise, async (req, res) => {
     });
   } catch (err) {
     console.error('[Projects] Get documents error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/projects/:id/documents
+ * Upload a document to a project
+ */
+router.post('/:id/documents', requireEnterprise, upload.single('file'), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Verify project ownership
+    const project = await Project.getById(projectId, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Validate file type
+    if (!projectDocProcessor.isValidFileType(file.mimetype)) {
+      return res.status(400).json({
+        error: 'Invalid file type. Allowed: PDF, DOCX, TXT, Markdown'
+      });
+    }
+
+    // Validate file size
+    if (!projectDocProcessor.isValidFileSize(file.size)) {
+      return res.status(400).json({
+        error: `File too large. Max size: ${PROJECT_LIMITS.maxFileSizeMB}MB`
+      });
+    }
+
+    // Upload to GridFS
+    const gridfsId = await gridfsService.uploadFile(
+      file.buffer,
+      file.originalname,
+      {
+        project_id: projectId,
+        mime_type: file.mimetype,
+        uploaded_by: req.user.id
+      }
+    );
+
+    // Create document record with 'pending' status
+    const document = await ProjectDocument.create(projectId, {
+      gridfsId: gridfsId,
+      fileName: file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_'),
+      originalName: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      processingStatus: 'pending'
+    });
+
+    console.log(`[Projects] Document uploaded: ${file.originalname} (${document.id})`);
+
+    // Process document asynchronously (don't await)
+    processDocumentAsync(document.id, projectId, file.buffer, file.mimetype, file.originalname);
+
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded successfully. Processing in background.',
+      document: {
+        id: document.id,
+        file_name: document.file_name,
+        status: 'pending'
+      }
+    });
+
+  } catch (err) {
+    console.error('[Projects] Upload error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -705,5 +845,44 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ========== HELPER FUNCTIONS ==========
+
+/**
+ * Async document processing function
+ * Processes uploaded documents in the background without blocking the upload response
+ */
+async function processDocumentAsync(docId, projectId, fileBuffer, mimeType, filename) {
+  try {
+    console.log(`[Background] Processing document ${docId}...`);
+
+    // Update status to 'processing'
+    await ProjectDocument.updateStatus(docId, 'processing');
+
+    // Extract text and generate embedding
+    const { text, embedding } = await projectDocProcessor.processDocument(
+      fileBuffer,
+      mimeType,
+      filename
+    );
+
+    // Convert embedding to pgvector format
+    const embeddingStr = `[${embedding.join(',')}]`;
+
+    // Update document with content and embedding
+    await ProjectDocument.updateContent(docId, text, embeddingStr);
+
+    // Update status to 'completed'
+    await ProjectDocument.updateStatus(docId, 'completed');
+
+    console.log(`[Background] Document ${docId} processed successfully`);
+
+  } catch (err) {
+    console.error(`[Background] Processing error for document ${docId}:`, err);
+
+    // Update status to 'failed' with error message
+    await ProjectDocument.updateStatus(docId, 'failed', err.message);
+  }
+}
 
 module.exports = router;
