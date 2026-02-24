@@ -118,7 +118,9 @@ app.post('/api/subscriptions/webhook',
 const allowedOrigins = [
   'http://localhost:3000',  // Local frontend
   'https://rag-space-habitats.vercel.app',  // Production frontend
-  process.env.CORS_ORIGIN  // Railway env variable
+  'https://spacehabitats.net',  // Production domain
+  'https://www.spacehabitats.net',  // Production domain (www)
+  process.env.CORS_ORIGIN  // Railway env variable (optional override)
 ].filter(Boolean);
 
 app.use(cors({
