@@ -32,4 +32,8 @@ export default defineConfig({
     outDir: 'build',
     sourcemap: false,
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+  },
 });

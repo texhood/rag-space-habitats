@@ -1,6 +1,7 @@
 // controllers/authController.js
 const User = require('../models/User');
 const passport = require('passport');
+const { validateRegistration } = require('../services/authValidation');
 
 class AuthController {
   /**
@@ -9,27 +10,11 @@ class AuthController {
   static async register(req, res, next) {
     try {
       const { username, password, email } = req.body;
-
-      // Validation
-      if (!username || !password) {
-        return res.status(400).json({ 
-          error: 'Missing fields',
-          message: 'Username and password are required'
-        });
-      }
-
-      if (password.length < 6) {
-        return res.status(400).json({
-          error: 'Invalid password',
-          message: 'Password must be at least 6 characters'
-        });
-      }
-
-      // Validate email format if provided
-      if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        return res.status(400).json({
-          error: 'Invalid email',
-          message: 'Please provide a valid email address'
+      const validation = validateRegistration({ username, password, email });
+      if (!validation.ok) {
+        return res.status(validation.status).json({
+          error: validation.error,
+          message: validation.message
         });
       }
 
