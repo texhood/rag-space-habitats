@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   DEFAULT_LICENSE,
+  PUBLIC_LICENSES,
   resolveLicense,
   canReadSubmission,
   listSubmissionsFilter,
@@ -37,6 +38,17 @@ describe('resolveLicense', () => {
     assert.equal(resolveLicense('cc-by'), 'cc-by');
     assert.equal(resolveLicense('cc-by-sa'), 'cc-by-sa');
     assert.equal(resolveLicense('cc-by-nc'), 'cc-by-nc');
+  });
+
+  it('keeps NASA and arXiv corpus licenses public', () => {
+    assert.equal(
+      resolveLicense('Public Domain (U.S. Government Work)'),
+      'Public Domain (U.S. Government Work)'
+    );
+    assert.equal(
+      resolveLicense('arXiv Non-exclusive License'),
+      'arXiv Non-exclusive License'
+    );
   });
 });
 
@@ -88,16 +100,16 @@ describe('listSubmissionsFilter', () => {
 });
 
 describe('publicBrowseFilter', () => {
-  it('only includes processed Creative Commons items', () => {
+  it('includes processed Creative Commons and crawler-public items', () => {
     assert.deepEqual(publicBrowseFilter(), {
       status: 'processed',
-      license: { $in: ['cc-by', 'cc-by-sa', 'cc-by-nc'] }
+      license: { $in: PUBLIC_LICENSES }
     });
   });
 
   it('ignores a request to browse private items', () => {
     assert.deepEqual(publicBrowseFilter('private').license, {
-      $in: ['cc-by', 'cc-by-sa', 'cc-by-nc']
+      $in: PUBLIC_LICENSES
     });
   });
 });
@@ -128,13 +140,21 @@ describe('canIngestIntoCorpus', () => {
     }));
     assert.equal(result.ok, true);
   });
+
+  it('allows an approved NASA public-domain submission', () => {
+    const result = canIngestIntoCorpus(submission({
+      status: 'approved',
+      license: 'Public Domain (U.S. Government Work)'
+    }));
+    assert.equal(result.ok, true);
+  });
 });
 
 describe('approvedIngestFilter', () => {
   it('excludes private licenses from batch ingest', () => {
     assert.deepEqual(approvedIngestFilter(), {
       status: 'approved',
-      license: { $in: ['cc-by', 'cc-by-sa', 'cc-by-nc'] }
+      license: { $in: PUBLIC_LICENSES }
     });
   });
 });

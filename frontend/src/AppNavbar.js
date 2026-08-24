@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './AppNavbar.css';
 
-function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, onShowProfile }) {
+function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, onShowProfile, onShowLogin }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -30,6 +30,15 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
     }
   };
 
+  const openLogin = () => {
+    setMobileMenuOpen(false);
+    if (onShowLogin) {
+      onShowLogin(true);
+      return;
+    }
+    handleNavClick('/app?login=true');
+  };
+
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -37,7 +46,6 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
       <div className="app-navbar-container">
         {/* Logo / Home Link */}
         <div className="app-navbar-brand" onClick={() => handleNavClick('/')}>
-          <span className="brand-icon" role="img" aria-label="rocket">&#128640;</span>
           <span className="brand-text">Space Habitats</span>
         </div>
 
@@ -47,16 +55,14 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
             className={`nav-link ${isActive('/app') ? 'active' : ''}`}
             onClick={() => handleNavClick('/app')}
           >
-            <span className="nav-icon" role="img" aria-label="search">&#128269;</span>
-            <span className="nav-text">Ask Questions</span>
+            <span className="nav-text">Query</span>
           </button>
 
           <button
             className={`nav-link ${isActive('/browse') ? 'active' : ''}`}
             onClick={() => handleNavClick('/browse')}
           >
-            <span className="nav-icon" role="img" aria-label="books">&#128218;</span>
-            <span className="nav-text">Browse</span>
+            <span className="nav-text">Library</span>
           </button>
 
           {user && (user.subscription_tier === 'enterprise' || user.role === 'admin') && (
@@ -64,7 +70,6 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
               className={`nav-link ${isActive('/projects') ? 'active' : ''}`}
               onClick={() => handleNavClick('/projects')}
             >
-              <span className="nav-icon" role="img" aria-label="briefcase">&#128188;</span>
               <span className="nav-text">Projects</span>
             </button>
           )}
@@ -74,7 +79,6 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
               className="nav-link"
               onClick={() => handleActionClick(onShowSubmit)}
             >
-              <span className="nav-icon" role="img" aria-label="upload">&#128228;</span>
               <span className="nav-text">Submit</span>
             </button>
           )}
@@ -84,8 +88,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
             {user ? (
               <>
                 <div className="mobile-user-info">
-                  <span className="user-avatar" role="img" aria-label="user">&#128100;</span>
-                  <span className="user-name">{user.username}</span>
+                <span className="user-name">{user.username}</span>
                   <span className="user-tier">{user.subscription_tier?.toUpperCase() || 'FREE'}</span>
                 </div>
                 {onShowProfile && (
@@ -93,7 +96,6 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                     className="nav-link"
                     onClick={() => handleActionClick(onShowProfile)}
                   >
-                    <span className="nav-icon" role="img" aria-label="profile">&#128100;</span>
                     <span className="nav-text">My Account</span>
                   </button>
                 )}
@@ -102,7 +104,6 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                     className="nav-link"
                     onClick={() => handleActionClick(onShowPricing)}
                   >
-                    <span className="nav-icon" role="img" aria-label="lightning">&#9889;</span>
                     <span className="nav-text">Upgrade</span>
                   </button>
                 )}
@@ -111,22 +112,19 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                     className="nav-link"
                     onClick={() => handleActionClick(onShowAdmin)}
                   >
-                    <span className="nav-icon" role="img" aria-label="tools">&#128736;</span>
-                    <span className="nav-text">Admin Panel</span>
+                    <span className="nav-text">Admin</span>
                   </button>
                 )}
                 <button className="nav-link logout-link" onClick={handleLogout}>
-                  <span className="nav-icon" role="img" aria-label="door">&#128682;</span>
-                  <span className="nav-text">Logout</span>
+                  <span className="nav-text">Sign out</span>
                 </button>
               </>
             ) : (
               <button
                 className="nav-link"
-                onClick={() => handleNavClick('/app?login=true')}
+                onClick={openLogin}
               >
-                <span className="nav-icon" role="img" aria-label="key">&#128273;</span>
-                <span className="nav-text">Login</span>
+                <span className="nav-text">Sign in</span>
               </button>
             )}
           </div>
@@ -140,7 +138,6 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                 className="user-menu-trigger"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
-                <span className="user-avatar" role="img" aria-label="user">&#128100;</span>
                 <span className="user-name">{user.username}</span>
                 <span className="user-tier-badge">{user.subscription_tier?.toUpperCase() || 'FREE'}</span>
                 <span className="menu-arrow">{userMenuOpen ? '\u25B2' : '\u25BC'}</span>
@@ -150,22 +147,22 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                 <div className="user-dropdown">
                   {onShowProfile && (
                     <button onClick={() => { setUserMenuOpen(false); onShowProfile(true); }}>
-                      <span role="img" aria-label="profile">&#128100;</span> My Account
+                      My Account
                     </button>
                   )}
                   {onShowPricing && (
                     <button onClick={() => { setUserMenuOpen(false); onShowPricing(true); }}>
-                      <span role="img" aria-label="lightning">&#9889;</span> Upgrade Plan
+                      Upgrade
                     </button>
                   )}
                   {user.role === 'admin' && onShowAdmin && (
                     <button onClick={() => { setUserMenuOpen(false); onShowAdmin(true); }}>
-                      <span role="img" aria-label="tools">&#128736;</span> Admin Panel
+                      Admin
                     </button>
                   )}
                   <hr className="dropdown-divider" />
                   <button onClick={handleLogout}>
-                    <span role="img" aria-label="door">&#128682;</span> Logout
+                    Sign out
                   </button>
                 </div>
               )}
@@ -174,9 +171,9 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
             <div className="auth-buttons">
               <button 
                 className="btn-login"
-                onClick={() => navigate('/app?login=true')}
+                onClick={openLogin}
               >
-                Login
+                Sign in
               </button>
             </div>
           )}

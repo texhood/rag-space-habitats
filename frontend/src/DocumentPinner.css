@@ -16,13 +16,13 @@
 
 .pinner-header h3 {
   margin: 0;
-  color: #333;
+  color: var(--text);
 }
 
 .pin-limit {
   font-size: 14px;
-  color: #666;
-  background: white;
+  color: var(--muted);
+  background: var(--bg-raised);
   padding: 6px 12px;
   border-radius: 4px;
 }
@@ -43,12 +43,12 @@
 
 .search-form input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent);
 }
 
 .btn-search {
   padding: 10px 20px;
-  background: #667eea;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 6px;
@@ -58,7 +58,7 @@
 }
 
 .btn-search:hover:not(:disabled) {
-  background: #5568d3;
+  background: var(--accent);
 }
 
 .btn-search:disabled {
@@ -76,7 +76,7 @@
 
 .search-results h4 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: var(--text);
 }
 
 .results-list {
@@ -90,7 +90,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  background: white;
+  background: var(--bg-raised);
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -101,14 +101,14 @@
 
 .result-info h5 {
   margin: 0 0 5px 0;
-  color: #333;
+  color: var(--text);
   font-size: 16px;
 }
 
 .result-source {
   margin: 5px 0;
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
 }
 
 .result-keywords {
@@ -120,7 +120,7 @@
 
 .keyword-tag {
   background: #e0e7ff;
-  color: #667eea;
+  color: var(--accent);
   padding: 3px 8px;
   border-radius: 3px;
   font-size: 11px;

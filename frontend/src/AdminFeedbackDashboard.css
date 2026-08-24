@@ -2,7 +2,7 @@
 
 .feedback-dashboard {
   padding: 24px;
-  background: white;
+  background: var(--bg-raised);
   border-radius: 12px;
 }
 
@@ -11,7 +11,7 @@
   padding: 40px 24px;
   text-align: center;
   font-size: 16px;
-  color: #666;
+  color: var(--muted);
 }
 
 .feedback-dashboard.error {
@@ -27,14 +27,14 @@
   align-items: center;
   margin-bottom: 32px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--line);
 }
 
 .dashboard-header h2 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 .period-selector {
@@ -42,7 +42,7 @@
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  color: #666;
+  color: var(--muted);
 }
 
 .period-selector label {
@@ -51,12 +51,12 @@
 
 .period-selector select {
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 6px;
-  background: white;
+  background: var(--bg-raised);
   cursor: pointer;
   font-size: 13px;
-  color: #333;
+  color: var(--text);
 }
 
 .period-selector select:hover {
@@ -65,7 +65,7 @@
 
 .period-selector select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -78,15 +78,15 @@
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #f5f7ff 0%, #fff 100%);
-  border: 1px solid #e0e0e0;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 24px;
   transition: all 0.2s ease;
 }
 
 .stat-card:hover {
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
@@ -102,7 +102,7 @@
 .stat-value {
   font-size: 32px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--accent);
   margin-bottom: 16px;
 }
 
@@ -115,7 +115,7 @@
 .stat-subvalue {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 /* Sentiment Breakdown */
@@ -178,7 +178,7 @@
 .reaction-count {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 /* Detailed Stats */
@@ -190,8 +190,8 @@
 }
 
 .stat-section {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 24px;
 }
@@ -200,7 +200,7 @@
   margin: 0 0 20px;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 /* Relevance Bars */
@@ -220,7 +220,7 @@
 .bar-label {
   font-size: 12px;
   font-weight: 500;
-  color: #666;
+  color: var(--muted);
 }
 
 .bar-background {
@@ -240,7 +240,7 @@
   text-align: right;
   font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
   min-width: 40px;
 }
 
@@ -253,23 +253,23 @@
 
 .type-btn {
   padding: 8px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--line);
   border-radius: 20px;
-  background: white;
+  background: var(--bg-raised);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: #666;
+  color: var(--muted);
   transition: all 0.2s ease;
 }
 
 .type-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .type-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   color: white;
   border-color: transparent;
 }
@@ -283,7 +283,7 @@
   margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 .feedback-list {
@@ -296,8 +296,8 @@
 
 .feedback-item {
   background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-left: 4px solid #667eea;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
   border-radius: 8px;
   padding: 16px;
   transition: all 0.2s ease;
@@ -305,11 +305,11 @@
 
 .feedback-item:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border-left-color: #764ba2;
+  border-left-color: var(--accent-strong);
 }
 
 .feedback-item.feedback-type-reaction {
-  border-left-color: #667eea;
+  border-left-color: var(--accent);
 }
 
 .feedback-item.feedback-type-rating {
@@ -330,13 +330,13 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--line);
 }
 
 .feedback-user {
   font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 .feedback-date {
@@ -361,18 +361,18 @@
 
 .feedback-value {
   font-size: 13px;
-  color: #333;
+  color: var(--text);
   font-weight: 500;
 }
 
 .feedback-comment {
   margin: 0;
   padding: 12px;
-  background: white;
+  background: var(--bg-raised);
   border-radius: 6px;
   border-left: 3px solid #2196f3;
   font-size: 13px;
-  color: #333;
+  color: var(--text);
   line-height: 1.5;
 }
 
@@ -380,7 +380,7 @@
   display: flex;
   gap: 8px;
   padding: 8px 12px;
-  background: white;
+  background: var(--bg-raised);
   border-radius: 6px;
   font-size: 11px;
 }
@@ -392,7 +392,7 @@
 
 .context-value {
   flex: 1;
-  color: #333;
+  color: var(--text);
   word-break: break-word;
 }
 
@@ -403,7 +403,7 @@
   font-size: 14px;
   background: #f9f9f9;
   border-radius: 8px;
-  border: 1px dashed #e0e0e0;
+  border: 1px dashed var(--line);
 }
 
 /* Responsive */

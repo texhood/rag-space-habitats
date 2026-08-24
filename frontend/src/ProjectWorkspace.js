@@ -163,10 +163,10 @@ function ProjectWorkspace() {
           </div>
           <div className="header-actions">
             <button className="btn-chat" onClick={handleOpenChat}>
-              💬 Open Chat
+              Open query
             </button>
             <button className="btn-edit" onClick={() => setShowEditModal(true)}>
-              ✏️ Edit Project
+              Edit project
             </button>
           </div>
         </div>
@@ -176,19 +176,19 @@ function ProjectWorkspace() {
             className={`tab ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
           >
-            📄 Documents
+            Documents
           </button>
           <button
             className={`tab ${activeTab === 'bookmarks' ? 'active' : ''}`}
             onClick={() => setActiveTab('bookmarks')}
           >
-            🔖 Bookmarks
+            Saved chats
           </button>
           <button
             className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
-            ⚙️ Settings
+            Settings
           </button>
         </div>
 
@@ -196,7 +196,7 @@ function ProjectWorkspace() {
           {activeTab === 'documents' && (
             <div className="tab-content">
               <section className="documents-section">
-                <h2>📤 Upload Project Documents</h2>
+                <h2>Upload documents</h2>
                 <p>Upload your own documents (PDF, DOCX, TXT, Markdown) to include in this project's context.</p>
                 <DocumentUploader
                   projectId={id}
@@ -227,8 +227,14 @@ function ProjectWorkspace() {
 
           {activeTab === 'bookmarks' && (
             <div className="tab-content">
-              <h2>🔖 Bookmarked Responses</h2>
-              <p>Coming soon: Save and organize important responses from your project queries.</p>
+              <h2>Saved conversations</h2>
+              <p>
+                Query chats for this project are saved automatically. Open query to continue the
+                current thread, or start a new one (the previous thread stays in Previous conversations).
+              </p>
+              <button className="btn-chat" onClick={handleOpenChat}>
+                Continue saved chat
+              </button>
             </div>
           )}
 

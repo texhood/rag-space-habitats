@@ -43,7 +43,7 @@ function ProjectList() {
         withCredentials: true
       });
 
-      setProjects([response.data.project, ...projects]);
+      setProjects([{ ...response.data.project, document_count: 0, pinned_count: 0 }, ...projects]);
       setShowCreateModal(false);
     } catch (err) {
       throw new Error(err.response?.data?.error || 'Failed to create project');
@@ -58,7 +58,7 @@ function ProjectList() {
     <div className="projects-page">
       <div className="projects-header">
         <h1>Projects</h1>
-        <p>Enterprise workspaces for custom research and analysis</p>
+        <p>Enterprise workspaces for custom research. Query chats in a project are saved.</p>
         <button
           className="btn-create-project"
           onClick={() => setShowCreateModal(true)}
@@ -81,9 +81,8 @@ function ProjectList() {
 
       {!loading && projects.length === 0 && !error && (
         <div className="projects-empty">
-          <div className="empty-icon">📁</div>
           <h2>No projects yet</h2>
-          <p>Create your first project to get started</p>
+          <p>Create a workspace with objectives and constraints for scoped research.</p>
           <button
             className="btn-create-project"
             onClick={() => setShowCreateModal(true)}

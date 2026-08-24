@@ -1,15 +1,12 @@
 .landing-page {
-  --lp-bg: #0c1014;
-  --lp-bg-raised: #141a21;
-  --lp-line: #2a3440;
-  --lp-text: #e8e4dc;
-  --lp-muted: #9aa3ad;
-  --lp-faint: #6d7680;
-  --lp-accent: #c4a574;
-  --lp-accent-strong: #d4b896;
-  --paper: #f4efe6;
-  --paper-ink: #1a1f24;
-  --danger: #b42318;
+  --lp-bg: var(--bg);
+  --lp-bg-raised: var(--bg-raised);
+  --lp-line: var(--line);
+  --lp-text: var(--text);
+  --lp-muted: var(--muted);
+  --lp-faint: var(--faint);
+  --lp-accent: var(--accent);
+  --lp-accent-strong: var(--accent-strong);
 
   min-height: 100vh;
   background: var(--lp-bg);
@@ -43,7 +40,7 @@
 
 html:has(.landing-page),
 html:has(.landing-page) body {
-  background: #0c1014;
+  background: var(--bg);
   padding: 0;
   margin: 0;
 }

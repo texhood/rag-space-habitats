@@ -1,8 +1,23 @@
-const PUBLIC_LICENSES = ['cc-by', 'cc-by-sa', 'cc-by-nc'];
+const CREATIVE_COMMONS_LICENSES = ['cc-by', 'cc-by-sa', 'cc-by-nc'];
+const CRAWLER_PUBLIC_LICENSES = [
+  'Public Domain (U.S. Government Work)',
+  'Public Domain',
+  'arXiv Non-exclusive License',
+  'arXiv Non-exclusive',
+  'CC-BY'
+];
+const PUBLIC_LICENSES = [
+  ...CREATIVE_COMMONS_LICENSES,
+  ...CRAWLER_PUBLIC_LICENSES
+];
 const DEFAULT_LICENSE = 'private';
 
+function isPublicLicense(raw) {
+  return PUBLIC_LICENSES.includes(raw);
+}
+
 function resolveLicense(raw) {
-  if (raw === 'private' || PUBLIC_LICENSES.includes(raw)) {
+  if (raw === 'private' || isPublicLicense(raw)) {
     return raw;
   }
   return DEFAULT_LICENSE;
@@ -12,7 +27,7 @@ function isPublicLibraryItem(submission) {
   return Boolean(
     submission &&
     submission.status === 'processed' &&
-    PUBLIC_LICENSES.includes(submission.license)
+    isPublicLicense(submission.license)
   );
 }
 
@@ -61,7 +76,7 @@ function publicBrowseFilter(license) {
     license: { $in: PUBLIC_LICENSES }
   };
 
-  if (license && license !== 'all' && PUBLIC_LICENSES.includes(license)) {
+  if (license && license !== 'all' && isPublicLicense(license)) {
     filter.license = license;
   }
 
@@ -115,8 +130,11 @@ function requireProjectUserId(userId) {
 const CORPUS_EXCLUDES_PRIVATE_SQL = "COALESCE(metadata->>'license', '') <> 'private'";
 
 module.exports = {
+  CREATIVE_COMMONS_LICENSES,
+  CRAWLER_PUBLIC_LICENSES,
   PUBLIC_LICENSES,
   DEFAULT_LICENSE,
+  isPublicLicense,
   resolveLicense,
   isPublicLibraryItem,
   canReadSubmission,

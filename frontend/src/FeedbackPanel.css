@@ -6,26 +6,26 @@
   border-radius: 12px;
   padding: 24px;
   margin-top: 24px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
 }
 
 .feedback-header {
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--line);
 }
 
 .feedback-header h3 {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 .feedback-header p {
   margin: 0;
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
 }
 
 /* Messages */
@@ -75,8 +75,8 @@
 
 /* Individual Feedback Type */
 .feedback-type {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -88,7 +88,7 @@
 }
 
 .feedback-type.expanded {
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
@@ -96,7 +96,7 @@
 .feedback-type-header {
   width: 100%;
   padding: 16px;
-  background: white;
+  background: var(--bg-raised);
   border: none;
   cursor: pointer;
   display: flex;
@@ -104,13 +104,13 @@
   gap: 12px;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
   transition: all 0.2s ease;
   text-align: left;
 }
 
 .feedback-type-header:hover:not(:disabled) {
-  background: #f5f5f5;
+  background: var(--bg-user);
 }
 
 .feedback-type-header:disabled {
@@ -172,7 +172,7 @@
 .feedback-type-content > p {
   margin: 12px 0 16px;
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
 }
 
 /* Reaction Buttons */
@@ -184,19 +184,19 @@
 .reaction-btn {
   flex: 1;
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--bg-raised);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
   transition: all 0.2s ease;
 }
 
 .reaction-btn:hover:not(:disabled) {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--accent);
+  color: var(--accent);
   background: #f5f7ff;
 }
 
@@ -224,9 +224,9 @@
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--bg-raised);
   cursor: pointer;
   font-size: 22px;
   color: #ddd;
@@ -271,9 +271,9 @@
 
 .relevance-option {
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--bg-raised);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
@@ -283,7 +283,7 @@
 }
 
 .relevance-option:hover:not(:disabled) {
-  border-color: #667eea;
+  border-color: var(--accent);
   background: #f5f7ff;
 }
 
@@ -295,7 +295,7 @@
 .option-label {
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
 }
 
 .option-description {
@@ -317,23 +317,23 @@
 .feedback-textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--line);
   border-radius: 8px;
   font-family: inherit;
   font-size: 13px;
-  color: #333;
+  color: var(--text);
   resize: none;
   transition: all 0.2s ease;
 }
 
 .feedback-textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .feedback-textarea:disabled {
-  background: #f5f5f5;
+  background: var(--bg-user);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -348,13 +348,13 @@
   right: 12px;
   font-size: 11px;
   color: #999;
-  background: white;
+  background: var(--bg-raised);
   padding: 0 4px;
 }
 
 .submit-btn {
   padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   color: white;
   border: none;
   border-radius: 8px;
@@ -418,7 +418,7 @@
   }
 
   .feedback-header p {
-    color: #aaa;
+    color: var(--faint);
   }
 
   .feedback-type {
@@ -427,7 +427,7 @@
   }
 
   .feedback-type:hover {
-    border-color: #555;
+    border-color: var(--muted);
   }
 
   .feedback-type-header {
@@ -444,7 +444,7 @@
   }
 
   .feedback-type-content > p {
-    color: #aaa;
+    color: var(--faint);
   }
 
   .reaction-btn,
@@ -467,6 +467,6 @@
   }
 
   .feedback-textarea::placeholder {
-    color: #666;
+    color: var(--muted);
   }
 }

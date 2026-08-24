@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg);
   overflow-y: auto;
   z-index: 1000;
   padding: 40px 20px;
@@ -21,7 +21,7 @@
   position: absolute;
   top: -20px;
   right: 0;
-  background: white;
+  background: var(--bg-raised);
   border: none;
   width: 40px;
   height: 40px;
@@ -39,14 +39,16 @@
 
 .pricing-header {
   text-align: center;
-  color: white;
+  color: var(--text);
   margin-bottom: 40px;
 }
 
 .pricing-header h1 {
   font-size: 48px;
   margin: 0 0 10px 0;
-  font-weight: 700;
+  font-family: var(--serif);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .pricing-header p {
@@ -73,7 +75,7 @@
 }
 
 .beta-banner {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: var(--bg-user);
   color: white;
   padding: 15px 30px;
   border-radius: 12px;
@@ -91,7 +93,7 @@
 }
 
 .pricing-card {
-  background: white;
+  background: var(--bg-raised);
   border-radius: 16px;
   padding: 30px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -107,7 +109,7 @@
 }
 
 .pricing-card.current {
-  border: 3px solid #667eea;
+  border: 3px solid var(--accent);
 }
 
 .pricing-card.popular {
@@ -120,7 +122,7 @@
 }
 
 .pricing-card.beta {
-  background: linear-gradient(135deg, #fff 0%, #fef3ff 100%);
+  background: var(--bg-raised);
   border: 2px dashed #f093fb;
 }
 
@@ -139,12 +141,12 @@
 }
 
 .popular-badge {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: var(--bg-user);
   color: white;
 }
 
 .beta-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   color: white;
 }
 
@@ -163,7 +165,7 @@
 .pricing-card-header h2 {
   margin: 0 0 15px 0;
   font-size: 24px;
-  color: #333;
+  color: var(--text);
 }
 
 .price {
@@ -175,24 +177,24 @@
 
 .price .currency {
   font-size: 24px;
-  color: #667eea;
+  color: var(--accent);
 }
 
 .price .amount {
   font-size: 48px;
   font-weight: 700;
-  color: #667eea;
+  color: var(--accent);
   line-height: 1;
 }
 
 .price .period {
   font-size: 16px;
-  color: #888;
+  color: var(--faint);
   margin-left: 5px;
 }
 
 .description {
-  color: #666;
+  color: var(--muted);
   font-size: 14px;
   margin: 0;
 }
@@ -212,7 +214,7 @@
   padding: 10px 0;
   display: flex;
   align-items: center;
-  color: #555;
+  color: var(--muted);
   font-size: 15px;
 }
 
@@ -240,7 +242,7 @@
 }
 
 .pricing-btn.upgrade {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   color: white;
 }
 
@@ -301,7 +303,7 @@
 }
 
 .confirm-modal {
-  background: white;
+  background: var(--bg-raised);
   border-radius: 16px;
   padding: 30px;
   max-width: 500px;
@@ -315,7 +317,7 @@
   margin: 0 0 20px 0;
   font-size: 24px;
   text-align: center;
-  color: #333;
+  color: var(--text);
 }
 
 .confirm-details {
@@ -331,7 +333,7 @@
   font-weight: 600;
   margin-bottom: 25px;
   padding: 15px;
-  background: #f8f9fa;
+  background: var(--bg-user);
   border-radius: 10px;
 }
 
@@ -340,12 +342,12 @@
 }
 
 .plan-change .arrow {
-  color: #667eea;
+  color: var(--accent);
   font-size: 24px;
 }
 
 .plan-change .to {
-  color: #667eea;
+  color: var(--accent);
 }
 
 .billing-info {
@@ -371,12 +373,12 @@
 }
 
 .billing-row .label {
-  color: #666;
+  color: var(--muted);
 }
 
 .billing-row .value {
   font-weight: 600;
-  color: #333;
+  color: var(--text);
 }
 
 .billing-row .value.highlight {
@@ -384,14 +386,14 @@
 }
 
 .feature-preview {
-  background: #f8f9fa;
+  background: var(--bg-user);
   border-radius: 10px;
   padding: 15px 20px;
 }
 
 .feature-preview h4 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: var(--text);
   font-size: 14px;
 }
 
@@ -455,7 +457,7 @@
 }
 
 .btn-confirm {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   color: white;
   border: none;
 }
@@ -475,13 +477,13 @@
 }
 
 .btn-cancel {
-  background: white;
-  color: #666;
+  background: var(--bg-raised);
+  color: var(--muted);
   border: 2px solid #ddd;
 }
 
 .btn-cancel:hover {
-  background: #f5f5f5;
+  background: var(--bg-user);
   border-color: #ccc;
 }
 

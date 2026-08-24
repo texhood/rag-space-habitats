@@ -19,3 +19,7 @@ migration/
 
 # Miscellaneous
 cookies.txt
+
+# Local DB dumps (contain user data — never commit)
+backups/
+backend-refactored/seed-data.json
