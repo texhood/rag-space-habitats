@@ -1,5 +1,5 @@
 // models/User.js
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 
 class User {
