@@ -1,4 +1,3 @@
-// LandingPage.js - Playful & Fun Landing Page with Login Modal
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -9,35 +8,31 @@ function LandingPage() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Auth modal state
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setIsScrolled(window.scrollY > 24);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Check if user is already logged in
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
         const res = await axios.get(`${API_URL}/api/auth/me`, { withCredentials: true });
         if (res.data.user) {
-          // User is already logged in, redirect to app
           navigate('/app');
         }
       } catch (err) {
-        // Not logged in, stay on landing page
+        // Stay on landing
       }
     };
     checkExistingAuth();
@@ -54,11 +49,10 @@ function LandingPage() {
         password: loginPassword
       }, { withCredentials: true });
 
-      // Success - navigate to app
       setShowLogin(false);
       navigate('/app');
     } catch (err) {
-      setAuthError(err.response?.data?.error || 'Login failed. Please try again.');
+      setAuthError(err.response?.data?.error || err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -72,14 +66,19 @@ function LandingPage() {
     try {
       await axios.post(`${API_URL}/api/auth/register`, {
         username: registerUsername,
+        password: registerPassword,
+        email: registerEmail || undefined
+      }, { withCredentials: true });
+
+      await axios.post(`${API_URL}/api/auth/login`, {
+        username: registerUsername,
         password: registerPassword
       }, { withCredentials: true });
 
-      // Success - navigate to app
       setShowRegister(false);
       navigate('/app');
     } catch (err) {
-      setAuthError(err.response?.data?.error || 'Registration failed. Please try again.');
+      setAuthError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -96,337 +95,272 @@ function LandingPage() {
   const openRegister = () => {
     setAuthError('');
     setRegisterUsername('');
+    setRegisterEmail('');
     setRegisterPassword('');
     setShowRegister(true);
     setShowLogin(false);
   };
 
-  const switchToRegister = () => {
-    setAuthError('');
-    setShowLogin(false);
-    setShowRegister(true);
-  };
-
-  const switchToLogin = () => {
-    setAuthError('');
-    setShowRegister(false);
-    setShowLogin(true);
-  };
-
-  const handleGetStarted = () => {
-    navigate('/app');
-  };
-
-  const handleBrowse = () => {
-    navigate('/browse');
-  };
-
   return (
     <div className="landing-page">
-      {/* Navbar */}
-      <nav className={`landing-navbar ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="nav-container">
-          <div className="nav-logo">
-            <span className="logo-icon">🎮</span>
-            <span className="logo-text">HABITAT BUILDER</span>
-          </div>
-          <div className="nav-buttons">
-            <button onClick={openLogin} className="btn-nav-login">
-              Login
+      <nav className={`lp-nav${isScrolled ? ' is-scrolled' : ''}`}>
+        <div className="lp-nav-inner">
+          <button type="button" className="lp-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <span className="lp-brand-mark" aria-hidden="true" />
+            Space Habitats
+          </button>
+          <div className="lp-nav-links">
+            <button type="button" className="lp-nav-text" onClick={() => navigate('/browse')}>
+              Library
             </button>
-            <button onClick={openRegister} className="btn-nav-signup">
-              Join Beta
+            <button type="button" className="lp-nav-text" onClick={openLogin}>
+              Sign in
+            </button>
+            <button type="button" className="lp-nav-cta" onClick={openRegister}>
+              Get access
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1 className="hero-title">
-            <span className="sparkle">✨</span>
-            DESIGN THE FUTURE OF HUMANITY IN SPACE
-            <span className="sparkle">✨</span>
-          </h1>
-          <p className="hero-subtitle">
-            🚀 Learn, share, and collaborate on space habitat design
-          </p>
-          
-          <div className="hero-mission">
-            <div className="mission-item">
-              <span className="mission-icon">📚</span>
-              <p>A place to <strong>learn and share</strong> about space habitat design</p>
-            </div>
-            <div className="mission-item">
-              <span className="mission-icon">💡</span>
-              <p>A place to <strong>contribute</strong> to the conversation with your own research and ideas</p>
-            </div>
-            <div className="mission-item">
-              <span className="mission-icon">🌟</span>
-              <p>A place to <strong>have fun</strong> while helping to become a spacefaring species</p>
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="habitat-spinner">
-              <div className="spinner-ring ring-1"></div>
-              <div className="spinner-ring ring-2"></div>
-              <div className="spinner-ring ring-3"></div>
-              <div className="spinner-center">
-                <span className="spinner-icon">🛸</span>
-                <p className="spinner-text">AI-Powered Knowledge Base</p>
-                <p className="spinner-subtext">Ask questions, get answers</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-cta-buttons">
-            <button onClick={handleGetStarted} className="btn-hero-primary">
-              🎯 Start Exploring
-            </button>
-            <button onClick={handleBrowse} className="btn-hero-secondary">
-              📚 Browse Knowledge Base
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="features-section">
-        <h2 className="features-heading">What You Can Do Here</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🤖</div>
-            <h3 className="feature-title">Ask AI Anything</h3>
-            <p className="feature-description">
-              Get instant answers about gravity, radiation, life support, and more from our AI-powered knowledge base
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">📚</div>
-            <h3 className="feature-title">Learn from Research</h3>
-            <p className="feature-description">
-              Access curated research papers, design documents, and engineering specifications from experts worldwide
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">💡</div>
-            <h3 className="feature-title">Share Your Ideas</h3>
-            <p className="feature-description">
-              Submit your own research, designs, and concepts to contribute to the growing knowledge base
-            </p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">🌍</div>
-            <h3 className="feature-title">Join the Community</h3>
-            <p className="feature-description">
-              Connect with engineers, researchers, and enthusiasts working to make humanity a spacefaring species
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Licensing Section */}
-      <section className="licensing-section">
-        <div className="licensing-container">
-          <h2 className="licensing-title">
-            🎁 YOUR CONTRIBUTIONS, YOUR RIGHTS
-          </h2>
-          
-          <p className="licensing-intro">
-            Share your research and ideas with the space habitat community!
-          </p>
-
-          <ul className="licensing-benefits">
-            <li>You retain full copyright ownership of everything you submit</li>
-            <li>Choose how your work is licensed (Creative Commons, Private, or other options)</li>
-            <li>Get proper attribution - your name stays with your work</li>
-            <li>Help advance humanity's journey to becoming a spacefaring species</li>
-            <li>Optional: Keep submissions private for review only, or share them publicly</li>
-          </ul>
-
-          <p className="licensing-attribution">
-            All contributions are properly attributed. You decide how your work is shared.
-          </p>
-
-          <div className="licensing-buttons">
-            <button onClick={openRegister} className="btn-license-info">
-              📤 Submit Your Research
-            </button>
-            <button onClick={() => navigate('/licensing')} className="btn-license-legal">
-              📜 Learn About Licensing
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Community Section */}
-      <section className="community-section">
-        <h2 className="community-title">🌟 BE PART OF SOMETHING BIGGER</h2>
-        
-        <p className="community-mission">
-          Join researchers, engineers, students, and space enthusiasts collaborating 
-          to solve the challenges of living beyond Earth.
+      <header className="lp-hero">
+        <p className="lp-kicker">NASA reports · arXiv · habitat engineering</p>
+        <h1 className="lp-headline">
+          Space habitat research,{' '}
+          <em>finally queryable.</em>
+        </h1>
+        <p className="lp-lede">
+          Ask a question in English. Get an answer drawn from the technical literature
+          on gravity, radiation, life support, and settlement design — with the sources attached.
         </p>
+        <div className="lp-hero-actions">
+          <button type="button" className="lp-btn-primary" onClick={openRegister}>
+            Create a free account
+          </button>
+          <button type="button" className="lp-btn-ghost" onClick={() => navigate('/browse')}>
+            Browse the library
+          </button>
+        </div>
+      </header>
 
-        <div className="achievements-grid">
-          <div className="achievement-card">
-            <div className="achievement-avatar">👨‍🚀</div>
-            <div className="achievement-content">
-              Recent: <strong>Mars Habitat Analysis</strong> submitted by @JohnD - exploring regolith-based construction methods
-            </div>
+      <section className="lp-product" aria-label="Product example">
+        <div className="lp-product-frame">
+          <div className="lp-product-bar">
+            <span>Query</span>
+            <span className="lp-product-meta">Cited · Grok</span>
           </div>
-
-          <div className="achievement-card">
-            <div className="achievement-avatar">👩‍🔬</div>
-            <div className="achievement-content">
-              Recent: <strong>Radiation Shielding Study</strong> from @SarahM - new approaches to cosmic ray protection
+          <div className="lp-product-body">
+            <div className="lp-msg lp-msg-user">
+              What rotation rate produces 1g at a 50 meter radius?
             </div>
-          </div>
-
-          <div className="achievement-card">
-            <div className="achievement-avatar">👨‍💻</div>
-            <div className="achievement-content">
-              Recent: <strong>O'Neill Cylinder Research</strong> by @AlexK - updated rotation calculations for 1g gravity
+            <div className="lp-msg lp-msg-assistant">
+              <p>
+                Centripetal acceleration is <span className="lp-math">a = ω²r</span>. For 1g
+                (9.81 m/s²) at r = 50 m:
+              </p>
+              <p className="lp-math-block">ω = √(g / r) ≈ 0.443 rad/s ≈ 4.23 rpm</p>
+              <p>
+                At this radius the head-to-foot gravity gradient is large; most habitat
+                studies prefer radii of hundreds of meters so the rate can stay near 1–2 rpm.
+              </p>
+              <p className="lp-cite">NASA SP-413 · Space Settlements: A Design Study</p>
             </div>
           </div>
         </div>
-
-        <p className="community-stats">
-          Together, we're building the knowledge foundation for humanity's future in space
-        </p>
-
-        <button onClick={openRegister} className="btn-community-join">
-          🚀 Start Contributing Today
-        </button>
       </section>
 
-      {/* Footer */}
-      <footer className="landing-footer">
-        <div className="footer-content">
-          <p className="footer-copyright">
-            © 2025 Habitat Builder. Making space habitat design fun and accessible.
-          </p>
-          <div className="footer-links">
-            <a href="/about">About</a>
-            <a href="/discord">Discord</a>
-            <a href="/twitter">Twitter</a>
-            <a href="/docs">Documentation</a>
-            <a href="/licensing">Legal & Licensing</a>
-            <a href="/privacy">Privacy</a>
+      <section className="lp-section">
+        <h2 className="lp-section-title">What you can do</h2>
+        <div className="lp-split">
+          <article>
+            <h3>Ask the corpus</h3>
+            <p>
+              Retrieval over indexed NASA technical reports and arXiv papers, then a
+              model that answers in context — including LaTeX for the engineering math.
+            </p>
+          </article>
+          <article>
+            <h3>Read the sources</h3>
+            <p>
+              Browse the library, open documents, and pin them into a project when you
+              need a working set instead of a one-off chat.
+            </p>
+          </article>
+          <article>
+            <h3>Add your own work</h3>
+            <p>
+              Submit research and designs with the license you choose. You keep copyright.
+              Attribution stays with the work.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="lp-section lp-section-muted">
+        <h2 className="lp-section-title">How a query runs</h2>
+        <ol className="lp-steps">
+          <li>
+            <span>01</span>
+            <div>
+              <strong>You ask in plain language.</strong>
+              Follow-ups stay in the same thread so the next question can refer to the last answer.
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <strong>We retrieve matching passages.</strong>
+              Vector search over the indexed corpus, with keyword search as fallback.
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <strong>You get a cited reply.</strong>
+              The model is constrained to that context. You can rate the answer so the corpus improves.
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section className="lp-section">
+        <div className="lp-contribute">
+          <div>
+            <p className="lp-kicker">Contributions</p>
+            <h2 className="lp-section-title">Your work stays yours</h2>
+            <p className="lp-contribute-copy">
+              Submissions keep your copyright. Choose a public Creative Commons license,
+              keep a piece private for review, or set other terms. Name stays on the work.
+            </p>
+          </div>
+          <button type="button" className="lp-btn-primary" onClick={openRegister}>
+            Submit research
+          </button>
+        </div>
+      </section>
+
+      <footer className="lp-footer">
+        <div className="lp-footer-inner">
+          <span>© {new Date().getFullYear()} Space Habitats</span>
+          <div className="lp-footer-links">
+            <button type="button" onClick={() => navigate('/browse')}>Library</button>
+            <button type="button" onClick={openLogin}>Sign in</button>
           </div>
         </div>
       </footer>
 
-      {/* Login Modal */}
       {showLogin && (
-        <div className="modal-overlay" onClick={() => setShowLogin(false)}>
-          <div className="modal-content auth-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowLogin(false)}>✕</button>
-            <h2>🚀 Welcome Back!</h2>
-            <p className="modal-subtitle">Login to continue your journey</p>
-            
-            {authError && (
-              <div className="auth-error">
-                ⚠️ {authError}
-              </div>
-            )}
-            
+        <div className="lp-modal-overlay" onClick={() => setShowLogin(false)}>
+          <div
+            className="lp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" className="lp-modal-close" onClick={() => setShowLogin(false)} aria-label="Close">
+              ×
+            </button>
+            <h2 id="login-title">Sign in</h2>
+            <p className="lp-modal-sub">Continue to your workspace.</p>
+            {authError && <div className="lp-auth-error">{authError}</div>}
             <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label>Username</label>
+              <label>
+                Username
                 <input
                   type="text"
+                  autoComplete="username"
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
-                  placeholder="Enter your username"
                   required
                   disabled={authLoading}
                 />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
+              </label>
+              <label>
+                Password
                 <input
                   type="password"
+                  autoComplete="current-password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Enter your password"
                   required
                   disabled={authLoading}
                 />
-              </div>
-              <div className="modal-buttons">
-                <button type="submit" className="btn-primary" disabled={authLoading}>
-                  {authLoading ? 'Logging in...' : 'Login'}
-                </button>
-              </div>
+              </label>
+              <button type="submit" className="lp-btn-primary lp-btn-block" disabled={authLoading}>
+                {authLoading ? 'Signing in…' : 'Sign in'}
+              </button>
             </form>
-            
-            <p className="modal-switch">
-              Don't have an account?{' '}
-              <button onClick={switchToRegister} className="btn-link">
-                Sign up here
+            <p className="lp-modal-switch">
+              No account?{' '}
+              <button type="button" className="lp-text-btn" onClick={openRegister}>
+                Create one
               </button>
             </p>
           </div>
         </div>
       )}
 
-      {/* Register Modal */}
       {showRegister && (
-        <div className="modal-overlay" onClick={() => setShowRegister(false)}>
-          <div className="modal-content auth-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowRegister(false)}>✕</button>
-            <h2>🌟 Join the Community!</h2>
-            <p className="modal-subtitle">Create your free account</p>
-            
-            {authError && (
-              <div className="auth-error">
-                ⚠️ {authError}
-              </div>
-            )}
-            
+        <div className="lp-modal-overlay" onClick={() => setShowRegister(false)}>
+          <div
+            className="lp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" className="lp-modal-close" onClick={() => setShowRegister(false)} aria-label="Close">
+              ×
+            </button>
+            <h2 id="register-title">Create an account</h2>
+            <p className="lp-modal-sub">Free to start. Email is used for account recovery.</p>
+            {authError && <div className="lp-auth-error">{authError}</div>}
             <form onSubmit={handleRegister}>
-              <div className="form-group">
-                <label>Username</label>
+              <label>
+                Username
                 <input
                   type="text"
+                  autoComplete="username"
                   value={registerUsername}
                   onChange={(e) => setRegisterUsername(e.target.value)}
-                  placeholder="Choose a username"
+                  required
+                  minLength={3}
+                  disabled={authLoading}
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
                   required
                   disabled={authLoading}
-                  minLength={3}
                 />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
+              </label>
+              <label>
+                Password
                 <input
                   type="password"
+                  autoComplete="new-password"
                   value={registerPassword}
                   onChange={(e) => setRegisterPassword(e.target.value)}
-                  placeholder="Create a password"
                   required
-                  disabled={authLoading}
                   minLength={6}
+                  disabled={authLoading}
                 />
-                <small>Minimum 6 characters</small>
-              </div>
-              <div className="modal-buttons">
-                <button type="submit" className="btn-primary" disabled={authLoading}>
-                  {authLoading ? 'Creating account...' : 'Create Account'}
-                </button>
-              </div>
+                <small>At least 6 characters</small>
+              </label>
+              <button type="submit" className="lp-btn-primary lp-btn-block" disabled={authLoading}>
+                {authLoading ? 'Creating account…' : 'Create account'}
+              </button>
             </form>
-            
-            <p className="modal-switch">
-              Already have an account?{' '}
-              <button onClick={switchToLogin} className="btn-link">
-                Login here
+            <p className="lp-modal-switch">
+              Already registered?{' '}
+              <button type="button" className="lp-text-btn" onClick={openLogin}>
+                Sign in
               </button>
             </p>
           </div>

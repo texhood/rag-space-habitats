@@ -27,7 +27,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [question, setQuestion] = useState('');
-  const [response, setResponse] = useState('');
+  const [, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
@@ -48,7 +48,7 @@ function Dashboard() {
   // PROJECT CONTEXT STATE
   // =====================
   const [activeProject, setActiveProject] = useState(null);
-  const [projectLoading, setProjectLoading] = useState(false);
+  const [, setProjectLoading] = useState(false);
 
   // =====================
   // CONVERSATION STATE

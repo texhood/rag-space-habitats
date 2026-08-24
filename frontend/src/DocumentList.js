@@ -1,5 +1,5 @@
 // DocumentList.js - Display list of uploaded project documents
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import API_URL from './config';
 import './DocumentList.css';
@@ -10,26 +10,7 @@ function DocumentList({ projectId, refreshTrigger }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadDocuments();
-  }, [projectId, refreshTrigger]);
-
-  // Auto-refresh if any documents are processing
-  useEffect(() => {
-    const hasProcessing = documents.some(doc =>
-      doc.processing_status === 'pending' || doc.processing_status === 'processing'
-    );
-
-    if (hasProcessing) {
-      const interval = setInterval(() => {
-        loadDocuments();
-      }, 3000); // Check every 3 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [documents]);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(
@@ -46,7 +27,26 @@ function DocumentList({ projectId, refreshTrigger }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments, refreshTrigger]);
+
+  // Auto-refresh if any documents are processing
+  useEffect(() => {
+    const hasProcessing = documents.some(doc =>
+      doc.processing_status === 'pending' || doc.processing_status === 'processing'
+    );
+
+    if (hasProcessing) {
+      const interval = setInterval(() => {
+        loadDocuments();
+      }, 3000); // Check every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [documents, loadDocuments]);
 
   const handleDelete = async (docId) => {
     if (!window.confirm('Are you sure you want to delete this document?')) {

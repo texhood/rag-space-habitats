@@ -1,5 +1,5 @@
 // ProjectWorkspace.js - Full project workspace with tab navigation
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_URL from './config';
@@ -24,27 +24,16 @@ function ProjectWorkspace() {
   const [pinnedRefreshTrigger, setPinnedRefreshTrigger] = useState(0);
   const [pinnedCount, setPinnedCount] = useState(0);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadProject();
-      loadPinnedCount();
-    }
-  }, [id, user]);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`, { withCredentials: true });
       setUser(response.data);
     } catch (err) {
       navigate('/');
     }
-  };
+  }, [navigate]);
 
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(
@@ -59,9 +48,9 @@ function ProjectWorkspace() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const loadPinnedCount = async () => {
+  const loadPinnedCount = useCallback(async () => {
     try {
       const response = await axios.get(
         `${API_URL}/api/projects/${id}/pinned`,
@@ -71,7 +60,18 @@ function ProjectWorkspace() {
     } catch (err) {
       console.error('Failed to load pinned count:', err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  useEffect(() => {
+    if (user) {
+      loadProject();
+      loadPinnedCount();
+    }
+  }, [user, loadProject, loadPinnedCount]);
 
   const handleUpdate = async (projectId, updates) => {
     try {

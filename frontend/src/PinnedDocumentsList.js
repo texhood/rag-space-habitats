@@ -1,5 +1,5 @@
 // PinnedDocumentsList.js - Display and manage pinned knowledge base documents
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import API_URL from './config';
 import './PinnedDocumentsList.css';
@@ -10,11 +10,7 @@ function PinnedDocumentsList({ projectId, refreshTrigger }) {
   const [error, setError] = useState(null);
   const [maxPinned, setMaxPinned] = useState(20);
 
-  useEffect(() => {
-    loadPinnedDocuments();
-  }, [projectId, refreshTrigger]);
-
-  const loadPinnedDocuments = async () => {
+  const loadPinnedDocuments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(
@@ -31,7 +27,11 @@ function PinnedDocumentsList({ projectId, refreshTrigger }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    loadPinnedDocuments();
+  }, [loadPinnedDocuments, refreshTrigger]);
 
   const handleUnpin = async (pinId) => {
     if (!window.confirm('Are you sure you want to unpin this document?')) {
