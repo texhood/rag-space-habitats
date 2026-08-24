@@ -114,6 +114,12 @@ router.post('/process/:id', isAdmin, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('Process submission error:', err);
+    if (err.code === 'INGEST_FORBIDDEN' || err.code === 'NOT_APPROVED') {
+      return res.status(400).json({ error: err.message });
+    }
+    if (err.code === 'NOT_FOUND') {
+      return res.status(404).json({ error: err.message });
+    }
     res.status(500).json({
       error: 'Processing failed',
       details: err.message

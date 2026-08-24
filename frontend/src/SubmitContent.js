@@ -12,7 +12,7 @@ function SubmitContent({ user, onClose }) {
   const [file, setFile] = useState(null);
   const [tags, setTags] = useState('');
   const [category, setCategory] = useState('general');
-  const [license, setLicense] = useState('cc-by');
+  const [license, setLicense] = useState('private');
   const [attribution, setAttribution] = useState(user?.username || '');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -20,6 +20,12 @@ function SubmitContent({ user, onClose }) {
 
   // License options with descriptions
   const licenseOptions = [
+    {
+      value: 'private',
+      label: 'Private (All Rights Reserved)',
+      description: 'Only you and administrators can view this document. It is not added to the public library.',
+      icon: '🔒'
+    },
     {
       value: 'cc-by',
       label: 'CC BY 4.0 (Attribution)',
@@ -37,12 +43,6 @@ function SubmitContent({ user, onClose }) {
       label: 'CC BY-NC 4.0 (Attribution-NonCommercial)',
       description: 'Others can share and adapt for non-commercial purposes only.',
       icon: '🚫💰'
-    },
-    {
-      value: 'private',
-      label: 'Private (All Rights Reserved)',
-      description: 'Only you and administrators can view this document.',
-      icon: '🔒'
     }
   ];
 
@@ -109,7 +109,7 @@ function SubmitContent({ user, onClose }) {
         setFile(null);
         setTags('');
         setCategory('general');
-        setLicense('cc-by');
+        setLicense('private');
         setAttribution(user?.username || '');
         onClose();
       }, 2000);
@@ -245,6 +245,7 @@ function SubmitContent({ user, onClose }) {
               </p>
             )}
             <small className="license-help">
+              Submissions stay private unless you choose a Creative Commons license.{' '}
               <a href="https://creativecommons.org/licenses/" target="_blank" rel="noopener noreferrer">
                 Learn more about Creative Commons licenses →
               </a>

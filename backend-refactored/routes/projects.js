@@ -8,6 +8,7 @@ const ProjectBookmark = require('../models/ProjectBookmark');
 const { requireEnterprise } = require('../middleware/enterpriseAuth');
 const gridfsService = require('../services/gridfsService');
 const projectDocProcessor = require('../services/projectDocumentProcessor');
+const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
 
 // Constants
 const PROJECT_LIMITS = {
@@ -113,10 +114,13 @@ router.get('/knowledge-base/search', requireEnterprise, async (req, res) => {
         metadata->>'category' as category
       FROM document_chunks
       WHERE 
-        metadata->>'title' ILIKE $1
-        OR content ILIKE $1
-        OR metadata->>'category' ILIKE $1
-        OR metadata::text ILIKE $1
+        ${CORPUS_EXCLUDES_PRIVATE_SQL}
+        AND (
+          metadata->>'title' ILIKE $1
+          OR content ILIKE $1
+          OR metadata->>'category' ILIKE $1
+          OR metadata::text ILIKE $1
+        )
       ORDER BY source_id
       LIMIT 20
     `, [`%${query}%`]);
