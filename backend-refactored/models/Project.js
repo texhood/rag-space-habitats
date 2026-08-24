@@ -1,5 +1,6 @@
 // models/Project.js
 const pool = require('../config/database');
+const { requireProjectUserId } = require('../services/submissionAccess');
 
 class Project {
   /**
@@ -21,17 +22,13 @@ class Project {
   /**
    * Get project by ID
    */
-  static async getById(projectId, userId = null) {
-    let query = `SELECT * FROM projects WHERE id = $1`;
-    let params = [projectId];
+  static async getById(projectId, userId) {
+    requireProjectUserId(userId);
 
-    // If userId provided, ensure user owns the project
-    if (userId) {
-      query += ` AND user_id = $2`;
-      params.push(userId);
-    }
-
-    const result = await pool.query(query, params);
+    const result = await pool.query(
+      `SELECT * FROM projects WHERE id = $1 AND user_id = $2`,
+      [projectId, userId]
+    );
     return result.rows[0];
   }
 

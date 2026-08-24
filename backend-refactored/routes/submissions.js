@@ -7,6 +7,12 @@ const upload = require('../middleware/upload');
 const multer = require('multer');
 const textExtractor = require('../services/textExtractor');
 const fs = require('fs').promises;
+const {
+  resolveLicense,
+  canReadSubmission,
+  listSubmissionsFilter,
+  publicBrowseFilter
+} = require('../services/submissionAccess');
 
 // ======================
 // MIDDLEWARE
@@ -50,13 +56,12 @@ const canSubmit = (req, res, next) => {
 // ROUTES
 // ======================
 
-// GET /api/submissions - List all submissions
-router.get('/', async (req, res) => {
+// GET /api/submissions - List the caller's submissions (admins see all)
+router.get('/', requireAuth, async (req, res) => {
   try {
     const submissions = getCollection('document_submissions');
-    const status = req.query.status;
-    
-    const filter = status ? { status } : {};
+    const filter = listSubmissionsFilter(req.user, { status: req.query.status });
+
     const docs = await submissions
       .find(filter)
       .sort({ submitted_at: -1 })
@@ -91,12 +96,7 @@ router.get('/browse', async (req, res) => {
       sort = 'newest' // Sort order: newest, oldest, title
     } = req.query;
 
-    // Build filter - only show processed (public) submissions
-    // Private submissions are excluded unless user is the author
-    const filter = {
-      status: 'processed',
-      license: { $ne: 'private' }  // Exclude private submissions
-    };
+    const filter = publicBrowseFilter(license);
 
     // Text search across title, description, tags
     if (q && q.trim()) {
@@ -120,11 +120,6 @@ router.get('/browse', async (req, res) => {
         { submitted_by_username: { $regex: author.trim(), $options: 'i' } },
         { attribution: { $regex: author.trim(), $options: 'i' } }
       ];
-    }
-
-    // License filter
-    if (license && license !== 'all') {
-      filter.license = license;
     }
 
     // Date range filter
@@ -207,7 +202,7 @@ router.get('/categories', async (req, res) => {
     const submissions = getCollection('document_submissions');
     
     const categories = await submissions.aggregate([
-      { $match: { status: 'processed', license: { $ne: 'private' } } },
+      { $match: publicBrowseFilter() },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]).toArray();
@@ -232,6 +227,11 @@ router.get('/:id', async (req, res) => {
     const doc = await submissions.findOne({ _id: new ObjectId(req.params.id) });
     
     if (!doc) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    const reader = (req.isAuthenticated && req.isAuthenticated()) ? req.user : null;
+    if (!canReadSubmission(doc, reader)) {
       return res.status(404).json({ error: 'Submission not found' });
     }
     
@@ -298,9 +298,7 @@ router.post('/', requireAuth, canSubmit, upload.single('file'), async (req, res)
       tags = tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
     }
 
-    // Validate license
-    const validLicenses = ['cc-by', 'cc-by-sa', 'cc-by-nc', 'private'];
-    const license = validLicenses.includes(req.body.license) ? req.body.license : 'cc-by';
+    const license = resolveLicense(req.body.license);
     
     // Attribution defaults to username if not provided
     const attribution = req.body.attribution?.trim() || req.user.username || 'Anonymous';

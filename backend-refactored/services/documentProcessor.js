@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const { getCollection } = require('../config/mongodb');
 const { ObjectId } = require('mongodb');
 const embeddingService = require('./embeddingService');
+const { canIngestIntoCorpus, approvedIngestFilter } = require('./submissionAccess');
 
 class DocumentProcessor {
   constructor() {
@@ -23,12 +24,11 @@ class DocumentProcessor {
         _id: new ObjectId(submissionId) 
       });
 
-      if (!submission) {
-        throw new Error('Submission not found');
-      }
-
-      if (submission.status !== 'approved') {
-        throw new Error('Only approved submissions can be processed');
+      const ingest = canIngestIntoCorpus(submission);
+      if (!ingest.ok) {
+        const err = new Error(ingest.error);
+        err.code = ingest.code;
+        throw err;
       }
 
       console.log(`Processing: ${submission.title}`);
@@ -59,7 +59,8 @@ class DocumentProcessor {
           category: submission.category,
           tags: submission.tags,
           submitted_by: submission.submitted_by_username,
-          submitted_at: submission.submitted_at
+          submitted_at: submission.submitted_at,
+          license: submission.license
         };
 
         // Convert embedding array to pgvector format string
@@ -111,6 +112,10 @@ class DocumentProcessor {
 
     } catch (err) {
       console.error('Processing error:', err);
+
+      if (err.code === 'INGEST_FORBIDDEN' || err.code === 'NOT_APPROVED' || err.code === 'NOT_FOUND') {
+        throw err;
+      }
       
       // Mark as failed in MongoDB
       try {
@@ -180,7 +185,7 @@ class DocumentProcessor {
    */
   async processAllApproved() {
     const submissions = getCollection('document_submissions');
-    const approved = await submissions.find({ status: 'approved' }).toArray();
+    const approved = await submissions.find(approvedIngestFilter()).toArray();
 
     console.log(`Found ${approved.length} approved submissions to process`);
 

@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const embeddingService = require('./embeddingService');
 const axios = require('axios');
 const Anthropic = require('@anthropic-ai/sdk');
+const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('./submissionAccess');
 
 class RAGService {
   constructor() {
@@ -68,6 +69,7 @@ class RAGService {
                1 - (embedding <=> $1::vector) as similarity
         FROM document_chunks
         WHERE embedding IS NOT NULL
+          AND ${CORPUS_EXCLUDES_PRIVATE_SQL}
         ORDER BY embedding <=> $1::vector
         LIMIT $2
       `, [embeddingStr, limit]);
@@ -107,6 +109,7 @@ class RAGService {
         SELECT content, metadata
         FROM document_chunks
         WHERE to_tsvector('english', content) @@ to_tsquery('english', $1)
+          AND ${CORPUS_EXCLUDES_PRIVATE_SQL}
         LIMIT $2
       `, [searchPattern, limit]);
 

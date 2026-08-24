@@ -1,47 +1,10 @@
 // services/usageService.js
 const pool = require('../config/database');
 const Pricing = require('../models/Pricing');
+const { LIMITS, getLimits, canPerformAction } = require('./usageLimits');
 
 class UsageService {
-  /**
-   * Tier limits configuration (fallback if database unavailable)
-   */
-  static LIMITS = {
-    free: {
-      queries_per_day: 10,
-      uploads_per_month: 0,
-      max_file_size: 0,
-      llm_access: ['grok']
-    },
-    basic: {
-      queries_per_day: 100,
-      uploads_per_month: 5,
-      max_file_size: 50 * 1024 * 1024, // 50MB
-      llm_access: ['grok']
-    },
-    pro: {
-      queries_per_day: -1, // unlimited
-      uploads_per_month: 50,
-      max_file_size: 100 * 1024 * 1024, // 100MB
-      llm_access: ['grok', 'claude']
-    },
-    enterprise: {
-      queries_per_day: -1, // unlimited
-      uploads_per_month: -1, // unlimited
-      max_file_size: 100 * 1024 * 1024, // 100MB
-      llm_access: ['grok', 'claude'],
-      priority: true,
-      api_access: true
-    },
-    beta: {
-      queries_per_day: -1, // unlimited (Pro features)
-      uploads_per_month: 50, // Pro features
-      max_file_size: 100 * 1024 * 1024, // 100MB
-      llm_access: ['grok', 'claude'], // Pro features
-      price: 0.00, // Special beta pricing
-      label: 'Beta Access - All Pro Features'
-    }
-  };
+  static LIMITS = LIMITS;
 
   /**
    * Log a usage action
@@ -116,37 +79,25 @@ class UsageService {
    * Check if user can perform action
    */
   static async canPerformAction(userId, action, tier) {
-    const limits = this.LIMITS[tier] || this.LIMITS.free;
+    const limits = getLimits(tier);
 
     if (action === 'query') {
-      if (limits.queries_per_day === -1) return { allowed: true };
-      
+      if (limits.queries_per_day === -1) {
+        return canPerformAction(action, tier);
+      }
       const usage = await this.getTodayUsage(userId);
-      const allowed = usage.queries < limits.queries_per_day;
-      
-      return {
-        allowed,
-        used: usage.queries,
-        limit: limits.queries_per_day,
-        remaining: limits.queries_per_day - usage.queries
-      };
+      return canPerformAction(action, tier, usage);
     }
 
     if (action === 'upload') {
-      if (limits.uploads_per_month === -1) return { allowed: true };
-      
+      if (limits.uploads_per_month === -1) {
+        return canPerformAction(action, tier);
+      }
       const usage = await this.getMonthUsage(userId);
-      const allowed = usage.uploads < limits.uploads_per_month;
-      
-      return {
-        allowed,
-        used: usage.uploads,
-        limit: limits.uploads_per_month,
-        remaining: limits.uploads_per_month - usage.uploads
-      };
+      return canPerformAction(action, tier, usage);
     }
 
-    return { allowed: true };
+    return canPerformAction(action, tier);
   }
 
   /**
@@ -164,9 +115,8 @@ class UsageService {
       console.error('[Pricing] Failed to load from database:', err.message);
     }
     
-    // Fallback to hardcoded LIMITS
     console.log(`[Pricing] Using hardcoded limits for ${tier}`);
-    return this.LIMITS[tier] || this.LIMITS.free;
+    return getLimits(tier);
   }
 }
 
