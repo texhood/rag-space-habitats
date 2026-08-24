@@ -8,7 +8,7 @@
 .pinned-docs-error {
   padding: 20px;
   text-align: center;
-  color: #666;
+  color: var(--muted);
 }
 
 .pinned-docs-error {
@@ -26,11 +26,11 @@
 
 .pinned-header h3 {
   margin: 0;
-  color: #333;
+  color: var(--text);
 }
 
 .pin-count {
-  background: #667eea;
+  background: var(--accent);
   color: white;
   padding: 6px 12px;
   border-radius: 4px;
@@ -58,7 +58,7 @@
 }
 
 .pinned-doc-card {
-  background: white;
+  background: var(--bg-raised);
   border: 2px solid #e0e7ff;
   border-radius: 8px;
   padding: 15px;
@@ -97,7 +97,7 @@
 
 .pinned-doc-card h4 {
   margin: 0 0 8px 0;
-  color: #333;
+  color: var(--text);
   font-size: 16px;
   line-height: 1.4;
 }
@@ -105,7 +105,7 @@
 .doc-source {
   margin: 5px 0;
   font-size: 13px;
-  color: #667eea;
+  color: var(--accent);
   font-weight: 600;
 }
 

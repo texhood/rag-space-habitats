@@ -9,9 +9,11 @@
 
 .submit-modal h2 {
   margin: 0 0 25px 0;
-  font-size: 28px;
-  color: #2c3e50;
-  text-align: center;
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--paper-ink);
+  text-align: left;
 }
 
 /* Upload Mode Selector */
@@ -42,7 +44,7 @@
 }
 
 .upload-mode-selector button:hover {
-  border-color: #667eea;
+  border-color: var(--accent);
   background: #e8f0ff;
   color: #495057;
   transform: translateY(-2px);
@@ -50,10 +52,10 @@
 }
 
 .upload-mode-selector button.active {
-  border-color: #667eea;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border-color: var(--paper-ink);
+  background: var(--paper-ink);
+  color: var(--paper);
+  box-shadow: none;
 }
 
 /* Form Groups */
@@ -91,7 +93,7 @@
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -113,7 +115,7 @@
 }
 
 .form-group input[type="file"]:hover {
-  border-color: #667eea;
+  border-color: var(--accent);
   background: #f0f4ff;
 }
 
@@ -129,8 +131,8 @@
 .file-info {
   margin-top: 15px;
   padding: 15px;
-  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
-  border-left: 4px solid #667eea;
+  background: var(--bg-user);
+  border-left: 4px solid var(--accent);
   border-radius: 8px;
   font-size: 15px;
   color: #2c3e50;
@@ -179,9 +181,9 @@
   min-width: 140px;
 }
 
-.modal-buttons button[type="submit"] {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.submit-modal .modal-buttons button[type="submit"] {
+  background: var(--paper);
+  color: var(--paper-ink);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
@@ -212,7 +214,7 @@
   margin-top: 25px;
   padding: 15px 20px;
   background: #f8f9fa;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--accent);
   border-radius: 8px;
   font-size: 14px;
   color: #495057;
@@ -305,12 +307,12 @@
 }
 
 .submit-modal::-webkit-scrollbar-thumb {
-  background: #667eea;
+  background: var(--accent);
   border-radius: 4px;
 }
 
 .submit-modal::-webkit-scrollbar-thumb:hover {
-  background: #5568d3;
+  background: var(--accent);
 }
 
 /* Focus visible for accessibility */
@@ -319,7 +321,7 @@
 .form-group textarea:focus-visible,
 .form-group select:focus-visible,
 .modal-buttons button:focus-visible {
-  outline: 3px solid #667eea;
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -362,12 +364,12 @@
 }
 
 .license-option:hover {
-  border-color: #667eea;
+  border-color: var(--accent);
   background: #f8f9ff;
 }
 
 .license-option.selected {
-  border-color: #667eea;
+  border-color: var(--accent);
   background: #eef0ff;
 }
 
@@ -401,7 +403,7 @@
 }
 
 .license-help a {
-  color: #667eea;
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.85rem;
 }

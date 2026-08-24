@@ -128,7 +128,7 @@ function SubmitContent({ user, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content submit-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>📤 Submit Document</h2>
+        <h2>Submit a document</h2>
         
         {error && (
           <div className="error-message">

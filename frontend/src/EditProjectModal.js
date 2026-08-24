@@ -38,8 +38,8 @@ function EditProjectModal({ project, onClose, onUpdate }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content create-project-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="project-modal-overlay" onClick={onClose}>
+      <div className="project-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Edit Project</h2>
           <button className="close-btn" onClick={onClose}>✕</button>

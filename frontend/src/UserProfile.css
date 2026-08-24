@@ -15,8 +15,9 @@
 }
 
 .profile-modal {
-  background: white;
-  border-radius: 16px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 0;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
@@ -47,10 +48,10 @@
 
 /* Header */
 .profile-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   padding: 40px 30px 30px;
   text-align: center;
-  color: white;
+  color: var(--paper-ink);
 }
 
 .profile-avatar {
@@ -104,13 +105,13 @@
 }
 
 .profile-nav button:hover {
-  color: #667eea;
+  color: var(--accent);
   background: #f0f4ff;
 }
 
 .profile-nav button.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
   background: white;
 }
 
@@ -177,7 +178,7 @@
 
 .info-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -197,9 +198,9 @@
 }
 
 /* Buttons */
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.profile-modal .btn-primary {
+  background: var(--paper);
+  color: var(--paper-ink);
   border: none;
   padding: 12px 25px;
   border-radius: 8px;
@@ -209,21 +210,21 @@
   transition: all 0.3s;
 }
 
-.btn-primary:hover:not(:disabled) {
+.profile-modal .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-.btn-primary:disabled {
+.profile-modal .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
-.btn-secondary {
+.profile-modal .btn-secondary {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: var(--accent);
+  border: 2px solid var(--accent);
   padding: 12px 25px;
   border-radius: 8px;
   font-size: 15px;
@@ -232,7 +233,7 @@
   transition: all 0.3s;
 }
 
-.btn-secondary:hover:not(:disabled) {
+.profile-modal .btn-secondary:hover:not(:disabled) {
   background: #f0f4ff;
 }
 
@@ -275,7 +276,7 @@
 .subscription-header h3 {
   margin: 0 0 8px;
   font-size: 24px;
-  color: #667eea;
+  color: var(--accent);
 }
 
 .status-badge {

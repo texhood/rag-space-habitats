@@ -1,101 +1,86 @@
-/* AppNavbar.css */
-
 .app-navbar {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 0 20px;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: rgba(12, 16, 20, 0.92);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(12px);
 }
 
 .app-navbar-container {
-  max-width: 1400px;
+  max-width: 1080px;
   margin: 0 auto;
+  padding: 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 60px;
+  gap: 16px;
 }
 
-/* Brand and Logo */
 .app-navbar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.app-navbar-brand:hover {
-  opacity: 0.8;
+  color: var(--text);
 }
 
 .brand-icon {
-  font-size: 1.5rem;
+  display: none;
+}
+
+.app-navbar-brand::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
 }
 
 .brand-text {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: 0.5px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
 }
 
-/* Navigation Links */
 .app-navbar-links {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  color: #a0aec0;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  gap: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: 0;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: none;
+  color: var(--text);
 }
 
 .nav-link.active {
-  background: rgba(102, 126, 234, 0.3);
-  color: #ffffff;
+  background: none;
+  color: var(--text);
 }
 
 .nav-icon {
-  font-size: 1.1rem;
-}
-
-.nav-text {
-  font-size: 0.9rem;
-}
-
-/* Mobile-only items hidden on desktop */
-.mobile-only-items {
   display: none;
 }
 
-/* User Menu */
-.app-navbar-user {
-  position: relative;
-}
-
-.user-menu-container {
-  position: relative;
+.mobile-only-items {
+  display: none;
 }
 
 .user-menu-trigger {
@@ -103,22 +88,20 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  border-radius: 25px;
-  transition: all 0.2s ease;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  border-radius: 2px;
 }
 
 .user-menu-trigger:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--muted);
+  background: transparent;
 }
 
 .user-avatar {
-  font-size: 1.1rem;
+  display: none;
 }
 
 .user-name {
@@ -128,124 +111,91 @@
   white-space: nowrap;
 }
 
-.menu-arrow {
-  font-size: 0.6rem;
-  opacity: 0.7;
+.user-tier-badge,
+.user-tier {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-/* Dropdown Menu */
+.menu-arrow {
+  font-size: 8px;
+  color: var(--faint);
+}
+
 .user-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 180px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  padding: 8px;
+  min-width: 200px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  padding: 6px;
   z-index: 1001;
-  animation: dropdownFadeIn 0.2s ease;
 }
 
-@keyframes dropdownFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.user-menu-container {
+  position: relative;
 }
 
 .user-dropdown button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: block;
   width: 100%;
   padding: 10px 12px;
-  border: none;
+  border: 0;
   background: transparent;
-  color: #333;
-  font-size: 0.9rem;
-  cursor: pointer;
-  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
   text-align: left;
-  transition: background 0.2s;
+  border-radius: 0;
 }
 
 .user-dropdown button:hover {
-  background: #f0f0f0;
+  background: var(--bg-user);
 }
 
 .dropdown-divider {
   border: none;
-  border-top: 1px solid #eee;
-  margin: 8px 0;
-}
-
-/* Auth Buttons when not logged in */
-.auth-buttons {
-  display: flex;
-  gap: 10px;
+  border-top: 1px solid var(--line);
+  margin: 6px 0;
 }
 
 .btn-login {
-  padding: 8px 20px;
-  border: 1px solid #667eea;
-  background: transparent;
-  color: #667eea;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: 8px 14px;
+  border: 0;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 2px;
 }
 
 .btn-login:hover {
-  background: #667eea;
-  color: #ffffff;
+  background: #fff;
+  color: var(--paper-ink);
 }
 
-/* Backdrop for closing menu on outside click */
 .menu-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 999;
 }
 
-/* Mobile Menu Toggle */
 .mobile-menu-toggle {
   display: none;
-  padding: 8px 12px;
-  border: none;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
   background: transparent;
-  color: #ffffff;
-  font-size: 1.5rem;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.2s;
+  color: var(--text);
+  font-size: 18px;
+  border-radius: 2px;
 }
 
-.mobile-menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Responsive Styles for Mobile */
 @media (max-width: 768px) {
-  .app-navbar {
-    padding: 0 15px;
-  }
-
   .app-navbar-container {
-    height: 55px;
-  }
-
-  .brand-text {
-    display: none;
+    padding: 0 18px;
+    height: 56px;
   }
 
   .desktop-only {
@@ -260,111 +210,49 @@
 
   .app-navbar-links {
     position: fixed;
-    top: 55px;
+    top: 56px;
     left: 0;
     right: 0;
-    background: rgba(26, 26, 46, 0.98);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
     flex-direction: column;
-    padding: 15px;
-    gap: 5px;
+    align-items: stretch;
+    padding: 12px 18px 20px;
+    gap: 2px;
     display: none;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    max-height: calc(100vh - 55px);
+    max-height: calc(100vh - 56px);
     overflow-y: auto;
   }
 
   .app-navbar-links.mobile-open {
     display: flex;
-    animation: slideDown 0.25s ease;
-  }
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
 
   .nav-link {
     width: 100%;
-    padding: 14px 16px;
+    padding: 12px 0;
     justify-content: flex-start;
-    border-radius: 10px;
-  }
-
-  .nav-link:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .nav-link.active {
-    background: rgba(102, 126, 234, 0.3);
-  }
-
-  .nav-text {
-    font-size: 1rem;
-  }
-
-  .nav-icon {
-    font-size: 1.2rem;
-    width: 28px;
   }
 
   .mobile-only-items {
     display: flex;
     flex-direction: column;
-    gap: 5px;
     width: 100%;
-    margin-top: 10px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
   }
 
   .mobile-user-info {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
-    color: #ffffff;
+    padding: 8px 0 12px;
+    color: var(--text);
     font-weight: 600;
-    background: rgba(102, 126, 234, 0.2);
-    border-radius: 10px;
-    margin-bottom: 5px;
-  }
-
-  .mobile-user-info .user-avatar {
-    font-size: 1.3rem;
-  }
-
-  .mobile-user-info .user-name {
-    font-size: 1rem;
   }
 
   .logout-link {
-    color: #ff6b6b;
-  }
-
-  .logout-link:hover {
-    background: rgba(255, 107, 107, 0.15);
-  }
-}
-
-@media (max-width: 480px) {
-  .app-navbar {
-    padding: 0 10px;
-  }
-
-  .brand-icon {
-    font-size: 1.3rem;
-  }
-
-  .mobile-menu-toggle {
-    padding: 8px 10px;
+    color: var(--danger);
   }
 }

@@ -25,7 +25,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: white;
+  background: var(--bg);
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -49,34 +49,35 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 30px;
-  border-bottom: 2px solid #e0e0e0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .admin-header h2 {
   margin: 0;
-  font-size: 24px;
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 500;
 }
 
 .close-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  font-size: 32px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  border-radius: 2px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  border-color: var(--muted);
+  color: var(--text);
 }
 
 /* Messages */
@@ -102,8 +103,8 @@
 .admin-tabs {
   display: flex;
   padding: 0 30px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--bg-user);
+  border-bottom: 1px solid var(--line);
 }
 
 .admin-tabs button {
@@ -112,19 +113,19 @@
   padding: 15px 25px;
   font-size: 16px;
   cursor: pointer;
-  color: #666;
+  color: var(--muted);
   border-bottom: 3px solid transparent;
   transition: all 0.2s;
 }
 
 .admin-tabs button:hover {
-  color: #333;
-  background: rgba(0, 0, 0, 0.03);
+  color: var(--text);
+  background: var(--bg-user);
 }
 
 .admin-tabs button.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
   font-weight: 600;
 }
 
@@ -141,7 +142,7 @@
 .loading {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--muted);
   font-size: 18px;
 }
 
@@ -156,7 +157,7 @@
 .tab-header h3 {
   margin: 0;
   font-size: 20px;
-  color: #333;
+  color: var(--text);
 }
 
 .refresh-btn {
@@ -170,7 +171,7 @@
 }
 
 .refresh-btn:hover {
-  background: #e0e0e0;
+  background: var(--line);
 }
 
 /* Tables */
@@ -178,7 +179,7 @@
 .queries-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--bg-raised);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   overflow: hidden;
@@ -186,12 +187,12 @@
 
 .users-table th,
 .queries-table th {
-  background: #f8f9fa;
+  background: var(--bg-user);
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  color: #555;
-  border-bottom: 2px solid #e0e0e0;
+  color: var(--muted);
+  border-bottom: 2px solid var(--line);
 }
 
 .users-table td,
@@ -202,7 +203,7 @@
 
 .users-table tr:hover,
 .queries-table tr:hover {
-  background: #f8f9fa;
+  background: var(--bg-user);
 }
 
 .question-cell {
@@ -216,7 +217,7 @@
 .badge {
   display: inline-block;
   padding: 2px 8px;
-  background: #667eea;
+  background: var(--accent);
   color: white;
   border-radius: 12px;
   font-size: 11px;
@@ -248,7 +249,7 @@
   padding: 6px 12px;
   margin: 0 4px;
   border: 1px solid #ddd;
-  background: white;
+  background: var(--bg-raised);
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
@@ -275,8 +276,8 @@
   border-color: #c00;
 }
 
-.btn-primary {
-  background: #667eea;
+.admin-panel .btn-primary {
+  background: var(--accent);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -286,13 +287,13 @@
   transition: all 0.2s;
 }
 
-.btn-primary:hover {
-  background: #5568d3;
+.admin-panel .btn-primary:hover {
+  background: var(--accent);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-.btn-secondary {
+.admin-panel .btn-secondary {
   background: #6c757d;
   color: white;
   border: none;
@@ -303,7 +304,7 @@
   transition: all 0.2s;
 }
 
-.btn-secondary:disabled {
+.admin-panel .btn-secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -317,30 +318,32 @@
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--bg-raised);
+  color: var(--text);
   padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--line);
+  border-radius: 0;
 }
 
 .stat-value {
+  font-family: var(--serif);
   font-size: 36px;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 8px;
+  color: var(--accent);
 }
 
 .stat-label {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 12px;
+  color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 /* Tools */
 .tool-card {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -348,11 +351,11 @@
 
 .tool-card h4 {
   margin-top: 0;
-  color: #333;
+  color: var(--text);
 }
 
 .tool-card p {
-  color: #666;
+  color: var(--muted);
   margin-bottom: 16px;
 }
 
@@ -415,15 +418,15 @@
 }
 
 .submission-review-card {
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: var(--bg-raised);
+  border: 2px solid var(--line);
   border-radius: 12px;
   padding: 20px;
 }
 
 .submission-review-card h4 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: var(--text);
 }
 
 .submission-review-card p {
@@ -434,7 +437,7 @@
 .content-preview {
   margin-top: 10px;
   padding: 15px;
-  background: #f8f9fa;
+  background: var(--bg-user);
   border-radius: 8px;
   font-family: monospace;
   font-size: 13px;
@@ -478,7 +481,7 @@
 }
 
 .process-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--paper);
   color: white;
   padding: 15px 30px;
   border: none;
@@ -496,7 +499,7 @@
 .processing-stats h4 {
   margin-top: 20px;
   margin-bottom: 15px;
-  color: #333;
+  color: var(--text);
 }
 
 /* Beta Mode Control */
@@ -531,7 +534,7 @@
 .beta-status p {
   margin: 0;
   font-size: 16px;
-  color: #333;
+  color: var(--text);
 }
 
 /* Pricing Management */
@@ -550,12 +553,12 @@
 .pricing-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--bg-raised);
   font-size: 14px;
 }
 
 .pricing-table thead {
-  background: #667eea;
+  background: var(--accent);
   color: white;
 }
 
@@ -564,28 +567,28 @@
   text-align: left;
   font-weight: 600;
   font-size: 13px;
-  border-bottom: 2px solid #5568d3;
+  border-bottom: 2px solid var(--accent);
 }
 
 .pricing-table td {
   padding: 12px 8px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
 
 .pricing-table tbody tr:hover {
-  background: #f5f5f5;
+  background: var(--bg-user);
 }
 
 .pricing-table input {
-  border: 2px solid #667eea;
+  border: 2px solid var(--accent);
   border-radius: 4px;
   font-size: 13px;
 }
 
 .pricing-table input:focus {
   outline: none;
-  border-color: #5568d3;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 

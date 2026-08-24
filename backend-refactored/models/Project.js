@@ -37,9 +37,16 @@ class Project {
    */
   static async getByUserId(userId, limit = 50, offset = 0) {
     const result = await pool.query(
-      `SELECT * FROM projects
-       WHERE user_id = $1
-       ORDER BY updated_at DESC
+      `SELECT p.*,
+              (SELECT COUNT(*)::int FROM project_documents d WHERE d.project_id = p.id) AS document_count,
+              (SELECT COUNT(*)::int FROM project_pinned_documents pin WHERE pin.project_id = p.id) AS pinned_count,
+              (SELECT COUNT(*)::int FROM project_conversations c WHERE c.project_id = p.id) AS conversation_count,
+              (SELECT COUNT(*)::int FROM project_conversation_messages m
+                 JOIN project_conversations c ON c.id = m.conversation_id
+                 WHERE c.project_id = p.id) AS message_count
+       FROM projects p
+       WHERE p.user_id = $1
+       ORDER BY p.updated_at DESC
        LIMIT $2 OFFSET $3`,
       [userId, limit, offset]
     );

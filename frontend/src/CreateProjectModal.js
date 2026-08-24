@@ -38,8 +38,8 @@ function CreateProjectModal({ onClose, onCreate }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content create-project-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="project-modal-overlay" onClick={onClose}>
+      <div className="project-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Create New Project</h2>
           <button className="close-btn" onClick={onClose}>✕</button>
@@ -47,6 +47,7 @@ function CreateProjectModal({ onClose, onCreate }) {
 
         <form onSubmit={handleSubmit} className="create-project-form">
           {error && <div className="form-error">{error}</div>}
+          <p className="persist-guidance">Query chats in this project are saved and restored the next time you sign in.</p>
 
           <div className="form-group">
             <label>Project Name *</label>

@@ -133,7 +133,9 @@ function BrowseKnowledgeBase() {
   const viewDocument = async (docId) => {
     setLoadingDoc(true);
     try {
-      const res = await axios.get(`${API_URL}/api/submissions/${docId}`);
+      const res = await axios.get(`${API_URL}/api/submissions/${docId}`, {
+        withCredentials: true
+      });
       setSelectedDoc(res.data.submission);
     } catch (err) {
       console.error('Failed to fetch document:', err);
@@ -145,6 +147,26 @@ function BrowseKnowledgeBase() {
 
   const closeDocument = () => {
     setSelectedDoc(null);
+  };
+
+  useEffect(() => {
+    if (!selectedDoc) {
+      return undefined;
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeDocument();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedDoc]);
+
+  const getSourceUrl = (doc) => {
+    if (!doc) return null;
+    if (doc.pdfUrl) return doc.pdfUrl;
+    if (doc.url) return doc.url;
+    return null;
   };
 
   const formatDate = (dateString) => {
@@ -161,6 +183,11 @@ function BrowseKnowledgeBase() {
       'cc-by': { icon: '🌐', label: 'CC BY 4.0' },
       'cc-by-sa': { icon: '🔄', label: 'CC BY-SA 4.0' },
       'cc-by-nc': { icon: '🚫💰', label: 'CC BY-NC 4.0' },
+      'CC-BY': { icon: '🌐', label: 'CC BY' },
+      'Public Domain (U.S. Government Work)': { icon: '🇺🇸', label: 'U.S. Public Domain' },
+      'Public Domain': { icon: '🌐', label: 'Public Domain' },
+      'arXiv Non-exclusive License': { icon: '📄', label: 'arXiv License' },
+      'arXiv Non-exclusive': { icon: '📄', label: 'arXiv License' },
       'private': { icon: '🔒', label: 'Private' }
     };
     return licenses[licenseType] || { icon: '📄', label: 'Unknown' };
@@ -192,8 +219,8 @@ function BrowseKnowledgeBase() {
 
       <main className="browse-main">
         <div className="browse-header">
-          <h1>📚 Browse Knowledge Base</h1>
-          <p>Explore community-contributed space habitat documents and research</p>
+          <h1>Library</h1>
+          <p>Community-contributed research and designs, licensed for reuse unless marked private.</p>
         </div>
 
         {/* Search and Filters */}
@@ -207,7 +234,7 @@ function BrowseKnowledgeBase() {
               className="search-input"
             />
             <button type="submit" className="search-button">
-              🔍 Search
+              Search
             </button>
           </form>
 
@@ -228,6 +255,8 @@ function BrowseKnowledgeBase() {
               <label>License</label>
               <select value={license} onChange={(e) => { setLicense(e.target.value); setPage(1); }}>
                 <option value="all">All Licenses</option>
+                <option value="Public Domain (U.S. Government Work)">U.S. Public Domain</option>
+                <option value="arXiv Non-exclusive License">arXiv License</option>
                 <option value="cc-by">CC BY 4.0</option>
                 <option value="cc-by-sa">CC BY-SA 4.0</option>
                 <option value="cc-by-nc">CC BY-NC 4.0</option>
@@ -368,64 +397,94 @@ function BrowseKnowledgeBase() {
 
       {/* Document Viewer Modal */}
       {selectedDoc && (
-        <div className="modal-overlay" onClick={closeDocument}>
-          <div className="document-viewer" onClick={(e) => e.stopPropagation()}>
-            <div className="viewer-header">
-              <h2>{selectedDoc.title}</h2>
-              <button className="close-btn" onClick={closeDocument}>✕</button>
-            </div>
-            
-            <div className="viewer-meta">
-              <span className="meta-item">
-                <strong>Author:</strong> {selectedDoc.attribution || selectedDoc.submitted_by_username}
-              </span>
-              <span className="meta-item">
-                <strong>Category:</strong> {getCategoryLabel(selectedDoc.category)}
-              </span>
-              <span className="meta-item">
-                <strong>License:</strong> {getLicenseInfo(selectedDoc.license).icon} {getLicenseInfo(selectedDoc.license).label}
-              </span>
-              <span className="meta-item">
-                <strong>Added:</strong> {formatDate(selectedDoc.created_at || selectedDoc.submitted_at)}
-              </span>
+        <div className="library-viewer-overlay" onClick={closeDocument}>
+          <div
+            className="library-viewer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="document-viewer-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="library-viewer-header">
+              <h2 id="document-viewer-title">{selectedDoc.title}</h2>
+              <button
+                type="button"
+                className="library-viewer-close"
+                onClick={closeDocument}
+                aria-label="Close document"
+              >
+                Close
+              </button>
             </div>
 
-            {selectedDoc.description && (
-              <div className="viewer-description">
-                <strong>Description:</strong>
-                <p>{selectedDoc.description}</p>
+            <div className="library-viewer-body">
+              <div className="library-viewer-meta">
+                <span className="library-meta-item">
+                  <strong>Author:</strong> {selectedDoc.attribution || selectedDoc.submitted_by_username || 'Unknown'}
+                </span>
+                <span className="library-meta-item">
+                  <strong>Category:</strong> {getCategoryLabel(selectedDoc.category)}
+                </span>
+                <span className="library-meta-item">
+                  <strong>License:</strong> {getLicenseInfo(selectedDoc.license).label}
+                </span>
+                <span className="library-meta-item">
+                  <strong>Added:</strong> {formatDate(selectedDoc.created_at || selectedDoc.submitted_at)}
+                </span>
               </div>
-            )}
 
-            {selectedDoc.tags && selectedDoc.tags.length > 0 && (
-              <div className="viewer-tags">
-                <strong>Tags:</strong>
-                <div className="tags-list">
-                  {selectedDoc.tags.map((tag, idx) => (
-                    <span key={idx} className="tag">{tag}</span>
-                  ))}
+              {selectedDoc.description &&
+                selectedDoc.description !== selectedDoc.content && (
+                <div className="library-viewer-section">
+                  <h3>Description</h3>
+                  <p>{selectedDoc.description}</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="viewer-content">
-              <strong>Content:</strong>
-              <div className="content-text">
-                {selectedDoc.content}
+              {selectedDoc.tags && selectedDoc.tags.length > 0 && (
+                <div className="library-viewer-section">
+                  <h3>Tags</h3>
+                  <div className="tags-list">
+                    {selectedDoc.tags.map((tag, idx) => (
+                      <span key={idx} className="tag">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="library-viewer-section">
+                <h3>
+                  {selectedDoc.content && selectedDoc.content === selectedDoc.description
+                    ? 'Abstract'
+                    : 'Content'}
+                </h3>
+                <div className="library-viewer-text">
+                  {selectedDoc.content || selectedDoc.description || 'No text is stored for this document.'}
+                </div>
+                {getSourceUrl(selectedDoc) && (
+                  <a
+                    className="library-source-link"
+                    href={getSourceUrl(selectedDoc)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open original source
+                  </a>
+                )}
               </div>
             </div>
 
-            <div className="viewer-footer">
-              <p className="license-notice">
+            <div className="library-viewer-footer">
+              <p>
                 {selectedDoc.license !== 'private' ? (
                   <>
-                    📜 This document is shared under <strong>{getLicenseInfo(selectedDoc.license).label}</strong>.
-                    {selectedDoc.license.startsWith('cc') && (
-                      <> Please credit: <strong>{selectedDoc.attribution || selectedDoc.submitted_by_username}</strong></>
+                    This document is shared under {getLicenseInfo(selectedDoc.license).label}.
+                    {selectedDoc.license?.toLowerCase().startsWith('cc') && (
+                      <> Please credit: {selectedDoc.attribution || selectedDoc.submitted_by_username}</>
                     )}
                   </>
                 ) : (
-                  <>🔒 This document is private.</>
+                  <>This document is private.</>
                 )}
               </p>
             </div>
@@ -434,7 +493,7 @@ function BrowseKnowledgeBase() {
       )}
 
       {loadingDoc && (
-        <div className="modal-overlay">
+        <div className="library-viewer-overlay">
           <div className="loading-spinner">
             <div className="spinner"></div>
             <p>Loading document...</p>

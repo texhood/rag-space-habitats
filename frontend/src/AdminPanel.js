@@ -900,7 +900,7 @@ function AdminPanel({ onClose }) {
                       style={{ 
                         width: '80px', 
                         padding: '8px', 
-                        border: '2px solid #667eea',
+                        border: '2px solid var(--accent)',
                         borderRadius: '4px'
                       }}
                     />
@@ -972,7 +972,7 @@ function AdminPanel({ onClose }) {
                           <span 
                             key={idx}
                             style={{
-                              background: '#667eea',
+                              background: 'var(--accent)',
                               color: 'white',
                               padding: '4px 12px',
                               borderRadius: '20px',
@@ -1084,7 +1084,7 @@ function AdminPanel({ onClose }) {
                           <tr key={idx}>
                             <td style={{ maxWidth: '300px' }}>
                               <a href={doc.url} target="_blank" rel="noopener noreferrer" 
-                                 style={{ color: '#667eea', textDecoration: 'none' }}>
+                                 style={{ color: 'var(--accent)', textDecoration: 'none' }}>
                                 {doc.title?.substring(0, 60)}{doc.title?.length > 60 ? '...' : ''}
                               </a>
                             </td>
@@ -1286,7 +1286,7 @@ function AdminPanel({ onClose }) {
                         fontSize: '18px', 
                         padding: '8px 12px', 
                         width: '100px',
-                        border: '2px solid #667eea',
+                        border: '2px solid var(--accent)',
                         borderRadius: '6px'
                       }}
                     />

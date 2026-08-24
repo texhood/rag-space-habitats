@@ -245,6 +245,10 @@ async function startServer() {
     const gridfsService = require('./services/gridfsService');
     await gridfsService.initialize();
 
+    const ProjectConversation = require('./models/ProjectConversation');
+    await ProjectConversation.ensureTables();
+    console.log('✅ Project conversation tables ready');
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Database: PostgreSQL with pgvector`);

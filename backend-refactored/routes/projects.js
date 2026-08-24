@@ -5,6 +5,7 @@ const multer = require('multer');
 const Project = require('../models/Project');
 const ProjectDocument = require('../models/ProjectDocument');
 const ProjectBookmark = require('../models/ProjectBookmark');
+const ProjectConversation = require('../models/ProjectConversation');
 const { requireEnterprise } = require('../middleware/enterpriseAuth');
 const gridfsService = require('../services/gridfsService');
 const projectDocProcessor = require('../services/projectDocumentProcessor');
@@ -726,6 +727,74 @@ router.delete('/:id/bookmarks/:bmId', requireEnterprise, async (req, res) => {
   }
 });
 
+// ========== PROJECT CONVERSATIONS ==========
+
+/**
+ * GET /api/projects/:id/conversations
+ * List saved threads for a project (active first)
+ */
+router.get('/:id/conversations', requireEnterprise, async (req, res) => {
+  try {
+    const conversations = await ProjectConversation.list(req.params.id, req.user.id);
+    res.json({ conversations });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] List conversations error:', err);
+    res.status(status).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/projects/:id/conversation
+ * Active thread and its messages (creates an empty thread if needed)
+ */
+router.get('/:id/conversation', requireEnterprise, async (req, res) => {
+  try {
+    const result = await ProjectConversation.getOrCreateActive(req.params.id, req.user.id);
+    res.json(result);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] Get conversation error:', err);
+    res.status(status).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/projects/:id/conversation
+ * Archive the current thread (if it has messages) and start a new one
+ */
+router.post('/:id/conversation', requireEnterprise, async (req, res) => {
+  try {
+    const result = await ProjectConversation.startNew(req.params.id, req.user.id);
+    const conversations = await ProjectConversation.list(req.params.id, req.user.id);
+    res.status(201).json({ ...result, conversations });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] New conversation error:', err);
+    res.status(status).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/projects/:id/conversations/:conversationId/open
+ * Resume an archived thread
+ */
+router.post('/:id/conversations/:conversationId/open', requireEnterprise, async (req, res) => {
+  try {
+    const result = await ProjectConversation.open(
+      req.params.id,
+      req.user.id,
+      req.params.conversationId
+    );
+    const conversations = await ProjectConversation.list(req.params.id, req.user.id);
+    res.json({ ...result, conversations });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] Open conversation error:', err);
+    res.status(status).json({ error: err.message });
+  }
+});
+
 // ========== PROJECT QUERY ==========
 
 /**
@@ -828,6 +897,16 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
         );
       } catch (logErr) {
         console.error('[Project Query] Failed to log query:', logErr.message);
+      }
+
+      try {
+        await ProjectConversation.appendExchange(projectId, req.user.id, {
+          question,
+          answer,
+          queryId
+        });
+      } catch (persistErr) {
+        console.error('[Project Query] Failed to persist conversation:', persistErr.message);
       }
     }
 
