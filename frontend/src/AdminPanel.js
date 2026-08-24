@@ -11,7 +11,6 @@ function AdminPanel({ onClose }) {
   const [users, setUsers] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [queries, setQueries] = useState([]);
-  const [preprocessStatus, setPreprocessStatus] = useState('');
   const [submissions, setSubmissions] = useState([]);
   const [processingStats, setProcessingStats] = useState(null);
   const [embeddingStatus, setEmbeddingStatus] = useState(null);
@@ -247,8 +246,7 @@ function AdminPanel({ onClose }) {
 
   const handleToggleCrawler = async () => {
     const enable = !crawlerStatus?.enabled;
-    const action = enable ? 'enable' : 'disable';
-    
+
     if (!window.confirm(`${enable ? 'Enable' : 'Disable'} the document crawler?`)) {
       return;
     }
@@ -371,20 +369,6 @@ function AdminPanel({ onClose }) {
       fetchUsers();
     } catch (err) {
       alert('Failed to delete user: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const runPreprocess = async () => {
-    setPreprocessStatus('Starting preprocessing...');
-    try {
-      const res = await axios.post(
-        `${API_URL}/api/admin/preprocess`,
-        {},
-        { withCredentials: true }
-      );
-      setPreprocessStatus(res.data.message);
-    } catch (err) {
-      setPreprocessStatus('Error: ' + (err.response?.data?.error || err.message));
     }
   };
 

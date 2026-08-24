@@ -1,5 +1,5 @@
 // DocumentViewer.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import API_URL from './config';
 import ReactMarkdown from 'react-markdown';
@@ -13,11 +13,7 @@ function DocumentViewer({ submissionId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchDocument();
-  }, [submissionId]);
-
-  const fetchDocument = async () => {
+  const fetchDocument = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(
@@ -34,7 +30,11 @@ function DocumentViewer({ submissionId, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [submissionId]);
+
+  useEffect(() => {
+    fetchDocument();
+  }, [fetchDocument]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';

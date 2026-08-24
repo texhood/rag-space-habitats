@@ -21,7 +21,7 @@ function App() {
 
   // Check auth on mount
   useEffect(() => {
-    axios.get(`${API_URL}/me', { withCredentials: true })
+    axios.get(`${API_URL}/me`, { withCredentials: true })
       .then(res => {
         setUser(res.data.user);
         setShowLogin(false);
@@ -36,7 +36,7 @@ function App() {
     const endpoint = isLogin ? '/login' : '/register';
     try {
       await axios.post(`http://localhost:5000${endpoint}`, form, { withCredentials: true });
-      const res = await axios.get(`${API_URL}/me', { withCredentials: true });
+      const res = await axios.get(`${API_URL}/me`, { withCredentials: true });
       setUser(res.data.user);
       setShowLogin(false);
     } catch (err) {
@@ -45,7 +45,7 @@ function App() {
   };
 
   const logout = () => {
-    axios.post(`${API_URL}/logout', {}, { withCredentials: true })
+    axios.post(`${API_URL}/logout`, {}, { withCredentials: true })
       .then(() => {
         setUser(null);
         setShowLogin(true);
@@ -58,7 +58,7 @@ function App() {
     setLoading(true);
     setAnswer('');
     try {
-      const res = await axios.post(`${API_URL}/ask', { question }, { withCredentials: true });
+      const res = await axios.post(`${API_URL}/ask`, { question }, { withCredentials: true });
       setAnswer(res.data.answer);
     } catch (err) {
       setAnswer(`Error: ${err.response?.data?.error || err.message}`);
@@ -70,7 +70,7 @@ function App() {
   const runPreprocess = async () => {
     setPreprocessStatus('Starting preprocessing...');
     try {
-      const res = await axios.post(`${API_URL}/admin/preprocess', {}, { withCredentials: true });
+      const res = await axios.post(`${API_URL}/admin/preprocess`, {}, { withCredentials: true });
       setPreprocessStatus(res.data.message);
     } catch (err) {
       setPreprocessStatus(`Error: ${err.response?.data?.error || err.message}`);

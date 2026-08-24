@@ -55,9 +55,6 @@ function PricingPage({ user, onClose }) {
     
     const now = new Date();
     const periodEnd = new Date(subscriptionInfo.current_period_end);
-    const periodStart = new Date(subscriptionInfo.current_period_start);
-    
-    const totalDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24));
     const remainingDays = Math.ceil((periodEnd - now) / (1000 * 60 * 60 * 24));
     
     if (remainingDays <= 0) return newPrice;

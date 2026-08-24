@@ -1,5 +1,5 @@
 // ProjectsPage.js - Projects page wrapper with navbar
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_URL from './config';
@@ -19,11 +19,7 @@ function ProjectsPage() {
   const [showPricing, setShowPricing] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/api/auth/me`, {
         withCredentials: true
@@ -35,7 +31,11 @@ function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const handleLogout = async () => {
     try {

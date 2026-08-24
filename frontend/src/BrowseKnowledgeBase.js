@@ -53,6 +53,8 @@ function BrowseKnowledgeBase() {
   // Fetch submissions when filters change
   useEffect(() => {
     fetchSubmissions();
+    // Search text is applied on submit via handleSearch, not on each keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, category, license, sortBy, dateFrom, dateTo]);
 
   const checkAuth = async () => {

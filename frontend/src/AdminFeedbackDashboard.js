@@ -1,5 +1,5 @@
 // AdminFeedbackDashboard.js - Admin Feedback Analytics and Review
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import API_URL from './config';
 import './AdminFeedbackDashboard.css';
@@ -13,11 +13,7 @@ function AdminFeedbackDashboard() {
   const [selectedType, setSelectedType] = useState(null);
   const [days, setDays] = useState(7);
 
-  useEffect(() => {
-    fetchFeedbackData();
-  }, [days]);
-
-  const fetchFeedbackData = async () => {
+  const fetchFeedbackData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -44,7 +40,11 @@ function AdminFeedbackDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [days]);
+
+  useEffect(() => {
+    fetchFeedbackData();
+  }, [fetchFeedbackData]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
