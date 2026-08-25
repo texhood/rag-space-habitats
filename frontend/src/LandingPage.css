@@ -316,6 +316,19 @@ html:has(.landing-page) body {
   color: var(--lp-accent);
 }
 
+.lp-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.lp-demo-error {
+  margin: 0;
+  font-size: 13px;
+  color: #d9a39a;
+}
+
 /* ——— Sections ——— */
 
 .lp-section {

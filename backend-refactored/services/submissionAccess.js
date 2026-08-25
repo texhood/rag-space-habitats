@@ -70,7 +70,7 @@ function listSubmissionsFilter(user, { status } = {}) {
   return filter;
 }
 
-function publicBrowseFilter(license) {
+function publicBrowseFilter(license, source) {
   const filter = {
     status: 'processed',
     license: { $in: PUBLIC_LICENSES }
@@ -78,6 +78,12 @@ function publicBrowseFilter(license) {
 
   if (license && license !== 'all' && isPublicLicense(license)) {
     filter.license = license;
+  }
+
+  if (source === 'ntrs' || source === 'arxiv') {
+    filter.source = source;
+  } else if (source === 'community') {
+    filter.source = { $nin: ['ntrs', 'arxiv'] };
   }
 
   return filter;

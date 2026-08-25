@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import API_URL from './config';
+import SourceRail from './SourceRail';
+import { DEMO_QUESTION } from './queryStarters';
 import './LandingPage.css';
 
 function LandingPage() {
@@ -17,6 +19,10 @@ function LandingPage() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState('');
+  const [demoAnswer, setDemoAnswer] = useState('');
+  const [demoSources, setDemoSources] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 24);
@@ -101,6 +107,25 @@ function LandingPage() {
     setShowLogin(false);
   };
 
+  const runDemo = async () => {
+    setDemoError('');
+    setDemoLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/rag/demo`, {
+        question: DEMO_QUESTION
+      });
+      setDemoAnswer(res.data.answer || '');
+      setDemoSources(res.data.sources || []);
+    } catch (err) {
+      setDemoError(
+        err.response?.data?.error ||
+        'The demo could not run. Create an account to query the corpus.'
+      );
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
   return (
     <div className="landing-page">
       <nav className={`lp-nav${isScrolled ? ' is-scrolled' : ''}`}>
@@ -112,6 +137,9 @@ function LandingPage() {
           <div className="lp-nav-links">
             <button type="button" className="lp-nav-text" onClick={() => navigate('/browse')}>
               Library
+            </button>
+            <button type="button" className="lp-nav-text" onClick={() => navigate('/pricing')}>
+              Pricing
             </button>
             <button type="button" className="lp-nav-text" onClick={openLogin}>
               Sign in
@@ -147,23 +175,48 @@ function LandingPage() {
         <div className="lp-product-frame">
           <div className="lp-product-bar">
             <span>Query</span>
-            <span className="lp-product-meta">Cited · Grok</span>
+            <span className="lp-product-meta">{demoAnswer ? 'Live · cited' : 'Example · Grok'}</span>
           </div>
           <div className="lp-product-body">
             <div className="lp-msg lp-msg-user">
-              What rotation rate produces 1g at a 50 meter radius?
+              {DEMO_QUESTION}
             </div>
-            <div className="lp-msg lp-msg-assistant">
-              <p>
-                Centripetal acceleration is <span className="lp-math">a = ω²r</span>. For 1g
-                (9.81 m/s²) at r = 50 m:
-              </p>
-              <p className="lp-math-block">ω = √(g / r) ≈ 0.443 rad/s ≈ 4.23 rpm</p>
-              <p>
-                At this radius the head-to-foot gravity gradient is large; most habitat
-                studies prefer radii of hundreds of meters so the rate can stay near 1–2 rpm.
-              </p>
-              <p className="lp-cite">NASA SP-413 · Space Settlements: A Design Study</p>
+            {demoAnswer ? (
+              <div className="lp-msg lp-msg-assistant">
+                {demoAnswer.split(/\n\n/).slice(0, 6).map((para, idx) => (
+                  <p key={idx}>{para}</p>
+                ))}
+                <SourceRail sources={demoSources} />
+              </div>
+            ) : (
+              <div className="lp-msg lp-msg-assistant">
+                <p>
+                  Centripetal acceleration is <span className="lp-math">a = ω²r</span>. For 1g
+                  (9.81 m/s²) at r = 50 m:
+                </p>
+                <p className="lp-math-block">ω = √(g / r) ≈ 0.443 rad/s ≈ 4.23 rpm</p>
+                <p>
+                  At this radius the head-to-foot gravity gradient is large; most habitat
+                  studies prefer radii of hundreds of meters so the rate can stay near 1–2 rpm.
+                </p>
+                <p className="lp-cite">NASA SP-413 · Space Settlements: A Design Study</p>
+              </div>
+            )}
+            {demoError ? <p className="lp-demo-error">{demoError}</p> : null}
+            <div className="lp-demo-actions">
+              <button
+                type="button"
+                className="lp-btn-ghost"
+                onClick={runDemo}
+                disabled={demoLoading}
+              >
+                {demoLoading ? 'Querying the corpus…' : demoAnswer ? 'Run again' : 'Run this query'}
+              </button>
+              {demoAnswer ? (
+                <button type="button" className="lp-btn-primary" onClick={openRegister}>
+                  Create a free account
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -244,6 +297,7 @@ function LandingPage() {
           <span>© {new Date().getFullYear()} Space Habitats</span>
           <div className="lp-footer-links">
             <button type="button" onClick={() => navigate('/browse')}>Library</button>
+            <button type="button" onClick={() => navigate('/pricing')}>Pricing</button>
             <button type="button" onClick={openLogin}>Sign in</button>
           </div>
         </div>

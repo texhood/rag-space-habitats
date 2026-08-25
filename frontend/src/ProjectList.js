@@ -28,7 +28,7 @@ function ProjectList() {
       setProjects(response.data.projects || []);
     } catch (err) {
       if (err.response?.status === 403) {
-        setError('Projects require an Enterprise subscription. Please upgrade to access this feature.');
+        setError(err.response?.data?.error || 'Upgrade to create more projects.');
       } else {
         setError(err.response?.data?.error || 'Failed to load projects');
       }
@@ -58,7 +58,7 @@ function ProjectList() {
     <div className="projects-page">
       <div className="projects-header">
         <h1>Projects</h1>
-        <p>Enterprise workspaces for custom research. Query chats in a project are saved.</p>
+        <p>Workspaces with a brief, pinned papers, and saved chats. Free accounts include one project.</p>
         <button
           className="btn-create-project"
           onClick={() => setShowCreateModal(true)}

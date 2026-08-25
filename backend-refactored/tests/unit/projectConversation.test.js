@@ -35,5 +35,19 @@ describe('toClientMessage', () => {
     });
     assert.equal(mapped.queryId, 44);
     assert.equal(mapped.role, 'assistant');
+    assert.deepEqual(mapped.sources, []);
+  });
+
+  it('passes through stored sources on assistant messages', () => {
+    const mapped = toClientMessage({
+      id: 10,
+      role: 'assistant',
+      content: '4.23 rpm.',
+      query_id: 45,
+      sources: [{ index: 1, title: 'NASA SP-413', href: '/browse?doc=abc' }],
+      created_at: '2026-08-24T00:00:00.000Z'
+    });
+    assert.equal(mapped.sources.length, 1);
+    assert.equal(mapped.sources[0].title, 'NASA SP-413');
   });
 });

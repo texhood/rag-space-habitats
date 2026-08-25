@@ -89,6 +89,7 @@ router.get('/browse', async (req, res) => {
       category,    // Filter by category
       author,      // Filter by author username
       license,     // Filter by license type
+      source,      // ntrs | arxiv | community
       dateFrom,    // Filter by date range start
       dateTo,      // Filter by date range end
       page = 1,    // Pagination
@@ -96,7 +97,7 @@ router.get('/browse', async (req, res) => {
       sort = 'newest' // Sort order: newest, oldest, title
     } = req.query;
 
-    const filter = publicBrowseFilter(license);
+    const filter = publicBrowseFilter(license, source);
 
     // Text search across title, description, tags
     if (q && q.trim()) {
@@ -165,6 +166,8 @@ router.get('/browse', async (req, res) => {
         submitted_by_username: 1,
         created_at: 1,
         submitted_at: 1,
+        source: 1,
+        url: 1,
         // Exclude full content - provide preview only
         content: { $substr: ['$content', 0, 300] }
       })

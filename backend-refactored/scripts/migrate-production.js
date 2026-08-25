@@ -1,3 +1,4 @@
+// Superseded by `npm run migrate` (migrations/001_projects.sql). Kept for reference.
 require('dotenv').config();
 const pool = require('../config/database');
 

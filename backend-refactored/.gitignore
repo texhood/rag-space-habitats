@@ -34,9 +34,9 @@ Thumbs.db
 uploads/*
 !uploads/.gitkeep
 
-# Data migration
+# Data migration dumps (not the numbered SQL runner)
 postgres-migration/
-migrations/
+migrations/processed/
 
 # Miscellaneous
 check_documents.js

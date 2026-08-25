@@ -7,38 +7,6 @@ const {
 } = require('../services/projectConversationFormat');
 
 class ProjectConversation {
-  static async ensureTables() {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS project_conversations (
-        id SERIAL PRIMARY KEY,
-        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        title VARCHAR(200) NOT NULL DEFAULT 'New conversation',
-        archived_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS project_conversation_messages (
-        id SERIAL PRIMARY KEY,
-        conversation_id INTEGER NOT NULL REFERENCES project_conversations(id) ON DELETE CASCADE,
-        role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
-        content TEXT NOT NULL,
-        query_id INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_project_conversations_one_active
-        ON project_conversations (project_id)
-        WHERE archived_at IS NULL
-    `);
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_project_conversation_messages_conv
-        ON project_conversation_messages (conversation_id, created_at)
-    `);
-  }
-
   static async _requireProject(projectId, userId) {
     const project = await Project.getById(projectId, userId);
     if (!project) {
@@ -105,7 +73,7 @@ class ProjectConversation {
     return { conversation, messages: [] };
   }
 
-  static async appendExchange(projectId, userId, { question, answer, queryId = null }) {
+  static async appendExchange(projectId, userId, { question, answer, queryId = null, sources = null }) {
     const { conversation } = await this.getOrCreateActive(projectId, userId);
     const client = await pool.connect();
     try {
@@ -116,9 +84,9 @@ class ProjectConversation {
         [conversation.id, question]
       );
       await client.query(
-        `INSERT INTO project_conversation_messages (conversation_id, role, content, query_id)
-         VALUES ($1, 'assistant', $2, $3)`,
-        [conversation.id, answer, queryId]
+        `INSERT INTO project_conversation_messages (conversation_id, role, content, query_id, sources)
+         VALUES ($1, 'assistant', $2, $3, $4)`,
+        [conversation.id, answer, queryId, sources && sources.length ? sources : null]
       );
 
       const title = conversation.messageCount === 0

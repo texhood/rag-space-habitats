@@ -3,25 +3,29 @@ const LIMITS = {
     queries_per_day: 10,
     uploads_per_month: 0,
     max_file_size: 0,
-    llm_access: ['grok']
+    llm_access: ['grok'],
+    projects_per_account: 1
   },
   basic: {
     queries_per_day: 100,
     uploads_per_month: 5,
     max_file_size: 50 * 1024 * 1024,
-    llm_access: ['grok']
+    llm_access: ['grok'],
+    projects_per_account: 3
   },
   pro: {
     queries_per_day: -1,
     uploads_per_month: 50,
     max_file_size: 100 * 1024 * 1024,
-    llm_access: ['grok', 'claude']
+    llm_access: ['grok', 'claude'],
+    projects_per_account: 10
   },
   enterprise: {
     queries_per_day: -1,
     uploads_per_month: -1,
     max_file_size: 100 * 1024 * 1024,
     llm_access: ['grok', 'claude'],
+    projects_per_account: -1,
     priority: true,
     api_access: true
   },
@@ -30,6 +34,7 @@ const LIMITS = {
     uploads_per_month: 50,
     max_file_size: 100 * 1024 * 1024,
     llm_access: ['grok', 'claude'],
+    projects_per_account: 10,
     price: 0.00,
     label: 'Beta Access - All Pro Features'
   }
@@ -66,11 +71,30 @@ function canPerformAction(action, tier, usage = {}) {
     };
   }
 
+  if (action === 'create_project') {
+    if (limits.projects_per_account === -1) {
+      return { allowed: true, used: usage.projects || 0, limit: -1 };
+    }
+
+    const used = usage.projects || 0;
+    return {
+      allowed: used < limits.projects_per_account,
+      used,
+      limit: limits.projects_per_account,
+      remaining: limits.projects_per_account - used
+    };
+  }
+
   return { allowed: true };
+}
+
+function canCreateProject(tier, currentCount = 0) {
+  return canPerformAction('create_project', tier, { projects: currentCount });
 }
 
 module.exports = {
   LIMITS,
   getLimits,
-  canPerformAction
+  canPerformAction,
+  canCreateProject
 };

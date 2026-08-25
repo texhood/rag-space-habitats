@@ -293,7 +293,8 @@ class CrawlerService {
         category: doc.category,
         tags: doc.tags,
         attribution: doc.attribution,
-        license: doc.license
+        license: doc.license,
+        url: doc.url || null
       });
 
       const embedding = embeddings[i];

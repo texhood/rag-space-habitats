@@ -7,15 +7,31 @@ class Feedback {
    */
   static async create(userId, feedbackData) {
     const { queryId, feedbackType, reaction, rating, documentRelevance, comment } = feedbackData;
-
-    const result = await pool.query(
-      `INSERT INTO feedback (user_id, query_id, feedback_type, reaction, rating, document_relevance, comment)
+    const sql = `INSERT INTO feedback (user_id, query_id, feedback_type, reaction, rating, document_relevance, comment)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, created_at`,
-      [userId, queryId, feedbackType, reaction, rating, documentRelevance, comment]
-    );
+       RETURNING id, created_at`;
+    const params = [
+      userId,
+      queryId || null,
+      feedbackType,
+      reaction,
+      rating,
+      documentRelevance,
+      comment
+    ];
 
-    return result.rows[0];
+    try {
+      const result = await pool.query(sql, params);
+      return result.rows[0];
+    } catch (err) {
+      // Stale conversation query_ids should not block thumbs up/down.
+      if (err.code === '23503' && params[1]) {
+        params[1] = null;
+        const result = await pool.query(sql, params);
+        return result.rows[0];
+      }
+      throw err;
+    }
   }
 
   /**

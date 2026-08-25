@@ -47,7 +47,7 @@ function CreateProjectModal({ onClose, onCreate }) {
 
         <form onSubmit={handleSubmit} className="create-project-form">
           {error && <div className="form-error">{error}</div>}
-          <p className="persist-guidance">Query chats in this project are saved and restored the next time you sign in.</p>
+          <p className="persist-guidance">Query chats in this project are saved with the brief and pinned papers.</p>
 
           <div className="form-group">
             <label>Project Name *</label>

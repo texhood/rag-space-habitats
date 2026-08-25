@@ -107,6 +107,13 @@ describe('publicBrowseFilter', () => {
     });
   });
 
+  it('filters NASA and community collections', () => {
+    assert.equal(publicBrowseFilter('all', 'ntrs').source, 'ntrs');
+    assert.deepEqual(publicBrowseFilter('all', 'community').source, {
+      $nin: ['ntrs', 'arxiv']
+    });
+  });
+
   it('ignores a request to browse private items', () => {
     assert.deepEqual(publicBrowseFilter('private').license, {
       $in: PUBLIC_LICENSES
