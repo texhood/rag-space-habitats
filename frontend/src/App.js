@@ -21,6 +21,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import SourceRail from './SourceRail';
+import { STARTER_QUESTIONS, formatCorpusLabel } from './queryStarters';
 
 // Main dashboard component (the existing app functionality)
 function Dashboard() {
@@ -56,13 +58,12 @@ function Dashboard() {
   // Isolated threads: general Query stays ephemeral; project chats load from the server.
   const [generalHistory, setGeneralHistory] = useState([]);
   const [projectHistory, setProjectHistory] = useState([]);
+  const [corpusStats, setCorpusStats] = useState(null);
   const messagesEndRef = useRef(null);
 
   const projectIdFromUrl = new URLSearchParams(location.search).get('project');
   const conversationHistory = projectIdFromUrl ? projectHistory : generalHistory;
-  const canUseProjects = Boolean(
-    user && (user.subscription_tier === 'enterprise' || user.role === 'admin')
-  );
+  const canUseProjects = Boolean(user);
 
   // Auto-scroll to bottom when conversation updates
   useEffect(() => {
@@ -72,6 +73,33 @@ function Dashboard() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    axios.get(`${API_URL}/api/rag/stats`)
+      .then((res) => setCorpusStats(res.data))
+      .catch(() => setCorpusStats(null));
+  }, []);
+
+  useEffect(() => {
+    if (!user || projectIdFromUrl) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    axios.get(`${API_URL}/api/rag/conversation`, { withCredentials: true })
+      .then((res) => {
+        if (!cancelled) {
+          setGeneralHistory(res.data.messages || []);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load saved query:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, projectIdFromUrl]);
 
   // Load user settings when authenticated
   useEffect(() => {
@@ -292,7 +320,10 @@ function Dashboard() {
 
       const res = await axios.post(endpoint, {
         question: question,
-        conversationHistory: history
+        conversationHistory: history.map((msg) => ({
+          role: msg.role,
+          content: msg.content
+        }))
       }, { withCredentials: true });
 
       appendHistory([
@@ -302,6 +333,7 @@ function Dashboard() {
           role: 'assistant',
           content: res.data.answer,
           queryId: res.data.queryId,
+          sources: res.data.sources || [],
           projectId: inProject ? projectIdFromUrl : null
         }
       ]);
@@ -361,7 +393,17 @@ function Dashboard() {
       return;
     }
 
-    setGeneralHistory([]);
+    try {
+      const res = await axios.post(
+        `${API_URL}/api/rag/conversation`,
+        {},
+        { withCredentials: true }
+      );
+      setGeneralHistory(res.data.messages || []);
+    } catch (err) {
+      console.error('Failed to start a new saved query:', err);
+      setGeneralHistory([]);
+    }
     setResponse('');
     setQuestion('');
   };
@@ -503,8 +545,10 @@ function Dashboard() {
                     <span className="conversation-stats">
                       {Math.floor(conversationHistory.length / 2)} exchange{conversationHistory.length > 2 ? 's' : ''}
                     </span>
-                    {projectIdFromUrl && (
+                    {projectIdFromUrl ? (
                       <span className="conversation-saved">Saved with this project</span>
+                    ) : (
+                      <span className="conversation-saved">Saved to your account</span>
                     )}
                   </div>
                   <div className="conversation-thread">
@@ -516,12 +560,15 @@ function Dashboard() {
                           </div>
                           <div className="message-content">
                             {msg.role === 'assistant' ? (
-                              <ReactMarkdown
-                                remarkPlugins={[remarkMath]}
-                                rehypePlugins={[rehypeKatex]}
-                              >
-                                {msg.content}
-                              </ReactMarkdown>
+                              <>
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkMath]}
+                                  rehypePlugins={[rehypeKatex]}
+                                >
+                                  {msg.content}
+                                </ReactMarkdown>
+                                <SourceRail sources={msg.sources} />
+                              </>
                             ) : (
                               <p>{msg.content}</p>
                             )}
@@ -563,26 +610,32 @@ function Dashboard() {
                   ) : (
                     <>
                       <p>Ask a question in English. Answers come from the habitat literature, with sources attached.</p>
-                      <p className="hint">Try: "What is the recommended rotation rate for artificial gravity?"</p>
+                      {formatCorpusLabel(corpusStats) ? (
+                        <p className="hint">{formatCorpusLabel(corpusStats)}</p>
+                      ) : null}
+                      <div className="starter-chips">
+                        {STARTER_QUESTIONS.map((starter) => (
+                          <button
+                            type="button"
+                            key={starter.topic}
+                            className="starter-chip"
+                            onClick={() => setQuestion(starter.text)}
+                          >
+                            {starter.topic}
+                          </button>
+                        ))}
+                      </div>
                       <p className="persist-guidance">
-                        Query chats are only kept for this session.{' '}
+                        This thread is saved to your account.{' '}
                         {canUseProjects ? (
                           <>
-                            Create a{' '}
+                            Open a{' '}
                             <button type="button" className="inline-link" onClick={() => navigate('/projects')}>
                               project
                             </button>
-                            {' '}if you want the conversation to persist.
+                            {' '}when you want a brief, pinned papers, and a working set.
                           </>
-                        ) : (
-                          <>
-                            Create a project if you want conversations to persist.{' '}
-                            <button type="button" className="inline-link" onClick={() => setShowPricing(true)}>
-                              Enterprise
-                            </button>
-                            {' '}includes projects.
-                          </>
-                        )}
+                        ) : null}
                       </p>
                     </>
                   )}
@@ -591,12 +644,20 @@ function Dashboard() {
 
               {/* Question input form */}
               <form onSubmit={handleAsk} className="question-form">
-                <input
-                  type="text"
+                <textarea
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder={conversationHistory.length > 0 ? "Ask a follow-up question..." : "Ask about space habitats..."}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (question.trim() && !loading && !projectLoading) {
+                        handleAsk(e);
+                      }
+                    }
+                  }}
+                  placeholder={conversationHistory.length > 0 ? 'Ask a follow-up question...' : 'Ask about space habitats...'}
                   className="question-input"
+                  rows={2}
                   disabled={loading || projectLoading}
                 />
                 <button type="submit" disabled={loading || projectLoading} className="ask-button">
@@ -712,6 +773,30 @@ function Dashboard() {
   );
 }
 
+function PricingRoute() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    axios.get(`${API_URL}/api/auth/me`, { withCredentials: true })
+      .then((res) => setUser(res.data.user || null))
+      .catch(() => setUser(null));
+  }, []);
+
+  return (
+    <PricingPage
+      user={user}
+      onClose={() => {
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate('/');
+        }
+      }}
+    />
+  );
+}
+
 // Root App component with Router
 function App() {
   return (
@@ -725,8 +810,9 @@ function App() {
 
         {/* Browse knowledge base */}
         <Route path="/browse" element={<BrowseKnowledgeBase />} />
+        <Route path="/pricing" element={<PricingRoute />} />
 
-        {/* Projects (Enterprise users and admins only) */}
+        {/* Projects */}
         <Route path="/projects" element={<ProjectsPage />} />
 
         {/* Individual project workspace */}

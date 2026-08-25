@@ -58,12 +58,12 @@ function ProjectsPage() {
   }
 
   // Check if user has access to projects
-  if (!user || (user.subscription_tier !== 'enterprise' && user.role !== 'admin')) {
+  if (!user) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2>Access Denied</h2>
-        <p>Projects require an Enterprise subscription.</p>
-        <button onClick={() => navigate('/pricing')}>Upgrade to Enterprise</button>
+        <h2>Sign in to open a project</h2>
+        <p>Free accounts include one project. Query chats are saved either way.</p>
+        <button onClick={() => navigate('/app?login=true')}>Sign in</button>
       </div>
     );
   }

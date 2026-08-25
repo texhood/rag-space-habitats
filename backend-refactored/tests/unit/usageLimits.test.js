@@ -30,4 +30,14 @@ describe('usageLimits', () => {
     assert.equal(canPerformAction('upload', 'basic', { uploads: 4 }).allowed, true);
     assert.equal(canPerformAction('upload', 'basic', { uploads: 5 }).allowed, false);
   });
+
+  it('gives a free account one project and blocks the second', () => {
+    assert.equal(canPerformAction('create_project', 'free', { projects: 0 }).allowed, true);
+    assert.equal(canPerformAction('create_project', 'free', { projects: 1 }).allowed, false);
+    assert.equal(canPerformAction('create_project', 'free', { projects: 1 }).limit, 1);
+  });
+
+  it('does not cap enterprise projects', () => {
+    assert.equal(canPerformAction('create_project', 'enterprise', { projects: 1000 }).allowed, true);
+  });
 });

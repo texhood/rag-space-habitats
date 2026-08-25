@@ -19,6 +19,8 @@ describe('LandingPage', () => {
     );
 
     expect(await screen.findByText(/finally queryable/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Pricing' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Run this query' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText(/Create an account/i)).not.toBeInTheDocument();
     });

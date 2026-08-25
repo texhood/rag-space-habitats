@@ -27,6 +27,20 @@
   font-size: 1.1rem;
 }
 
+.browse-corpus-stats {
+  margin-top: 8px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+.card-source {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 /* Search and Filters */
 .browse-controls {
   background: var(--bg-raised);

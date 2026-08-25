@@ -5,12 +5,27 @@ function titleFromUserText(text, max = 80) {
   return `${compact.slice(0, max - 1)}…`;
 }
 
+function parseSources(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      return [];
+    }
+  }
+  return [];
+}
+
 function toClientMessage(row) {
   return {
     id: row.id,
     role: row.role,
     content: row.content,
     queryId: row.query_id,
+    sources: parseSources(row.sources),
     createdAt: row.created_at
   };
 }
@@ -19,7 +34,8 @@ function toClientConversation(row) {
   if (!row) return null;
   return {
     id: row.id,
-    projectId: row.project_id,
+    projectId: row.project_id || null,
+    userId: row.user_id || null,
     title: row.title,
     archived: Boolean(row.archived_at),
     archivedAt: row.archived_at,

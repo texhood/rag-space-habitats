@@ -1,6 +1,6 @@
 // BrowseKnowledgeBase.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import API_URL from './config';
 import AppNavbar from './AppNavbar';
@@ -9,9 +9,11 @@ import AdminPanel from './AdminPanel';
 import PricingPage from './PricingPage';
 import './AppNavbar.css';
 import './BrowseKnowledgeBase.css';
+import { formatCorpusLabel } from './queryStarters';
 
 function BrowseKnowledgeBase() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Auth state
   const [user, setUser] = useState(null);
@@ -25,9 +27,11 @@ function BrowseKnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [license, setLicense] = useState('all');
+  const [source, setSource] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [corpusStats, setCorpusStats] = useState(null);
   
   // Results state
   const [submissions, setSubmissions] = useState([]);
@@ -48,6 +52,9 @@ function BrowseKnowledgeBase() {
   useEffect(() => {
     checkAuth();
     fetchCategories();
+    axios.get(`${API_URL}/api/rag/stats`)
+      .then((res) => setCorpusStats(res.data))
+      .catch(() => setCorpusStats(null));
   }, []);
 
   // Fetch submissions when filters change
@@ -55,7 +62,7 @@ function BrowseKnowledgeBase() {
     fetchSubmissions();
     // Search text is applied on submit via handleSearch, not on each keystroke
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, category, license, sortBy, dateFrom, dateTo]);
+  }, [page, category, license, source, sortBy, dateFrom, dateTo]);
 
   const checkAuth = async () => {
     try {
@@ -94,6 +101,7 @@ function BrowseKnowledgeBase() {
       if (searchQuery.trim()) params.append('q', searchQuery.trim());
       if (category !== 'all') params.append('category', category);
       if (license !== 'all') params.append('license', license);
+      if (source !== 'all') params.append('source', source);
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
       params.append('sort', sortBy);
@@ -112,7 +120,7 @@ function BrowseKnowledgeBase() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, category, license, sortBy, dateFrom, dateTo, page]);
+  }, [searchQuery, category, license, source, sortBy, dateFrom, dateTo, page]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -124,19 +132,37 @@ function BrowseKnowledgeBase() {
     setSearchQuery('');
     setCategory('all');
     setLicense('all');
+    setSource('all');
     setSortBy('newest');
     setDateFrom('');
     setDateTo('');
     setPage(1);
   };
 
-  const viewDocument = async (docId) => {
+  const viewDocument = async (docId, { fromUrl } = {}) => {
+    if (!fromUrl) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('doc', docId);
+        return next;
+      }, { replace: true });
+    }
     setLoadingDoc(true);
     try {
-      const res = await axios.get(`${API_URL}/api/submissions/${docId}`, {
-        withCredentials: true
-      });
-      setSelectedDoc(res.data.submission);
+      let submission;
+      try {
+        const res = await axios.get(`${API_URL}/api/submissions/${docId}`, {
+          withCredentials: true
+        });
+        submission = res.data.submission;
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          throw err;
+        }
+        const fallback = await axios.get(`${API_URL}/api/rag/documents/${docId}`);
+        submission = fallback.data.submission;
+      }
+      setSelectedDoc(submission);
     } catch (err) {
       console.error('Failed to fetch document:', err);
       alert('Failed to load document');
@@ -147,7 +173,22 @@ function BrowseKnowledgeBase() {
 
   const closeDocument = () => {
     setSelectedDoc(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('doc');
+      return next;
+    }, { replace: true });
   };
+
+  useEffect(() => {
+    const docId = searchParams.get('doc');
+    if (!docId) {
+      return undefined;
+    }
+    viewDocument(docId, { fromUrl: true });
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedDoc) {
@@ -193,6 +234,14 @@ function BrowseKnowledgeBase() {
     return licenses[licenseType] || { icon: '📄', label: 'Unknown' };
   };
 
+  const getSourceLabel = (doc) => {
+    const raw = String(doc?.source || '').toLowerCase();
+    if (raw === 'ntrs' || raw.includes('nasa')) return 'NASA';
+    if (raw.includes('arxiv')) return 'arXiv';
+    if (doc?.submitted_by_username === 'crawler') return 'Corpus';
+    return 'Community';
+  };
+
   const getCategoryLabel = (cat) => {
     const labels = {
       'general': 'General',
@@ -220,7 +269,10 @@ function BrowseKnowledgeBase() {
       <main className="browse-main">
         <div className="browse-header">
           <h1>Library</h1>
-          <p>Community-contributed research and designs, licensed for reuse unless marked private.</p>
+          <p>NASA reports, arXiv papers, and community submissions — the same collection Query searches.</p>
+          {formatCorpusLabel(corpusStats) ? (
+            <p className="browse-corpus-stats">{formatCorpusLabel(corpusStats)}</p>
+          ) : null}
         </div>
 
         {/* Search and Filters */}
@@ -248,6 +300,16 @@ function BrowseKnowledgeBase() {
                     {getCategoryLabel(cat.name)} ({cat.count})
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Collection</label>
+              <select value={source} onChange={(e) => { setSource(e.target.value); setPage(1); }}>
+                <option value="all">All sources</option>
+                <option value="ntrs">NASA NTRS</option>
+                <option value="arxiv">arXiv</option>
+                <option value="community">Community</option>
               </select>
             </div>
 
@@ -330,6 +392,7 @@ function BrowseKnowledgeBase() {
               <div key={doc._id} className="submission-card" onClick={() => viewDocument(doc._id)}>
                 <div className="card-header">
                   <span className="card-category">{getCategoryLabel(doc.category)}</span>
+                  <span className="card-source">{getSourceLabel(doc)}</span>
                   <span className="card-license" title={getLicenseInfo(doc.license).label}>
                     {getLicenseInfo(doc.license).icon}
                   </span>
@@ -421,6 +484,9 @@ function BrowseKnowledgeBase() {
               <div className="library-viewer-meta">
                 <span className="library-meta-item">
                   <strong>Author:</strong> {selectedDoc.attribution || selectedDoc.submitted_by_username || 'Unknown'}
+                </span>
+                <span className="library-meta-item">
+                  <strong>Source:</strong> {getSourceLabel(selectedDoc)}
                 </span>
                 <span className="library-meta-item">
                   <strong>Category:</strong> {getCategoryLabel(selectedDoc.category)}

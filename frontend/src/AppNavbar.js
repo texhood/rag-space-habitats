@@ -65,7 +65,7 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
             <span className="nav-text">Library</span>
           </button>
 
-          {user && (user.subscription_tier === 'enterprise' || user.role === 'admin') && (
+          {user && (
             <button
               className={`nav-link ${isActive('/projects') ? 'active' : ''}`}
               onClick={() => handleNavClick('/projects')}
@@ -99,10 +99,10 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                     <span className="nav-text">My Account</span>
                   </button>
                 )}
-                {onShowPricing && (
+                {user && (
                   <button
                     className="nav-link"
-                    onClick={() => handleActionClick(onShowPricing)}
+                    onClick={() => handleNavClick('/pricing')}
                   >
                     <span className="nav-text">Upgrade</span>
                   </button>
@@ -150,11 +150,9 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                       My Account
                     </button>
                   )}
-                  {onShowPricing && (
-                    <button onClick={() => { setUserMenuOpen(false); onShowPricing(true); }}>
+                  <button onClick={() => { setUserMenuOpen(false); handleNavClick('/pricing'); }}>
                       Upgrade
                     </button>
-                  )}
                   {user.role === 'admin' && onShowAdmin && (
                     <button onClick={() => { setUserMenuOpen(false); onShowAdmin(true); }}>
                       Admin

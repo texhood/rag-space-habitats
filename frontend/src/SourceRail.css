@@ -1,0 +1,54 @@
+.source-rail {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, #2a333c);
+}
+
+.source-rail-label {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint, #7a8694);
+}
+
+.source-rail ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.source-link,
+.source-plain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text, #e8edf2);
+  text-decoration: none;
+}
+
+.source-link:hover .source-title {
+  text-decoration: underline;
+}
+
+.source-index {
+  color: var(--accent, #8fd3c4);
+  font-variant-numeric: tabular-nums;
+}
+
+.source-title {
+  color: inherit;
+}
+
+.source-origin {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint, #7a8694);
+}

@@ -235,10 +235,12 @@
   gap: 10px;
   padding: 16px 18px;
   border-top: 1px solid var(--line);
+  align-items: flex-end;
 }
 
 .question-input,
-.input-area input {
+.input-area input,
+.input-area textarea {
   flex: 1;
   padding: 10px 12px;
   font-size: 15px;
@@ -246,6 +248,33 @@
   border-radius: 2px;
   background: var(--bg);
   color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 44px;
+}
+
+.starter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+
+.starter-chip {
+  padding: 6px 10px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.starter-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .question-input:focus,

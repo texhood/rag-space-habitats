@@ -4,6 +4,12 @@ const embeddingService = require('./embeddingService');
 const axios = require('axios');
 const Anthropic = require('@anthropic-ai/sdk');
 const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('./submissionAccess');
+const {
+  normalizeRetrievedChunk,
+  buildLabeledContext,
+  citationInstruction,
+  chunkText
+} = require('./citationFormat');
 
 class RAGService {
   constructor() {
@@ -65,7 +71,7 @@ class RAGService {
       const embeddingStr = `[${queryEmbedding.join(',')}]`;
 
       const result = await pool.query(`
-        SELECT content, metadata, 
+        SELECT content, metadata, source_id, source_type, chunk_index,
                1 - (embedding <=> $1::vector) as similarity
         FROM document_chunks
         WHERE embedding IS NOT NULL
@@ -81,7 +87,7 @@ class RAGService {
         console.log(`[RAG] Top similarities: ${similarities.join(', ')}`);
       }
 
-      return result.rows.map(row => row.content);
+      return result.rows.map(normalizeRetrievedChunk);
 
     } catch (err) {
       console.error('[RAG] Vector search error:', err);
@@ -106,7 +112,7 @@ class RAGService {
       const searchPattern = keywords.join(' | ');
       
       const result = await pool.query(`
-        SELECT content, metadata
+        SELECT content, metadata, source_id, source_type, chunk_index
         FROM document_chunks
         WHERE to_tsvector('english', content) @@ to_tsquery('english', $1)
           AND ${CORPUS_EXCLUDES_PRIVATE_SQL}
@@ -114,7 +120,7 @@ class RAGService {
       `, [searchPattern, limit]);
 
       console.log(`[RAG] Keyword search found ${result.rows.length} chunks`);
-      return result.rows.map(row => row.content);
+      return result.rows.map(normalizeRetrievedChunk);
 
     } catch (err) {
       console.error('[RAG] Keyword search error:', err);
@@ -125,13 +131,14 @@ class RAGService {
   /**
    * Generate answer from chunks using LLM - NOW WITH CONVERSATION HISTORY
    */
-  async generateAnswer(question, chunks, conversationHistory = [], projectContext = null) {
-    if (!chunks || chunks.length === 0) {
+  async generateAnswer(question, chunks, conversationHistory = [], projectContext = null, preference = null) {
+    const labeled = buildLabeledContext(chunks);
+    if (!labeled.text) {
       return "I don't have enough information to answer that question. Could you please rephrase or ask something else about space habitats?";
     }
 
-    const context = chunks.map((c, i) => `[Source ${i + 1}]\n${c}`).join('\n\n---\n\n');
-    const userPreference = this.currentUserPreference || 'both';
+    const context = labeled.text + citationInstruction(labeled.sourceCount);
+    const userPreference = preference || this.currentUserPreference || 'both';
 
     console.log(`[RAG] User preference: ${userPreference}, Available - Grok: ${this.useGrok}, Claude: ${this.useClaude}`);
     console.log(`[RAG] Conversation history: ${conversationHistory.length} messages`);
@@ -443,7 +450,10 @@ The retrieved documents below are for reference only. If there is ANY conflict b
         break;
       }
       
-      trimmed.unshift(msg);
+      trimmed.unshift({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      });
       tokenCount += msgTokens;
     }
     
@@ -454,12 +464,17 @@ The retrieved documents below are for reference only. If there is ANY conflict b
    * Format chunks as basic answer when no LLM available
    */
   _formatChunksAsAnswer(chunks) {
-    if (chunks.length === 0) {
+    if (!chunks || chunks.length === 0) {
       return 'No relevant information found in the database.';
     }
 
     return chunks
-      .map((chunk, i) => `**[Source ${i + 1}]**\n\n${chunk}`)
+      .map((chunk, i) => {
+        const text = chunkText(chunk);
+        const title = typeof chunk === 'string' ? '' : (chunk.title || '');
+        const heading = title ? `**[${i + 1}] ${title}**` : `**[${i + 1}]**`;
+        return `${heading}\n\n${text}`;
+      })
       .join('\n\n---\n\n');
   }
 }

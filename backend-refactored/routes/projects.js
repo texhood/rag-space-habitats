@@ -6,7 +6,8 @@ const Project = require('../models/Project');
 const ProjectDocument = require('../models/ProjectDocument');
 const ProjectBookmark = require('../models/ProjectBookmark');
 const ProjectConversation = require('../models/ProjectConversation');
-const { requireEnterprise } = require('../middleware/enterpriseAuth');
+const { isAuthenticated } = require('../middleware/auth');
+const { canCreateProject } = require('../services/usageLimits');
 const gridfsService = require('../services/gridfsService');
 const projectDocProcessor = require('../services/projectDocumentProcessor');
 const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
@@ -32,7 +33,7 @@ const upload = multer({
  * GET /api/projects
  * List user's projects
  */
-router.get('/', requireEnterprise, async (req, res) => {
+router.get('/', isAuthenticated, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -58,7 +59,7 @@ router.get('/', requireEnterprise, async (req, res) => {
  * POST /api/projects
  * Create new project
  */
-router.post('/', requireEnterprise, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { name, description, objectives, constraints } = req.body;
 
@@ -68,6 +69,20 @@ router.post('/', requireEnterprise, async (req, res) => {
 
     if (name.length > 255) {
       return res.status(400).json({ error: 'Project name must be less than 255 characters' });
+    }
+
+    const count = await Project.countByUserId(req.user.id);
+    const quotaTier = req.user.role === 'admin' ? 'enterprise' : (req.user.subscription_tier || 'free');
+    const quota = canCreateProject(quotaTier, count);
+    if (!quota.allowed) {
+      return res.status(403).json({
+        error: quota.limit === 1
+          ? 'Free accounts include 1 project. Upgrade to create more.'
+          : `Your plan includes ${quota.limit} projects. Upgrade to create more.`,
+        upgrade_required: true,
+        used: quota.used,
+        limit: quota.limit
+      });
     }
 
     const project = await Project.create(req.user.id, {
@@ -94,7 +109,7 @@ router.post('/', requireEnterprise, async (req, res) => {
  * GET /api/projects/knowledge-base/search
  * Search knowledge base documents (PostgreSQL) for pinning to projects
  */
-router.get('/knowledge-base/search', requireEnterprise, async (req, res) => {
+router.get('/knowledge-base/search', isAuthenticated, async (req, res) => {
   try {
     const { query } = req.query;
     
@@ -151,7 +166,7 @@ router.get('/knowledge-base/search', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id
  * Get project details
  */
-router.get('/:id', requireEnterprise, async (req, res) => {
+router.get('/:id', isAuthenticated, async (req, res) => {
   try {
     const project = await Project.getById(req.params.id, req.user.id);
 
@@ -170,7 +185,7 @@ router.get('/:id', requireEnterprise, async (req, res) => {
  * PUT /api/projects/:id
  * Update project
  */
-router.put('/:id', requireEnterprise, async (req, res) => {
+router.put('/:id', isAuthenticated, async (req, res) => {
   try {
     const { name, description, objectives, constraints, is_active } = req.body;
 
@@ -207,7 +222,7 @@ router.put('/:id', requireEnterprise, async (req, res) => {
  * DELETE /api/projects/:id
  * Delete project
  */
-router.delete('/:id', requireEnterprise, async (req, res) => {
+router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
     const success = await Project.delete(req.params.id, req.user.id);
 
@@ -233,7 +248,7 @@ router.delete('/:id', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id/filters
  * Get project filters
  */
-router.get('/:id/filters', requireEnterprise, async (req, res) => {
+router.get('/:id/filters', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -257,7 +272,7 @@ router.get('/:id/filters', requireEnterprise, async (req, res) => {
  * POST /api/projects/:id/filters
  * Add filter to project
  */
-router.post('/:id/filters', requireEnterprise, async (req, res) => {
+router.post('/:id/filters', isAuthenticated, async (req, res) => {
   try {
     const { filterType, filterValue } = req.body;
 
@@ -290,7 +305,7 @@ router.post('/:id/filters', requireEnterprise, async (req, res) => {
  * DELETE /api/projects/:id/filters/:filterId
  * Remove filter from project
  */
-router.delete('/:id/filters/:filterId', requireEnterprise, async (req, res) => {
+router.delete('/:id/filters/:filterId', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -322,7 +337,7 @@ router.delete('/:id/filters/:filterId', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id/pinned
  * Get pinned documents
  */
-router.get('/:id/pinned', requireEnterprise, async (req, res) => {
+router.get('/:id/pinned', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -347,7 +362,7 @@ router.get('/:id/pinned', requireEnterprise, async (req, res) => {
  * POST /api/projects/:id/pinned
  * Pin a document
  */
-router.post('/:id/pinned', requireEnterprise, async (req, res) => {
+router.post('/:id/pinned', isAuthenticated, async (req, res) => {
   try {
     const { mongoId, documentTitle, documentSource } = req.body;
 
@@ -397,7 +412,7 @@ router.post('/:id/pinned', requireEnterprise, async (req, res) => {
  * DELETE /api/projects/:id/pinned/:pinId
  * Unpin a document
  */
-router.delete('/:id/pinned/:pinId', requireEnterprise, async (req, res) => {
+router.delete('/:id/pinned/:pinId', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -429,7 +444,7 @@ router.delete('/:id/pinned/:pinId', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id/documents
  * List uploaded documents
  */
-router.get('/:id/documents', requireEnterprise, async (req, res) => {
+router.get('/:id/documents', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -455,7 +470,7 @@ router.get('/:id/documents', requireEnterprise, async (req, res) => {
  * POST /api/projects/:id/documents
  * Upload a document to a project
  */
-router.post('/:id/documents', requireEnterprise, upload.single('file'), async (req, res) => {
+router.post('/:id/documents', isAuthenticated, upload.single('file'), async (req, res) => {
   try {
     const projectId = req.params.id;
     const file = req.file;
@@ -530,7 +545,7 @@ router.post('/:id/documents', requireEnterprise, upload.single('file'), async (r
  * DELETE /api/projects/:id/documents/:docId
  * Remove document
  */
-router.delete('/:id/documents/:docId', requireEnterprise, async (req, res) => {
+router.delete('/:id/documents/:docId', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -561,7 +576,7 @@ router.delete('/:id/documents/:docId', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id/documents/:docId/status
  * Check document processing status
  */
-router.get('/:id/documents/:docId/status', requireEnterprise, async (req, res) => {
+router.get('/:id/documents/:docId/status', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -593,7 +608,7 @@ router.get('/:id/documents/:docId/status', requireEnterprise, async (req, res) =
  * GET /api/projects/:id/bookmarks
  * List bookmarks
  */
-router.get('/:id/bookmarks', requireEnterprise, async (req, res) => {
+router.get('/:id/bookmarks', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -625,7 +640,7 @@ router.get('/:id/bookmarks', requireEnterprise, async (req, res) => {
  * POST /api/projects/:id/bookmarks
  * Save a bookmark
  */
-router.post('/:id/bookmarks', requireEnterprise, async (req, res) => {
+router.post('/:id/bookmarks', isAuthenticated, async (req, res) => {
   try {
     const { queryText, responseText, modelUsed, citedDocuments, userNotes, tags } = req.body;
 
@@ -665,7 +680,7 @@ router.post('/:id/bookmarks', requireEnterprise, async (req, res) => {
  * PUT /api/projects/:id/bookmarks/:bmId
  * Update bookmark notes/tags
  */
-router.put('/:id/bookmarks/:bmId', requireEnterprise, async (req, res) => {
+router.put('/:id/bookmarks/:bmId', isAuthenticated, async (req, res) => {
   try {
     const { userNotes, tags } = req.body;
 
@@ -701,7 +716,7 @@ router.put('/:id/bookmarks/:bmId', requireEnterprise, async (req, res) => {
  * DELETE /api/projects/:id/bookmarks/:bmId
  * Delete bookmark
  */
-router.delete('/:id/bookmarks/:bmId', requireEnterprise, async (req, res) => {
+router.delete('/:id/bookmarks/:bmId', isAuthenticated, async (req, res) => {
   try {
     // Verify project ownership
     const project = await Project.getById(req.params.id, req.user.id);
@@ -733,7 +748,7 @@ router.delete('/:id/bookmarks/:bmId', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id/conversations
  * List saved threads for a project (active first)
  */
-router.get('/:id/conversations', requireEnterprise, async (req, res) => {
+router.get('/:id/conversations', isAuthenticated, async (req, res) => {
   try {
     const conversations = await ProjectConversation.list(req.params.id, req.user.id);
     res.json({ conversations });
@@ -748,7 +763,7 @@ router.get('/:id/conversations', requireEnterprise, async (req, res) => {
  * GET /api/projects/:id/conversation
  * Active thread and its messages (creates an empty thread if needed)
  */
-router.get('/:id/conversation', requireEnterprise, async (req, res) => {
+router.get('/:id/conversation', isAuthenticated, async (req, res) => {
   try {
     const result = await ProjectConversation.getOrCreateActive(req.params.id, req.user.id);
     res.json(result);
@@ -763,7 +778,7 @@ router.get('/:id/conversation', requireEnterprise, async (req, res) => {
  * POST /api/projects/:id/conversation
  * Archive the current thread (if it has messages) and start a new one
  */
-router.post('/:id/conversation', requireEnterprise, async (req, res) => {
+router.post('/:id/conversation', isAuthenticated, async (req, res) => {
   try {
     const result = await ProjectConversation.startNew(req.params.id, req.user.id);
     const conversations = await ProjectConversation.list(req.params.id, req.user.id);
@@ -779,7 +794,7 @@ router.post('/:id/conversation', requireEnterprise, async (req, res) => {
  * POST /api/projects/:id/conversations/:conversationId/open
  * Resume an archived thread
  */
-router.post('/:id/conversations/:conversationId/open', requireEnterprise, async (req, res) => {
+router.post('/:id/conversations/:conversationId/open', isAuthenticated, async (req, res) => {
   try {
     const result = await ProjectConversation.open(
       req.params.id,
@@ -802,9 +817,10 @@ router.post('/:id/conversations/:conversationId/open', requireEnterprise, async 
  * Execute a RAG query within a project context
  * Includes project objectives/constraints and project documents in context
  */
-router.post('/:id/query', requireEnterprise, async (req, res) => {
-  const RAGService = require('../services/ragService');
-  const QueryLog = require('../models/QueryLog');
+router.post('/:id/query', isAuthenticated, async (req, res) => {
+const RAGService = require('../services/ragService');
+const QueryLog = require('../models/QueryLog');
+const { formatSourcesForClient } = require('../services/citationFormat');
 
   try {
     const { question, conversationHistory = [] } = req.body;
@@ -825,18 +841,15 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
     const startTime = Date.now();
 
     // Set user's LLM preference if available
-    if (req.user?.llm_preference) {
-      RAGService.setUserPreference(req.user.llm_preference);
-    }
+    const preference = req.user?.llm_preference || 'grok';
+    RAGService.setUserPreference(preference);
 
-    // Get project documents (uploaded files)
     const projectDocs = await ProjectDocument.getByProjectId(projectId, 100);
     console.log(`[Project Query] Found ${projectDocs.length} project documents`);
 
-    // Retrieve relevant chunks from knowledge base
-    const chunks = await RAGService.retrieveRelevantChunks(question);
+    const corpusChunks = await RAGService.retrieveRelevantChunks(question);
+    const sources = formatSourcesForClient(corpusChunks);
 
-    // Build enhanced context with project objectives and constraints
     let enhancedChunks = [];
 
     // Add project context as first chunk
@@ -861,7 +874,7 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
     }
 
     // Add knowledge base chunks
-    enhancedChunks = enhancedChunks.concat(chunks);
+    enhancedChunks = enhancedChunks.concat(corpusChunks);
 
     // Build project context object to pass to RAGService
     const projectContextData = {
@@ -880,7 +893,13 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
     console.log(`============================================================\n`);
 
     // Generate answer with project context
-    const answer = await RAGService.generateAnswer(question, enhancedChunks, conversationHistory, projectContextData);
+    const answer = await RAGService.generateAnswer(
+      question,
+      enhancedChunks,
+      conversationHistory,
+      projectContextData,
+      preference
+    );
 
     const responseTime = Date.now() - startTime;
     console.log(`[Project Query] Response time: ${responseTime}ms`);
@@ -903,7 +922,8 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
         await ProjectConversation.appendExchange(projectId, req.user.id, {
           question,
           answer,
-          queryId
+          queryId,
+          sources
         });
       } catch (persistErr) {
         console.error('[Project Query] Failed to persist conversation:', persistErr.message);
@@ -914,6 +934,7 @@ router.post('/:id/query', requireEnterprise, async (req, res) => {
       answer,
       queryId,
       projectId,
+      sources,
       metadata: {
         project_name: project.name,
         chunks_used: enhancedChunks.length,

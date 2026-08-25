@@ -80,7 +80,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 
   } catch (err) {
     console.error('[Feedback] Submission error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to submit feedback' });
   }
 });
 

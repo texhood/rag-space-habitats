@@ -116,11 +116,16 @@ app.post('/api/subscriptions/webhook',
 
 // CORS - Support multiple origins
 const allowedOrigins = [
-  'http://localhost:3000',  // Local frontend
-  'https://rag-space-habitats.vercel.app',  // Production frontend
-  'https://spacehabitats.net',  // Production domain
-  'https://www.spacehabitats.net',  // Production domain (www)
-  process.env.CORS_ORIGIN  // Railway env variable (optional override)
+  'http://localhost:3000',
+  'http://localhost:3500',
+  'http://localhost:3501',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3500',
+  'http://127.0.0.1:3501',
+  'https://rag-space-habitats.vercel.app',
+  'https://spacehabitats.net',
+  'https://www.spacehabitats.net',
+  process.env.CORS_ORIGIN
 ].filter(Boolean);
 
 app.use(cors({
@@ -244,10 +249,6 @@ async function startServer() {
     // Initialize GridFS for project document uploads
     const gridfsService = require('./services/gridfsService');
     await gridfsService.initialize();
-
-    const ProjectConversation = require('./models/ProjectConversation');
-    await ProjectConversation.ensureTables();
-    console.log('✅ Project conversation tables ready');
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
