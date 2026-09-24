@@ -1,0 +1,885 @@
+const Project = require('../models/Project');
+const ProjectDocument = require('../models/ProjectDocument');
+const ProjectBookmark = require('../models/ProjectBookmark');
+const ProjectConversation = require('../models/ProjectConversation');
+const { canCreateProject } = require('../services/usageLimits');
+const { runProjectQuery } = require('../services/projectQueryService');
+const gridfsService = require('../services/gridfsService');
+const projectDocProcessor = require('../services/projectDocumentProcessor');
+const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
+
+const PROJECT_LIMITS = {
+  maxPinnedDocuments: 20,
+  maxFileSizeMB: 200
+};
+
+/**
+ * GET /api/projects
+ * List user's projects
+ */
+async function listProjects(req, res) {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const projects = await Project.getByUserId(req.user.id, limit, offset);
+    const count = await Project.countByUserId(req.user.id);
+
+    res.json({
+      projects,
+      pagination: {
+        limit,
+        offset,
+        total: count
+      }
+    });
+  } catch (err) {
+    console.error('[Projects] List error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects
+ * Create new project
+ */
+async function createProject(req, res) {
+  try {
+    const { name, description, objectives, constraints } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Project name is required' });
+    }
+
+    if (name.length > 255) {
+      return res.status(400).json({ error: 'Project name must be less than 255 characters' });
+    }
+
+    const count = await Project.countByUserId(req.user.id);
+    const quotaTier = req.user.role === 'admin' ? 'enterprise' : (req.user.subscription_tier || 'free');
+    const quota = canCreateProject(quotaTier, count);
+    if (!quota.allowed) {
+      return res.status(403).json({
+        error: quota.limit === 1
+          ? 'Free accounts include 1 project. Upgrade to create more.'
+          : `Your plan includes ${quota.limit} projects. Upgrade to create more.`,
+        upgrade_required: true,
+        used: quota.used,
+        limit: quota.limit
+      });
+    }
+
+    const project = await Project.create(req.user.id, {
+      name: name.trim(),
+      description: description || '',
+      objectives: objectives || '',
+      constraints: constraints || ''
+    });
+
+    console.log(`[Projects] User ${req.user.id} created project: ${project.name}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Project created successfully',
+      project
+    });
+  } catch (err) {
+    console.error('[Projects] Create error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/projects/knowledge-base/search
+ * Search knowledge base documents (PostgreSQL) for pinning to projects
+ */
+async function searchKnowledgeBase(req, res) {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    }
+
+    const pool = require('../config/database');
+    
+    // Search document_chunks in PostgreSQL
+    // Group by source_id to get unique documents
+    const result = await pool.query(`
+      SELECT DISTINCT ON (source_id)
+        source_id as _id,
+        metadata->>'title' as title,
+        metadata->>'source' as source,
+        metadata->'tags' as tags,
+        metadata->>'category' as category
+      FROM document_chunks
+      WHERE 
+        ${CORPUS_EXCLUDES_PRIVATE_SQL}
+        AND (
+          metadata->>'title' ILIKE $1
+          OR content ILIKE $1
+          OR metadata->>'category' ILIKE $1
+          OR metadata::text ILIKE $1
+        )
+      ORDER BY source_id
+      LIMIT 20
+    `, [`%${query}%`]);
+
+    const documents = result.rows.map(row => ({
+      _id: row._id,
+      title: row.title || 'Untitled Document',
+      source: row.source || 'Unknown',
+      keywords: row.tags || [],
+      category: row.category
+    }));
+
+    console.log(`[Projects] KB search for "${query}" found ${documents.length} results`);
+
+    res.json({ 
+      documents,
+      count: documents.length,
+      query
+    });
+  } catch (err) {
+    console.error('[Projects] KB search error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/projects/:id
+ * Get project details
+ */
+async function getProject(req, res) {
+  try {
+    const project = await Project.getById(req.params.id, req.user.id);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    res.json(project);
+  } catch (err) {
+    console.error('[Projects] Get error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * PUT /api/projects/:id
+ * Update project
+ */
+async function updateProject(req, res) {
+  try {
+    const { name, description, objectives, constraints, is_active } = req.body;
+
+    if (name && name.length > 255) {
+      return res.status(400).json({ error: 'Project name must be less than 255 characters' });
+    }
+
+    const project = await Project.update(req.params.id, req.user.id, {
+      name,
+      description,
+      objectives,
+      constraints,
+      is_active
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} updated project: ${project.name}`);
+
+    res.json({
+      success: true,
+      message: 'Project updated successfully',
+      project
+    });
+  } catch (err) {
+    console.error('[Projects] Update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/projects/:id
+ * Delete project
+ */
+async function deleteProject(req, res) {
+  try {
+    const success = await Project.delete(req.params.id, req.user.id);
+
+    if (!success) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} deleted project: ${req.params.id}`);
+
+    res.json({
+      success: true,
+      message: 'Project deleted successfully'
+    });
+  } catch (err) {
+    console.error('[Projects] Delete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ========== PROJECT FILTERS ==========
+
+/**
+ * GET /api/projects/:id/filters
+ * Get project filters
+ */
+async function listFilters(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const filters = await Project.getFilters(req.params.id);
+
+    res.json({
+      filters,
+      count: filters.length
+    });
+  } catch (err) {
+    console.error('[Projects] Get filters error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects/:id/filters
+ * Add filter to project
+ */
+async function addFilter(req, res) {
+  try {
+    const { filterType, filterValue } = req.body;
+
+    if (!filterType || !filterValue) {
+      return res.status(400).json({ error: 'Filter type and value are required' });
+    }
+
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const filter = await Project.addFilter(req.params.id, filterType, filterValue);
+
+    console.log(`[Projects] User ${req.user.id} added filter to project ${req.params.id}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Filter added successfully',
+      filter
+    });
+  } catch (err) {
+    console.error('[Projects] Add filter error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/projects/:id/filters/:filterId
+ * Remove filter from project
+ */
+async function removeFilter(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const success = await Project.removeFilter(req.params.filterId, req.params.id);
+
+    if (!success) {
+      return res.status(404).json({ error: 'Filter not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} removed filter from project ${req.params.id}`);
+
+    res.json({
+      success: true,
+      message: 'Filter removed successfully'
+    });
+  } catch (err) {
+    console.error('[Projects] Remove filter error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ========== PINNED DOCUMENTS ==========
+
+/**
+ * GET /api/projects/:id/pinned
+ * Get pinned documents
+ */
+async function listPinned(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const pinnedDocs = await Project.getPinnedDocuments(req.params.id);
+
+    res.json({
+      pinnedDocuments: pinnedDocs,
+      count: pinnedDocs.length,
+      maxPinned: PROJECT_LIMITS.maxPinnedDocuments
+    });
+  } catch (err) {
+    console.error('[Projects] Get pinned error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects/:id/pinned
+ * Pin a document
+ */
+async function pinDocument(req, res) {
+  try {
+    const { mongoId, documentTitle, documentSource } = req.body;
+
+    if (!mongoId) {
+      return res.status(400).json({ error: 'Document ID is required' });
+    }
+
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check pinned document limit
+    const pinnedCount = await Project.countPinnedDocuments(req.params.id);
+    if (pinnedCount >= PROJECT_LIMITS.maxPinnedDocuments) {
+      return res.status(400).json({
+        error: `Maximum ${PROJECT_LIMITS.maxPinnedDocuments} pinned documents reached`
+      });
+    }
+
+    const pinned = await Project.pinDocument(
+      req.params.id,
+      mongoId,
+      documentTitle,
+      documentSource
+    );
+
+    if (!pinned) {
+      return res.status(400).json({ error: 'Document already pinned to this project' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} pinned document to project ${req.params.id}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Document pinned successfully',
+      pinned
+    });
+  } catch (err) {
+    console.error('[Projects] Pin document error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/projects/:id/pinned/:pinId
+ * Unpin a document
+ */
+async function unpinDocument(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const success = await Project.unpinDocument(req.params.pinId, req.params.id);
+
+    if (!success) {
+      return res.status(404).json({ error: 'Pinned document not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} unpinned document from project ${req.params.id}`);
+
+    res.json({
+      success: true,
+      message: 'Document unpinned successfully'
+    });
+  } catch (err) {
+    console.error('[Projects] Unpin document error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ========== PROJECT DOCUMENTS (uploaded) ==========
+
+/**
+ * GET /api/projects/:id/documents
+ * List uploaded documents
+ */
+async function listDocuments(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const documents = await ProjectDocument.getByProjectId(req.params.id);
+    const stats = await ProjectDocument.getStats(req.params.id);
+
+    res.json({
+      documents,
+      stats,
+      count: documents.length
+    });
+  } catch (err) {
+    console.error('[Projects] Get documents error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects/:id/documents
+ * Upload a document to a project
+ */
+async function uploadDocument(req, res) {
+  try {
+    const projectId = req.params.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Verify project ownership
+    const project = await Project.getById(projectId, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Validate file type
+    if (!projectDocProcessor.isValidFileType(file.mimetype)) {
+      return res.status(400).json({
+        error: 'Invalid file type. Allowed: PDF, DOCX, TXT, Markdown'
+      });
+    }
+
+    // Validate file size
+    if (!projectDocProcessor.isValidFileSize(file.size)) {
+      return res.status(400).json({
+        error: `File too large. Max size: ${PROJECT_LIMITS.maxFileSizeMB}MB`
+      });
+    }
+
+    // Upload to GridFS
+    const gridfsId = await gridfsService.uploadFile(
+      file.buffer,
+      file.originalname,
+      {
+        project_id: projectId,
+        mime_type: file.mimetype,
+        uploaded_by: req.user.id
+      }
+    );
+
+    // Create document record with 'pending' status
+    const document = await ProjectDocument.create(projectId, {
+      gridfsId: gridfsId,
+      fileName: file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_'),
+      originalName: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      processingStatus: 'pending'
+    });
+
+    console.log(`[Projects] Document uploaded: ${file.originalname} (${document.id})`);
+
+    // Process document asynchronously (don't await)
+    processDocumentAsync(document.id, projectId, file.buffer, file.mimetype, file.originalname);
+
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded successfully. Processing in background.',
+      document: {
+        id: document.id,
+        file_name: document.file_name,
+        status: 'pending'
+      }
+    });
+
+  } catch (err) {
+    console.error('[Projects] Upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/projects/:id/documents/:docId
+ * Remove document
+ */
+async function deleteDocument(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const gridfsId = await ProjectDocument.delete(req.params.docId, req.params.id);
+
+    if (!gridfsId) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} deleted document ${gridfsId} from project ${req.params.id}`);
+
+    res.json({
+      success: true,
+      message: 'Document deleted successfully',
+      gridfsId  // Return for client-side cleanup if needed
+    });
+  } catch (err) {
+    console.error('[Projects] Delete document error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/projects/:id/documents/:docId/status
+ * Check document processing status
+ */
+async function documentStatus(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const doc = await ProjectDocument.getById(req.params.docId, req.params.id);
+
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    res.json({
+      id: doc.id,
+      fileName: doc.file_name,
+      processingStatus: doc.processing_status,
+      errorMessage: doc.error_message
+    });
+  } catch (err) {
+    console.error('[Projects] Check status error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ========== BOOKMARKS ==========
+
+/**
+ * GET /api/projects/:id/bookmarks
+ * List bookmarks
+ */
+async function listBookmarks(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const bookmarks = await ProjectBookmark.getByProjectId(req.params.id, limit, offset);
+    const count = await ProjectBookmark.countByProjectId(req.params.id);
+
+    res.json({
+      bookmarks,
+      pagination: {
+        limit,
+        offset,
+        total: count
+      }
+    });
+  } catch (err) {
+    console.error('[Projects] Get bookmarks error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects/:id/bookmarks
+ * Save a bookmark
+ */
+async function createBookmark(req, res) {
+  try {
+    const { queryText, responseText, modelUsed, citedDocuments, userNotes, tags } = req.body;
+
+    if (!queryText || !responseText) {
+      return res.status(400).json({ error: 'Query and response text are required' });
+    }
+
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const bookmark = await ProjectBookmark.create(req.params.id, {
+      queryText,
+      responseText,
+      modelUsed,
+      citedDocuments,
+      userNotes,
+      tags
+    });
+
+    console.log(`[Projects] User ${req.user.id} bookmarked response in project ${req.params.id}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Bookmark saved successfully',
+      bookmark
+    });
+  } catch (err) {
+    console.error('[Projects] Create bookmark error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * PUT /api/projects/:id/bookmarks/:bmId
+ * Update bookmark notes/tags
+ */
+async function updateBookmark(req, res) {
+  try {
+    const { userNotes, tags } = req.body;
+
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const bookmark = await ProjectBookmark.update(req.params.bmId, req.params.id, {
+      userNotes,
+      tags
+    });
+
+    if (!bookmark) {
+      return res.status(404).json({ error: 'Bookmark not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} updated bookmark in project ${req.params.id}`);
+
+    res.json({
+      success: true,
+      message: 'Bookmark updated successfully',
+      bookmark
+    });
+  } catch (err) {
+    console.error('[Projects] Update bookmark error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * DELETE /api/projects/:id/bookmarks/:bmId
+ * Delete bookmark
+ */
+async function deleteBookmark(req, res) {
+  try {
+    // Verify project ownership
+    const project = await Project.getById(req.params.id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const success = await ProjectBookmark.delete(req.params.bmId, req.params.id);
+
+    if (!success) {
+      return res.status(404).json({ error: 'Bookmark not found' });
+    }
+
+    console.log(`[Projects] User ${req.user.id} deleted bookmark from project ${req.params.id}`);
+
+    res.json({
+      success: true,
+      message: 'Bookmark deleted successfully'
+    });
+  } catch (err) {
+    console.error('[Projects] Delete bookmark error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ========== PROJECT CONVERSATIONS ==========
+
+/**
+ * GET /api/projects/:id/conversations
+ * List saved threads for a project (active first)
+ */
+async function listConversations(req, res) {
+  try {
+    const conversations = await ProjectConversation.list(req.params.id, req.user.id);
+    res.json({ conversations });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] List conversations error:', err);
+    res.status(status).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/projects/:id/conversation
+ * Active thread and its messages (creates an empty thread if needed)
+ */
+async function getConversation(req, res) {
+  try {
+    const result = await ProjectConversation.getOrCreateActive(req.params.id, req.user.id);
+    res.json(result);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] Get conversation error:', err);
+    res.status(status).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects/:id/conversation
+ * Archive the current thread (if it has messages) and start a new one
+ */
+async function startConversation(req, res) {
+  try {
+    const result = await ProjectConversation.startNew(req.params.id, req.user.id);
+    const conversations = await ProjectConversation.list(req.params.id, req.user.id);
+    res.status(201).json({ ...result, conversations });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] New conversation error:', err);
+    res.status(status).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/projects/:id/conversations/:conversationId/open
+ * Resume an archived thread
+ */
+async function openConversation(req, res) {
+  try {
+    const result = await ProjectConversation.open(
+      req.params.id,
+      req.user.id,
+      req.params.conversationId
+    );
+    const conversations = await ProjectConversation.list(req.params.id, req.user.id);
+    res.json({ ...result, conversations });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('[Projects] Open conversation error:', err);
+    res.status(status).json({ error: err.message });
+  }
+}
+
+// ========== PROJECT QUERY ==========
+
+/**
+ * POST /api/projects/:id/query
+ * Execute a RAG query within a project context
+ * Includes project objectives/constraints and project documents in context
+ */
+/**
+ * POST /api/projects/:id/query
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
+async function queryProject(req, res) {
+  try {
+    const result = await runProjectQuery(req.user, req.params.id, req.body.question);
+    res.status(result.status).json(result.body);
+  } catch (err) {
+    console.error('[Project Query] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ========== HELPER FUNCTIONS ==========
+
+/**
+ * Async document processing function
+ * Processes uploaded documents in the background without blocking the upload response
+ */
+async function processDocumentAsync(docId, projectId, fileBuffer, mimeType, filename) {
+  try {
+    console.log(`[Background] Processing document ${docId}...`);
+
+    // Update status to 'processing'
+    await ProjectDocument.updateStatus(docId, 'processing');
+
+    // Extract text and generate embedding
+    const { text, embedding } = await projectDocProcessor.processDocument(
+      fileBuffer,
+      mimeType,
+      filename
+    );
+
+    // Convert embedding to pgvector format
+    const embeddingStr = `[${embedding.join(',')}]`;
+
+    // Update document with content and embedding
+    await ProjectDocument.updateContent(docId, text, embeddingStr);
+
+    // Update status to 'completed'
+    await ProjectDocument.updateStatus(docId, 'completed');
+
+    console.log(`[Background] Document ${docId} processed successfully`);
+
+  } catch (err) {
+    console.error(`[Background] Processing error for document ${docId}:`, err);
+
+    // Update status to 'failed' with error message
+    await ProjectDocument.updateStatus(docId, 'failed', err.message);
+  }
+}
+
+module.exports = {
+  listProjects,
+  createProject,
+  searchKnowledgeBase,
+  getProject,
+  updateProject,
+  deleteProject,
+  listFilters,
+  addFilter,
+  removeFilter,
+  listPinned,
+  pinDocument,
+  unpinDocument,
+  listDocuments,
+  uploadDocument,
+  deleteDocument,
+  documentStatus,
+  listBookmarks,
+  createBookmark,
+  updateBookmark,
+  deleteBookmark,
+  listConversations,
+  getConversation,
+  startConversation,
+  openConversation,
+  queryProject
+};
