@@ -9,6 +9,11 @@ import FeedbackRating from './FeedbackRating';
 import FeedbackRelevance from './FeedbackRelevance';
 import FeedbackForm from './FeedbackForm';
 
+/**
+ * Collect a reaction, rating, or note for one answer.
+ * @param {object} fields
+ * @returns {*}
+ */
 function FeedbackPanel({ queryId, onFeedbackSubmitted }) {
   const [expandedType, setExpandedType] = useState(null);
   const [submittedFeedback, setSubmittedFeedback] = useState({});

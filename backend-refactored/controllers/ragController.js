@@ -8,11 +8,23 @@ const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
 
 const DEMO_MAX_QUESTION_LENGTH = 400;
 
+/**
+ * Stored model preference, defaulting to grok.
+ * @param {object} user
+ * @returns {*}
+ */
 function llmPreferenceFor(user) {
   return user?.llm_preference || 'grok';
 }
 
 class RAGController {
+  /**
+   * Answer a question from the corpus. Checks the daily quota, then stores the turn.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async ask(req, res, next) {
     try {
       const { question } = req.body;
@@ -82,6 +94,13 @@ class RAGController {
     }
   }
 
+  /**
+   * Answer one demo question. The rate limiter has already consumed a hit.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async demo(req, res, next) {
     try {
       const question = String(req.body?.question || '').trim();
@@ -114,6 +133,13 @@ class RAGController {
     }
   }
 
+  /**
+   * Public corpus counts for the welcome screen.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async stats(req, res, next) {
     try {
       const stats = await getCorpusStats();
@@ -124,6 +150,13 @@ class RAGController {
     }
   }
 
+  /**
+   * Active conversation and its stored turns.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async getConversation(req, res, next) {
     try {
       const result = await UserConversation.getOrCreateActive(req.user.id);
@@ -134,6 +167,13 @@ class RAGController {
     }
   }
 
+  /**
+   * Start a new active conversation for this user.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async startConversation(req, res, next) {
     try {
       const result = await UserConversation.startNew(req.user.id);
@@ -144,6 +184,13 @@ class RAGController {
     }
   }
 
+  /**
+   * One public corpus document and its chunks.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async getDocument(req, res, next) {
     try {
       const pool = require('../config/database');
@@ -182,6 +229,13 @@ class RAGController {
     }
   }
 
+  /**
+   * Recent questions for the signed-in user.
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
+   */
   static async getHistory(req, res, next) {
     try {
       const limit = parseInt(req.query.limit) || 20;

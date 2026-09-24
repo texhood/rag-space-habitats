@@ -37,6 +37,9 @@ class ProjectDocumentProcessor {
 
   /**
    * Extract text from PDF using pdf-parse
+   *
+   * @param {*} fileBuffer
+   * @returns {Promise<*>}
    */
   async extractFromPDF(fileBuffer) {
     try {
@@ -50,6 +53,9 @@ class ProjectDocumentProcessor {
 
   /**
    * Extract text from DOCX using mammoth
+   *
+   * @param {*} fileBuffer
+   * @returns {Promise<*>}
    */
   async extractFromDOCX(fileBuffer) {
     try {
@@ -68,6 +74,9 @@ class ProjectDocumentProcessor {
 
   /**
    * Extract text from plain text or markdown files
+   *
+   * @param {*} fileBuffer
+   * @returns {*}
    */
   extractFromText(fileBuffer) {
     const text = fileBuffer.toString('utf-8');

@@ -1,10 +1,15 @@
-// models/User.js
+/**
+ * PostgreSQL users. Passwords are bcrypt hashes. Sessions live in the session table.
+ */
 const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 
 class User {
   /**
    * Find user by username
+   *
+   * @param {string} username
+   * @returns {Promise<*>}
    */
   static async findByUsername(username) {
     const result = await pool.query(
@@ -16,6 +21,9 @@ class User {
 
   /**
    * Find user by email
+   *
+   * @param {string} email
+   * @returns {Promise<*>}
    */
   static async findByEmail(email) {
     const result = await pool.query(
@@ -27,6 +35,9 @@ class User {
 
   /**
    * Find user by ID
+   *
+   * @param {number} id
+   * @returns {Promise<*>}
    */
   static async findById(id) {
     const result = await pool.query(
@@ -38,6 +49,8 @@ class User {
 
   /**
    * Get all users
+   *
+   * @returns {Promise<*>}
    */
   static async findAll() {
     const result = await pool.query(
@@ -48,6 +61,12 @@ class User {
 
   /**
    * Create a new user
+   *
+   * @param {string} username
+   * @param {string} password
+   * @param {string} role
+   * @param {string} email
+   * @returns {Promise<*>}
    */
   static async create(username, password, role = 'user', email = null) {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -60,6 +79,10 @@ class User {
 
   /**
    * Update user role
+   *
+   * @param {number} id
+   * @param {string} role
+   * @returns {Promise<*>}
    */
   static async updateRole(id, role) {
     const result = await pool.query(
@@ -71,6 +94,9 @@ class User {
 
   /**
    * Delete user
+   *
+   * @param {number} id
+   * @returns {Promise<*>}
    */
   static async delete(id) {
     const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
@@ -79,6 +105,9 @@ class User {
 
   /**
    * Check if user exists
+   *
+   * @param {string} username
+   * @returns {Promise<boolean>}
    */
   static async exists(username) {
     const result = await pool.query(
@@ -90,6 +119,10 @@ class User {
 
   /**
    * Update user's LLM preference
+   *
+   * @param {number} id
+   * @param {string} preference
+   * @returns {Promise<*>}
    */
   static async updateLLMPreference(id, preference) {
     const validPreferences = ['grok', 'claude', 'both'];
@@ -106,6 +139,9 @@ class User {
 
   /**
    * Get user's LLM preference
+   *
+   * @param {number} id
+   * @returns {Promise<*>}
    */
   static async getLLMPreference(id) {
     const result = await pool.query(

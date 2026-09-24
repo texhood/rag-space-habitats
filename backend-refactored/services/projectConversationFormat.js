@@ -1,3 +1,9 @@
+/**
+ * Conversation title taken from the first question.
+ * @param {string} text
+ * @param {*} max
+ * @returns {*}
+ */
 function titleFromUserText(text, max = 80) {
   const compact = String(text || '').replace(/\s+/g, ' ').trim();
   if (!compact) return 'New conversation';
@@ -5,6 +11,11 @@ function titleFromUserText(text, max = 80) {
   return `${compact.slice(0, max - 1)}…`;
 }
 
+/**
+ * Source list stored as JSON, or an empty array.
+ * @param {*} raw
+ * @returns {*}
+ */
 function parseSources(raw) {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
@@ -19,6 +30,11 @@ function parseSources(raw) {
   return [];
 }
 
+/**
+ * One stored turn shaped for the chat UI.
+ * @param {*} row
+ * @returns {*}
+ */
 function toClientMessage(row) {
   return {
     id: row.id,
@@ -30,6 +46,11 @@ function toClientMessage(row) {
   };
 }
 
+/**
+ * One conversation row shaped for the chat UI.
+ * @param {*} row
+ * @returns {*}
+ */
 function toClientConversation(row) {
   if (!row) return null;
   return {

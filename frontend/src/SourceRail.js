@@ -1,6 +1,11 @@
 import { Link } from 'react-router-dom';
 import './SourceRail.css';
 
+/**
+ * Numbered sources cited in an answer.
+ * @param {object} fields
+ * @returns {*}
+ */
 function SourceRail({ sources }) {
   if (!sources || sources.length === 0) {
     return null;

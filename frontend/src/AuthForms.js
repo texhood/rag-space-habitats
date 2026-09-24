@@ -6,6 +6,8 @@ import AppNavbar from './AppNavbar';
 
 /**
  * Sign-in form. On success the session user is stored and the query screen opens.
+ *
+ * @returns {*}
  */
 export function LoginForm() {
   const navigate = useNavigate();
@@ -58,6 +60,8 @@ export function LoginForm() {
 
 /**
  * Registration form. On success the new session opens the query screen.
+ *
+ * @returns {*}
  */
 export function RegisterForm() {
   const navigate = useNavigate();

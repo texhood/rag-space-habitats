@@ -7,6 +7,9 @@ const path = require('path');
 class TextExtractor {
   /**
    * Extract text from uploaded file based on type
+   *
+   * @param {*} filePath
+   * @returns {Promise<*>}
    */
   async extractText(filePath) {
     const ext = path.extname(filePath).toLowerCase();
@@ -36,6 +39,9 @@ class TextExtractor {
 
   /**
    * Extract text from PDF
+   *
+   * @param {*} filePath
+   * @returns {Promise<*>}
    */
   async extractFromPDF(filePath) {
     try {
@@ -67,6 +73,9 @@ class TextExtractor {
 
   /**
    * Extract text from Word (.docx)
+   *
+   * @param {*} filePath
+   * @returns {Promise<*>}
    */
   async extractFromDocx(filePath) {
     try {
@@ -93,6 +102,9 @@ class TextExtractor {
 
   /**
    * Extract text from old Word format (.doc)
+   *
+   * @param {*} filePath
+   * @returns {Promise<*>}
    */
   async extractFromDoc(filePath) {
     // .doc files require different handling
@@ -116,6 +128,9 @@ class TextExtractor {
 
   /**
    * Extract text from plain text file
+   *
+   * @param {*} filePath
+   * @returns {Promise<*>}
    */
   async extractFromTxt(filePath) {
     try {
@@ -141,6 +156,9 @@ class TextExtractor {
 
   /**
    * Get file info without extracting
+   *
+   * @param {*} filePath
+   * @returns {Promise<*>}
    */
   async getFileInfo(filePath) {
     const stats = await fs.stat(filePath);
@@ -157,6 +175,10 @@ class TextExtractor {
 
   /**
    * Format bytes to human readable
+   *
+   * @param {*} bytes
+   * @param {*} decimals
+   * @returns {*}
    */
   formatBytes(bytes, decimals = 2) {
     if (bytes === 0) return '0 Bytes';

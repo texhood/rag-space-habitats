@@ -1,3 +1,7 @@
+/**
+ * Project HTTP handlers. createProject checks the project cap.
+ * queryProject delegates to projectQueryService, which checks the daily query quota.
+ */
 const Project = require('../models/Project');
 const ProjectDocument = require('../models/ProjectDocument');
 const ProjectBookmark = require('../models/ProjectBookmark');
@@ -18,6 +22,10 @@ const PROJECT_LIMITS = {
 /**
  * GET /api/projects
  * List user's projects
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function listProjects(req, res) {
   try {
@@ -44,6 +52,10 @@ async function listProjects(req, res) {
 /**
  * POST /api/projects
  * Create new project
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function createProject(req, res) {
   try {
@@ -94,6 +106,10 @@ async function createProject(req, res) {
 /**
  * GET /api/projects/knowledge-base/search
  * Search knowledge base documents (PostgreSQL) for pinning to projects
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function searchKnowledgeBase(req, res) {
   try {
@@ -151,6 +167,10 @@ async function searchKnowledgeBase(req, res) {
 /**
  * GET /api/projects/:id
  * Get project details
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function getProject(req, res) {
   try {
@@ -170,6 +190,10 @@ async function getProject(req, res) {
 /**
  * PUT /api/projects/:id
  * Update project
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function updateProject(req, res) {
   try {
@@ -207,6 +231,10 @@ async function updateProject(req, res) {
 /**
  * DELETE /api/projects/:id
  * Delete project
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function deleteProject(req, res) {
   try {
@@ -233,6 +261,10 @@ async function deleteProject(req, res) {
 /**
  * GET /api/projects/:id/filters
  * Get project filters
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function listFilters(req, res) {
   try {
@@ -257,6 +289,10 @@ async function listFilters(req, res) {
 /**
  * POST /api/projects/:id/filters
  * Add filter to project
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function addFilter(req, res) {
   try {
@@ -290,6 +326,10 @@ async function addFilter(req, res) {
 /**
  * DELETE /api/projects/:id/filters/:filterId
  * Remove filter from project
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function removeFilter(req, res) {
   try {
@@ -322,6 +362,10 @@ async function removeFilter(req, res) {
 /**
  * GET /api/projects/:id/pinned
  * Get pinned documents
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function listPinned(req, res) {
   try {
@@ -347,6 +391,10 @@ async function listPinned(req, res) {
 /**
  * POST /api/projects/:id/pinned
  * Pin a document
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function pinDocument(req, res) {
   try {
@@ -397,6 +445,10 @@ async function pinDocument(req, res) {
 /**
  * DELETE /api/projects/:id/pinned/:pinId
  * Unpin a document
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function unpinDocument(req, res) {
   try {
@@ -429,6 +481,10 @@ async function unpinDocument(req, res) {
 /**
  * GET /api/projects/:id/documents
  * List uploaded documents
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function listDocuments(req, res) {
   try {
@@ -455,6 +511,10 @@ async function listDocuments(req, res) {
 /**
  * POST /api/projects/:id/documents
  * Upload a document to a project
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function uploadDocument(req, res) {
   try {
@@ -530,6 +590,10 @@ async function uploadDocument(req, res) {
 /**
  * DELETE /api/projects/:id/documents/:docId
  * Remove document
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function deleteDocument(req, res) {
   try {
@@ -561,6 +625,10 @@ async function deleteDocument(req, res) {
 /**
  * GET /api/projects/:id/documents/:docId/status
  * Check document processing status
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function documentStatus(req, res) {
   try {
@@ -593,6 +661,10 @@ async function documentStatus(req, res) {
 /**
  * GET /api/projects/:id/bookmarks
  * List bookmarks
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function listBookmarks(req, res) {
   try {
@@ -625,6 +697,10 @@ async function listBookmarks(req, res) {
 /**
  * POST /api/projects/:id/bookmarks
  * Save a bookmark
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function createBookmark(req, res) {
   try {
@@ -665,6 +741,10 @@ async function createBookmark(req, res) {
 /**
  * PUT /api/projects/:id/bookmarks/:bmId
  * Update bookmark notes/tags
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function updateBookmark(req, res) {
   try {
@@ -701,6 +781,10 @@ async function updateBookmark(req, res) {
 /**
  * DELETE /api/projects/:id/bookmarks/:bmId
  * Delete bookmark
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function deleteBookmark(req, res) {
   try {
@@ -733,6 +817,10 @@ async function deleteBookmark(req, res) {
 /**
  * GET /api/projects/:id/conversations
  * List saved threads for a project (active first)
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function listConversations(req, res) {
   try {
@@ -748,6 +836,10 @@ async function listConversations(req, res) {
 /**
  * GET /api/projects/:id/conversation
  * Active thread and its messages (creates an empty thread if needed)
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function getConversation(req, res) {
   try {
@@ -763,6 +855,10 @@ async function getConversation(req, res) {
 /**
  * POST /api/projects/:id/conversation
  * Archive the current thread (if it has messages) and start a new one
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function startConversation(req, res) {
   try {
@@ -779,6 +875,10 @@ async function startConversation(req, res) {
 /**
  * POST /api/projects/:id/conversations/:conversationId/open
  * Resume an archived thread
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<*>}
  */
 async function openConversation(req, res) {
   try {
@@ -824,6 +924,13 @@ async function queryProject(req, res) {
 /**
  * Async document processing function
  * Processes uploaded documents in the background without blocking the upload response
+ *
+ * @param {number} docId
+ * @param {number} projectId
+ * @param {*} fileBuffer
+ * @param {string} mimeType
+ * @param {string} filename
+ * @returns {Promise<*>}
  */
 async function processDocumentAsync(docId, projectId, fileBuffer, mimeType, filename) {
   try {

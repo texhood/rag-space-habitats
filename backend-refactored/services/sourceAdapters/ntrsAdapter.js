@@ -14,6 +14,10 @@ class NTRSAdapter {
 
   /**
    * Generate document hash for deduplication
+   *
+   * @param {*} title
+   * @param {*} attribution
+   * @returns {*}
    */
   generateHash(title, attribution) {
     const normalized = `${title.toLowerCase().trim()}|${attribution.toLowerCase().trim()}`;
@@ -61,6 +65,9 @@ class NTRSAdapter {
    * Check if document is eligible for ingestion
    * - Must be public domain or permissively licensed
    * - Must have downloadable content
+   *
+   * @param {*} doc
+   * @returns {boolean}
    */
   isEligible(doc) {
     // NASA documents are generally public domain (17 U.S.C. § 105)
@@ -84,6 +91,9 @@ class NTRSAdapter {
 
   /**
    * Normalize NTRS document to common format
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   normalizeDocument(doc) {
     const authors = doc.authorAffiliations 
@@ -117,6 +127,9 @@ class NTRSAdapter {
 
   /**
    * Determine category based on document metadata
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   categorize(doc) {
     const categories = doc.subjectCategories || [];
@@ -137,6 +150,9 @@ class NTRSAdapter {
 
   /**
    * Extract relevant tags from document
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   extractTags(doc) {
     const tags = new Set();
@@ -166,6 +182,9 @@ class NTRSAdapter {
   /**
    * Fetch full document content (PDF text extraction)
    * For now, returns abstract - PDF extraction can be added later
+   *
+   * @param {*} document
+   * @returns {Promise<*>}
    */
   async fetchFullContent(document) {
     // TODO: Implement PDF download and text extraction
@@ -175,6 +194,8 @@ class NTRSAdapter {
 
   /**
    * Rate-limited delay
+   *
+   * @returns {Promise<*>}
    */
   async delay() {
     return new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));

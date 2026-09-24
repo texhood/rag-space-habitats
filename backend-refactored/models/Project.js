@@ -1,10 +1,16 @@
-// models/Project.js
+/**
+ * PostgreSQL projects, filters, and pinned library documents for one user.
+ */
 const pool = require('../config/database');
 const { requireProjectUserId } = require('../services/submissionAccess');
 
 class Project {
   /**
    * Create a new project
+   *
+   * @param {number} userId
+   * @param {object} projectData
+   * @returns {Promise<*>}
    */
   static async create(userId, projectData) {
     const { name, description, objectives, constraints } = projectData;
@@ -21,6 +27,10 @@ class Project {
 
   /**
    * Get project by ID
+   *
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
    */
   static async getById(projectId, userId) {
     requireProjectUserId(userId);
@@ -34,6 +44,11 @@ class Project {
 
   /**
    * Get all projects for a user
+   *
+   * @param {number} userId
+   * @param {number} limit
+   * @param {number} offset
+   * @returns {Promise<*>}
    */
   static async getByUserId(userId, limit = 50, offset = 0) {
     const result = await pool.query(
@@ -56,6 +71,9 @@ class Project {
 
   /**
    * Get project count for user
+   *
+   * @param {number} userId
+   * @returns {Promise<*>}
    */
   static async countByUserId(userId) {
     const result = await pool.query(
@@ -68,6 +86,11 @@ class Project {
 
   /**
    * Update project
+   *
+   * @param {number} projectId
+   * @param {number} userId
+   * @param {object} updateData
+   * @returns {Promise<*>}
    */
   static async update(projectId, userId, updateData) {
     const { name, description, objectives, constraints, is_active } = updateData;
@@ -90,6 +113,10 @@ class Project {
 
   /**
    * Delete project
+   *
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
    */
   static async delete(projectId, userId) {
     const result = await pool.query(
@@ -102,6 +129,11 @@ class Project {
 
   /**
    * Add filter to project
+   *
+   * @param {number} projectId
+   * @param {string} filterType
+   * @param {string} filterValue
+   * @returns {Promise<*>}
    */
   static async addFilter(projectId, filterType, filterValue) {
     const result = await pool.query(
@@ -116,6 +148,9 @@ class Project {
 
   /**
    * Get project filters
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async getFilters(projectId) {
     const result = await pool.query(
@@ -128,6 +163,10 @@ class Project {
 
   /**
    * Remove filter from project
+   *
+   * @param {number} filterId
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async removeFilter(filterId, projectId) {
     const result = await pool.query(
@@ -140,6 +179,12 @@ class Project {
 
   /**
    * Pin a document to project
+   *
+   * @param {number} projectId
+   * @param {number} mongoId
+   * @param {string} documentTitle
+   * @param {string} documentSource
+   * @returns {Promise<*>}
    */
   static async pinDocument(projectId, mongoId, documentTitle, documentSource) {
     const result = await pool.query(
@@ -155,6 +200,9 @@ class Project {
 
   /**
    * Get pinned documents
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async getPinnedDocuments(projectId) {
     const result = await pool.query(
@@ -167,6 +215,10 @@ class Project {
 
   /**
    * Unpin a document from project
+   *
+   * @param {number} pinnedId
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async unpinDocument(pinnedId, projectId) {
     const result = await pool.query(
@@ -179,6 +231,9 @@ class Project {
 
   /**
    * Count pinned documents
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async countPinnedDocuments(projectId) {
     const result = await pool.query(

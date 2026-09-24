@@ -7,6 +7,12 @@ const {
 } = require('../services/projectConversationFormat');
 
 class ProjectConversation {
+  /**
+   * Load the project for this user or throw 404.
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async _requireProject(projectId, userId) {
     const project = await Project.getById(projectId, userId);
     if (!project) {
@@ -17,6 +23,12 @@ class ProjectConversation {
     return project;
   }
 
+  /**
+   * Conversations for a project the user owns.
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async list(projectId, userId) {
     await this._requireProject(projectId, userId);
     const result = await pool.query(
@@ -31,6 +43,11 @@ class ProjectConversation {
     return result.rows.map(toClientConversation);
   }
 
+  /**
+   * Stored turns for one project conversation.
+   * @param {number} conversationId
+   * @returns {Promise<*>}
+   */
   static async getMessages(conversationId) {
     const result = await pool.query(
       `SELECT * FROM project_conversation_messages
@@ -41,6 +58,12 @@ class ProjectConversation {
     return result.rows.map(toClientMessage);
   }
 
+  /**
+   * The project conversation marked active, if any.
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async getActive(projectId, userId) {
     await this._requireProject(projectId, userId);
     const result = await pool.query(
@@ -55,6 +78,12 @@ class ProjectConversation {
     return result.rows[0] ? toClientConversation(result.rows[0]) : null;
   }
 
+  /**
+   * Active project conversation, creating one when none exists.
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async getOrCreateActive(projectId, userId) {
     await this._requireProject(projectId, userId);
     const existing = await this.getActive(projectId, userId);
@@ -73,6 +102,13 @@ class ProjectConversation {
     return { conversation, messages: [] };
   }
 
+  /**
+   * Persist a question and answer on the active project conversation.
+   * @param {number} projectId
+   * @param {number} userId
+   * @param {object} fields
+   * @returns {Promise<*>}
+   */
   static async appendExchange(projectId, userId, { question, answer, queryId = null, sources = null }) {
     const { conversation } = await this.getOrCreateActive(projectId, userId);
     const client = await pool.connect();
@@ -108,6 +144,12 @@ class ProjectConversation {
     }
   }
 
+  /**
+   * Close the active project conversation and open an empty one.
+   * @param {number} projectId
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async startNew(projectId, userId) {
     await this._requireProject(projectId, userId);
     const client = await pool.connect();
@@ -155,6 +197,13 @@ class ProjectConversation {
     }
   }
 
+  /**
+   * Make an existing project conversation the active one.
+   * @param {number} projectId
+   * @param {number} userId
+   * @param {number} conversationId
+   * @returns {Promise<*>}
+   */
   static async open(projectId, userId, conversationId) {
     await this._requireProject(projectId, userId);
     const client = await pool.connect();

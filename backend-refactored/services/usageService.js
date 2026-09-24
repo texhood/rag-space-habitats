@@ -1,4 +1,7 @@
-// services/usageService.js
+/**
+ * Writes query and upload counts to PostgreSQL daily_usage.
+ * Query routes call this through services/queryAccess.js after a successful answer.
+ */
 const pool = require('../config/database');
 const Pricing = require('../models/Pricing');
 const { LIMITS, getLimits, canPerformAction } = require('./usageLimits');
@@ -8,6 +11,11 @@ class UsageService {
 
   /**
    * Log a usage action
+   *
+   * @param {number} userId
+   * @param {string} action
+   * @param {object} metadata
+   * @returns {Promise<*>}
    */
   static async logUsage(userId, action, metadata = {}) {
     await pool.query(
@@ -39,6 +47,9 @@ class UsageService {
 
   /**
    * Get user's usage for today
+   *
+   * @param {number} userId
+   * @returns {Promise<*>}
    */
   static async getTodayUsage(userId) {
     const today = new Date().toISOString().split('T')[0];
@@ -53,6 +64,9 @@ class UsageService {
 
   /**
    * Get user's usage for current month
+   *
+   * @param {number} userId
+   * @returns {Promise<*>}
    */
   static async getMonthUsage(userId) {
     const startOfMonth = new Date();
@@ -77,6 +91,11 @@ class UsageService {
 
   /**
    * Check if user can perform action
+   *
+   * @param {number} userId
+   * @param {string} action
+   * @param {string} tier
+   * @returns {Promise<boolean>}
    */
   static async canPerformAction(userId, action, tier) {
     const limits = getLimits(tier);
@@ -102,6 +121,9 @@ class UsageService {
 
   /**
    * Get tier limits for a user (from database with fallback to hardcoded)
+   *
+   * @param {string} tier
+   * @returns {Promise<*>}
    */
   static async getLimits(tier) {
     try {

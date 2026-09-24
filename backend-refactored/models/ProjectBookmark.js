@@ -4,6 +4,10 @@ const pool = require('../config/database');
 class ProjectBookmark {
   /**
    * Create a bookmark
+   *
+   * @param {number} projectId
+   * @param {object} bookmarkData
+   * @returns {Promise<*>}
    */
   static async create(projectId, bookmarkData) {
     const {
@@ -27,6 +31,10 @@ class ProjectBookmark {
 
   /**
    * Get bookmark by ID
+   *
+   * @param {number} bookmarkId
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async getById(bookmarkId, projectId = null) {
     let query = `SELECT * FROM project_bookmarks WHERE id = $1`;
@@ -43,6 +51,11 @@ class ProjectBookmark {
 
   /**
    * Get bookmarks for project
+   *
+   * @param {number} projectId
+   * @param {number} limit
+   * @param {number} offset
+   * @returns {Promise<*>}
    */
   static async getByProjectId(projectId, limit = 100, offset = 0) {
     const result = await pool.query(
@@ -58,6 +71,11 @@ class ProjectBookmark {
 
   /**
    * Get bookmarks by tag
+   *
+   * @param {number} projectId
+   * @param {string} tag
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async getByTag(projectId, tag, limit = 50) {
     const result = await pool.query(
@@ -73,6 +91,11 @@ class ProjectBookmark {
 
   /**
    * Search bookmarks by query or response text
+   *
+   * @param {number} projectId
+   * @param {string} searchText
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async search(projectId, searchText, limit = 50) {
     const result = await pool.query(
@@ -88,6 +111,11 @@ class ProjectBookmark {
 
   /**
    * Update bookmark
+   *
+   * @param {number} bookmarkId
+   * @param {number} projectId
+   * @param {object} updateData
+   * @returns {Promise<*>}
    */
   static async update(bookmarkId, projectId, updateData) {
     const { userNotes, tags } = updateData;
@@ -106,6 +134,11 @@ class ProjectBookmark {
 
   /**
    * Add tag to bookmark
+   *
+   * @param {number} bookmarkId
+   * @param {number} projectId
+   * @param {string} tag
+   * @returns {Promise<*>}
    */
   static async addTag(bookmarkId, projectId, tag) {
     const result = await pool.query(
@@ -121,6 +154,11 @@ class ProjectBookmark {
 
   /**
    * Remove tag from bookmark
+   *
+   * @param {number} bookmarkId
+   * @param {number} projectId
+   * @param {string} tag
+   * @returns {Promise<*>}
    */
   static async removeTag(bookmarkId, projectId, tag) {
     const result = await pool.query(
@@ -136,6 +174,10 @@ class ProjectBookmark {
 
   /**
    * Delete bookmark
+   *
+   * @param {number} bookmarkId
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async delete(bookmarkId, projectId) {
     const result = await pool.query(
@@ -148,6 +190,9 @@ class ProjectBookmark {
 
   /**
    * Get bookmark count for project
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async countByProjectId(projectId) {
     const result = await pool.query(
@@ -160,6 +205,9 @@ class ProjectBookmark {
 
   /**
    * Get all tags for project
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async getAllTags(projectId) {
     const result = await pool.query(
@@ -172,6 +220,9 @@ class ProjectBookmark {
 
   /**
    * Format database row to application object
+   *
+   * @param {*} row
+   * @returns {*}
    */
   static _formatRow(row) {
     if (!row) return null;

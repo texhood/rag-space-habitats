@@ -4,6 +4,10 @@ const pool = require('../config/database');
 class ProjectDocument {
   /**
    * Create project document record
+   *
+   * @param {number} projectId
+   * @param {object} documentData
+   * @returns {Promise<*>}
    */
   static async create(projectId, documentData) {
     const {
@@ -28,6 +32,10 @@ class ProjectDocument {
 
   /**
    * Get document by ID
+   *
+   * @param {number} docId
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async getById(docId, projectId = null) {
     let query = `SELECT * FROM project_documents WHERE id = $1`;
@@ -44,6 +52,10 @@ class ProjectDocument {
 
   /**
    * Get documents for project
+   *
+   * @param {number} projectId
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async getByProjectId(projectId, limit = 100) {
     const result = await pool.query(
@@ -59,6 +71,9 @@ class ProjectDocument {
 
   /**
    * Get document count for project
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async countByProjectId(projectId) {
     const result = await pool.query(
@@ -71,6 +86,11 @@ class ProjectDocument {
 
   /**
    * Update document processing status
+   *
+   * @param {number} docId
+   * @param {*} processingStatus
+   * @param {*} errorMessage
+   * @returns {Promise<*>}
    */
   static async updateStatus(docId, processingStatus, errorMessage = null) {
     const result = await pool.query(
@@ -86,6 +106,11 @@ class ProjectDocument {
 
   /**
    * Update document with extracted content and embedding
+   *
+   * @param {number} docId
+   * @param {*} contentText
+   * @param {Array} embedding
+   * @returns {Promise<*>}
    */
   static async updateContent(docId, contentText, embedding = null) {
       const result = await pool.query(
@@ -101,6 +126,10 @@ class ProjectDocument {
 
   /**
    * Delete document
+   *
+   * @param {number} docId
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async delete(docId, projectId) {
     const result = await pool.query(
@@ -113,6 +142,11 @@ class ProjectDocument {
 
   /**
    * Search documents in project
+   *
+   * @param {number} projectId
+   * @param {string} searchText
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async searchByContent(projectId, searchText, limit = 10) {
     const result = await pool.query(
@@ -130,6 +164,9 @@ class ProjectDocument {
 
   /**
    * Get document stats for project
+   *
+   * @param {number} projectId
+   * @returns {Promise<*>}
    */
   static async getStats(projectId) {
     const result = await pool.query(

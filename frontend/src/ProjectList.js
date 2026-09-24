@@ -6,6 +6,10 @@ import ProjectCard from './ProjectCard';
 import CreateProjectModal from './CreateProjectModal';
 import './ProjectList.css';
 
+/**
+ * The signed-in user's projects.
+ * @returns {*}
+ */
 function ProjectList() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);

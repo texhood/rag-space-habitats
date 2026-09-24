@@ -1,4 +1,9 @@
-// services/embeddingService.js
+/**
+ * Embeddings for document_chunks and project_document_chunks.
+ * Stored vectors are 1024 numbers (intfloat/multilingual-e5-large).
+ * A local server result with a different length is rejected for that request
+ * and does not switch later requests off the local server.
+ */
 const axios = require('axios');
 
 /**
@@ -32,7 +37,9 @@ class EmbeddingService {
   }
 
   /**
-   * Check if embedding server is running
+   * Whether the local server or the Hugging Face API can produce a vector.
+   * Does not change which backend later requests try first.
+   * @returns {Promise<boolean>}
    */
   async checkHealth() {
     // Try local server first
@@ -64,7 +71,9 @@ class EmbeddingService {
   }
 
   /**
-   * Generate embedding for text (tries local first, falls back to API)
+   * Vector for one text. Length is this.dimensions (1024).
+   * @param {string} text
+   * @returns {Promise<number[]>}
    */
   async generateEmbedding(text) {
     if (this.useLocalServer) {
@@ -82,6 +91,9 @@ class EmbeddingService {
 
   /**
    * Generate embedding via local Python server
+   *
+   * @param {string} text
+   * @returns {Promise<*>}
    */
   async generateEmbeddingViaLocalServer(text) {
     const response = await axios.post(`${this.embeddingServerUrl}/embed`, {
@@ -95,6 +107,9 @@ class EmbeddingService {
 
   /**
    * Generate an embedding via the Hugging Face router API.
+   *
+   * @param {string} text
+   * @returns {Promise<*>}
    */
   async generateEmbeddingViaAPI(text) {
     if (!this.huggingfaceApiKey) {
@@ -175,6 +190,9 @@ class EmbeddingService {
 
   /**
    * Generate embeddings in batch
+   *
+   * @param {*} texts
+   * @returns {Promise<*>}
    */
   async generateBatchEmbeddings(texts) {
     // Try local server for batch (faster)
@@ -193,6 +211,9 @@ class EmbeddingService {
 
   /**
    * Batch embedding via local server
+   *
+   * @param {*} texts
+   * @returns {Promise<*>}
    */
   async generateBatchViaLocalServer(texts) {
     const batchSize = 50;
@@ -216,6 +237,9 @@ class EmbeddingService {
 
   /**
    * Batch embedding via HuggingFace API (slower, one at a time)
+   *
+   * @param {*} texts
+   * @returns {Promise<*>}
    */
   async generateBatchViaAPI(texts) {
     const allEmbeddings = [];
@@ -250,6 +274,10 @@ class EmbeddingService {
 
   /**
    * Calculate cosine similarity between two vectors
+   *
+   * @param {*} vecA
+   * @param {*} vecB
+   * @returns {*}
    */
   cosineSimilarity(vecA, vecB) {
     if (vecA.length !== vecB.length) {

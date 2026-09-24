@@ -11,6 +11,10 @@ import './AppNavbar.css';
 import './BrowseKnowledgeBase.css';
 import { formatCorpusLabel } from './queryStarters';
 
+/**
+ * Public library browser. Loads submissions from the API.
+ * @returns {*}
+ */
 function BrowseKnowledgeBase() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

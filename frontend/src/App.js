@@ -16,6 +16,8 @@ import './ProjectList.css';
 
 /**
  * Pricing screen. Close returns to the previous page.
+ *
+ * @returns {*}
  */
 function PricingRoute() {
   const navigate = useNavigate();
@@ -33,6 +35,8 @@ function PricingRoute() {
 
 /**
  * Route table. Each screen lives in its own module.
+ *
+ * @returns {*}
  */
 function App() {
   return (

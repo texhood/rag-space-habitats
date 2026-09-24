@@ -10,6 +10,10 @@ import PricingPage from './PricingPage';
 import UserProfile from './UserProfile';
 import SubmitContent from './SubmitContent';
 
+/**
+ * Projects route with the shared navigation bar.
+ * @returns {*}
+ */
 function ProjectsPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);

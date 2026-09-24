@@ -1,3 +1,8 @@
+/**
+ * Accept a registration body or return a 400 payload. Does not write.
+ * @param {object} fields
+ * @returns {*}
+ */
 function validateRegistration({ username, password, email } = {}) {
   if (!username || !password) {
     return {

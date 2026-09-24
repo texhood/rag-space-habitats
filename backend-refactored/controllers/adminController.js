@@ -5,6 +5,11 @@ const QueryLog = require('../models/QueryLog');
 class AdminController {
   /**
    * Get all users
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async getUsers(req, res, next) {
     try {
@@ -17,6 +22,11 @@ class AdminController {
 
   /**
    * Update user role
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async updateUserRole(req, res, next) {
     try {
@@ -59,6 +69,11 @@ class AdminController {
 
   /**
    * Delete user
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async deleteUser(req, res, next) {
     try {
@@ -92,6 +107,11 @@ class AdminController {
 
   /**
    * Get analytics
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async getAnalytics(req, res, next) {
     try {
@@ -110,6 +130,11 @@ class AdminController {
 
   /**
    * Trigger preprocessing
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async triggerPreprocess(req, res, next) {
     try {

@@ -1,3 +1,7 @@
+/**
+ * Who may read a MongoDB submission, and which rows may be copied into PostgreSQL chunks.
+ * Private licenses stay out of the public corpus.
+ */
 const CREATIVE_COMMONS_LICENSES = ['cc-by', 'cc-by-sa', 'cc-by-nc'];
 const CRAWLER_PUBLIC_LICENSES = [
   'Public Domain (U.S. Government Work)',
@@ -12,10 +16,20 @@ const PUBLIC_LICENSES = [
 ];
 const DEFAULT_LICENSE = 'private';
 
+/**
+ * Whether this license may appear in the public library and corpus.
+ * @param {*} raw
+ * @returns {boolean}
+ */
 function isPublicLicense(raw) {
   return PUBLIC_LICENSES.includes(raw);
 }
 
+/**
+ * Known license, or the private default.
+ * @param {*} raw
+ * @returns {*}
+ */
 function resolveLicense(raw) {
   if (raw === 'private' || isPublicLicense(raw)) {
     return raw;
@@ -23,6 +37,11 @@ function resolveLicense(raw) {
   return DEFAULT_LICENSE;
 }
 
+/**
+ * Whether a Mongo submission is approved and publicly licensed.
+ * @param {object} submission
+ * @returns {boolean}
+ */
 function isPublicLibraryItem(submission) {
   return Boolean(
     submission &&
@@ -31,10 +50,21 @@ function isPublicLibraryItem(submission) {
   );
 }
 
+/**
+ * Whether the user role is admin.
+ * @param {object} user
+ * @returns {boolean}
+ */
 function isAdmin(user) {
   return Boolean(user && user.role === 'admin');
 }
 
+/**
+ * Whether this user submitted the document.
+ * @param {object} submission
+ * @param {object} user
+ * @returns {boolean}
+ */
 function isOwner(submission, user) {
   if (!user || submission?.submitted_by == null || user.id == null) {
     return false;
@@ -42,6 +72,12 @@ function isOwner(submission, user) {
   return String(submission.submitted_by) === String(user.id);
 }
 
+/**
+ * Owner, admin, or a public library item may read it.
+ * @param {object} submission
+ * @param {object} user
+ * @returns {boolean}
+ */
 function canReadSubmission(submission, user) {
   if (!submission) {
     return false;
@@ -55,6 +91,12 @@ function canReadSubmission(submission, user) {
   return false;
 }
 
+/**
+ * Mongo filter for the submissions an admin or owner may list.
+ * @param {object} user
+ * @param {object} fields
+ * @returns {*}
+ */
 function listSubmissionsFilter(user, { status } = {}) {
   if (!user) {
     return null;
@@ -70,6 +112,12 @@ function listSubmissionsFilter(user, { status } = {}) {
   return filter;
 }
 
+/**
+ * Mongo filter for the public browse list.
+ * @param {*} license
+ * @param {*} source
+ * @returns {*}
+ */
 function publicBrowseFilter(license, source) {
   const filter = {
     status: 'processed',
@@ -89,6 +137,11 @@ function publicBrowseFilter(license, source) {
   return filter;
 }
 
+/**
+ * Approved public submissions may be copied into PostgreSQL chunks.
+ * @param {object} submission
+ * @returns {boolean}
+ */
 function canIngestIntoCorpus(submission) {
   if (!submission) {
     return {
@@ -117,6 +170,10 @@ function canIngestIntoCorpus(submission) {
   return { ok: true };
 }
 
+/**
+ * Mongo filter for submissions the crawler may ingest.
+ * @returns {*}
+ */
 function approvedIngestFilter() {
   return {
     status: 'approved',
@@ -124,6 +181,11 @@ function approvedIngestFilter() {
   };
 }
 
+/**
+ * Throw when a project read has no user id.
+ * @param {number} userId
+ * @returns {*}
+ */
 function requireProjectUserId(userId) {
   if (userId === null || userId === undefined || userId === '') {
     const err = new Error('userId is required to load a project');

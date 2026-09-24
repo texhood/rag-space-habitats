@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './SubmitContent.css';
 
+/**
+ * Submit text or a file to the library inbox. onClose leaves the form.
+ * @param {object} fields
+ * @returns {*}
+ */
 function SubmitContent({ user, onClose }) {
   const [uploadMode, setUploadMode] = useState('text');
   const [title, setTitle] = useState('');

@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './DocumentUploader.css';
 
+/**
+ * Upload a project file. Calls onUploadComplete after the API accepts it.
+ * @param {object} fields
+ * @returns {*}
+ */
 function DocumentUploader({ projectId, onUploadComplete }) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);

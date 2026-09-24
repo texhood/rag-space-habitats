@@ -1,6 +1,15 @@
 // FeedbackRelevance.js - Document Relevance Component
 import React from 'react';
 
+/**
+ * Relevance mark for a retrieved document. onSubmit receives the choice.
+ * @param {object} props
+ * @param {boolean} props.isExpanded
+ * @param {Function} props.onExpand
+ * @param {Function} props.onSubmit
+ * @param {boolean} props.isSubmitted
+ * @returns {import('react').ReactElement}
+ */
 function FeedbackRelevance({
   isExpanded,
   onExpand,

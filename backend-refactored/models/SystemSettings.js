@@ -4,6 +4,9 @@ const pool = require('../config/database');
 class SystemSettings {
   /**
    * Get a setting by key
+   *
+   * @param {string} key
+   * @returns {Promise<*>}
    */
   static async get(key) {
     const result = await pool.query(
@@ -27,6 +30,11 @@ class SystemSettings {
 
   /**
    * Update a setting (upsert)
+   *
+   * @param {string} key
+   * @param {*} value
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async set(key, value, updatedBy) {
     // For PostgreSQL JSONB, we can store objects directly
@@ -46,6 +54,8 @@ class SystemSettings {
 
   /**
    * Get beta mode configuration
+   *
+   * @returns {Promise<*>}
    */
   static async getBetaMode() {
     const betaSettings = await this.get('beta_mode');
@@ -68,6 +78,10 @@ class SystemSettings {
 
   /**
    * Update beta mode
+   *
+   * @param {object} config
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async setBetaMode(config, updatedBy) {
     // Ensure enabled is a boolean in the stored JSON
@@ -81,6 +95,8 @@ class SystemSettings {
 
   /**
    * Check if beta mode is enabled
+   *
+   * @returns {Promise<boolean>}
    */
   static async isBetaModeEnabled() {
     const betaSettings = await this.getBetaMode();
@@ -89,6 +105,8 @@ class SystemSettings {
 
   /**
    * Get all settings
+   *
+   * @returns {Promise<*>}
    */
   static async getAll() {
     const result = await pool.query(

@@ -1,4 +1,10 @@
 /**
+ * Query quota helpers.
+ * checkQueryQuota and recordQuery run from POST /api/rag/ask and
+ * POST /api/projects/:id/query. Counts are stored in PostgreSQL daily_usage.
+ */
+
+/**
  * Tier used for a query quota check. Admins follow the enterprise limits.
  * @param {{ role?: string, subscription_tier?: string }} user
  * @returns {string}

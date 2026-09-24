@@ -6,6 +6,11 @@ import DocumentViewer from './DocumentViewer';
 import AdminFeedbackDashboard from './AdminFeedbackDashboard';
 import './AdminPanel.css';
 
+/**
+ * Admin tools for users, documents, and feedback. onClose leaves the screen.
+ * @param {object} fields
+ * @returns {*}
+ */
 function AdminPanel({ onClose }) {
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);

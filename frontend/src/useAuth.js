@@ -29,6 +29,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
+   * End the session and clear the stored user.
    * @returns {Promise<void>}
    */
   async function logout() {
@@ -44,6 +45,7 @@ export function AuthProvider({ children }) {
 }
 
 /**
+ * Session user, ready flag, and logout. Throws outside AuthProvider.
  * @returns {{ user: object|null, setUser: Function, ready: boolean, logout: Function }}
  */
 export function useAuth() {

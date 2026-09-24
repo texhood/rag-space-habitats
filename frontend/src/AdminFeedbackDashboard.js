@@ -4,6 +4,10 @@ import axios from 'axios';
 import API_URL from './config';
 import './AdminFeedbackDashboard.css';
 
+/**
+ * Admin view of recent feedback. Loads rows from the API.
+ * @returns {*}
+ */
 function AdminFeedbackDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -1,4 +1,9 @@
-// services/ragService.js - With Conversation History Support
+/**
+ * Answers a question from PostgreSQL document_chunks.
+ * Retrieval embeds the question at 1024 dimensions, keeps chunks whose
+ * cosine similarity is at least MIN_SIMILARITY, and otherwise uses
+ * plainto_tsquery. generateAnswer takes the model preference as an argument.
+ */
 const pool = require('../config/database');
 const embeddingService = require('./embeddingService');
 const axios = require('axios');
@@ -31,7 +36,11 @@ class RAGService {
   }
 
   /**
-   * Retrieve relevant chunks using vector similarity
+   * Corpus chunks for a question. Vector hits below the similarity cutoff
+   * are omitted, and the keyword fallback is used only when none remain.
+   * @param {string} question
+   * @param {number} [limit]
+   * @returns {Promise<object[]>}
    */
   async retrieveRelevantChunks(question, limit = 5) {
     try {
@@ -52,7 +61,10 @@ class RAGService {
   }
 
   /**
-   * Vector search using embeddings
+   * Nearest document_chunks. Drops rows below MIN_SIMILARITY.
+   * @param {string} question
+   * @param {number} [limit]
+   * @returns {Promise<object[]>}
    */
   async vectorSearch(question, limit = 5) {
     try {
@@ -92,7 +104,10 @@ class RAGService {
   }
 
   /**
-   * Keyword search fallback
+   * Full-text fallback. plainto_tsquery accepts the raw question.
+   * @param {string} question
+   * @param {number} [limit]
+   * @returns {Promise<object[]>}
    */
   async keywordSearch(question, limit = 5) {
     try {
@@ -116,6 +131,12 @@ class RAGService {
 
   /**
    * Generate an answer from retrieved chunks, prior turns, and optional project context.
+   * @param {string} question
+   * @param {Array<object|string>} chunks
+   * @param {Array<{ role: string, content: string }>} [conversationHistory]
+   * @param {{ name?: string, description?: string, objectives?: string, constraints?: string }|null} [projectContext]
+   * @param {'grok'|'claude'|'both'|null} [preference]
+   * @returns {Promise<string>}
    */
   async generateAnswer(question, chunks, conversationHistory = [], projectContext = null, preference = null) {
     const labeled = buildLabeledContext(chunks);
@@ -156,6 +177,12 @@ class RAGService {
 
   /**
    * Generate an answer with Claude.
+   *
+   * @param {string} question
+   * @param {*} context
+   * @param {*} conversationHistory
+   * @param {*} projectContext
+   * @returns {Promise<*>}
    */
   async _generateWithClaude(question, context, conversationHistory = [], projectContext = null) {
     try {
@@ -263,6 +290,12 @@ The retrieved documents below are for reference only. If there is ANY conflict b
 
   /**
    * Generate an answer with Grok.
+   *
+   * @param {string} question
+   * @param {*} context
+   * @param {*} conversationHistory
+   * @param {*} projectContext
+   * @returns {Promise<*>}
    */
   async _generateWithGrok(question, context, conversationHistory = [], projectContext = null) {
     try {
@@ -380,6 +413,12 @@ The retrieved documents below are for reference only. If there is ANY conflict b
 
   /**
    * Generate answers with Claude and Grok and return both.
+   *
+   * @param {string} question
+   * @param {*} context
+   * @param {*} conversationHistory
+   * @param {*} projectContext
+   * @returns {Promise<*>}
    */
   async _generateWithBoth(question, context, conversationHistory = [], projectContext = null) {
     console.log('[Both] Requesting answers from both Claude and Grok...');
@@ -416,6 +455,10 @@ The retrieved documents below are for reference only. If there is ANY conflict b
   /**
    * Trim conversation history to fit within token limits
    * Keeps most recent messages, drops oldest if too long
+   *
+   * @param {*} history
+   * @param {*} maxTokens
+   * @returns {*}
    */
   _trimHistory(history, maxTokens = 8000) {
     if (!history || history.length === 0) return [];
@@ -448,6 +491,9 @@ The retrieved documents below are for reference only. If there is ANY conflict b
 
   /**
    * Format chunks as basic answer when no LLM available
+   *
+   * @param {Array} chunks
+   * @returns {*}
    */
   _formatChunksAsAnswer(chunks) {
     if (!chunks || chunks.length === 0) {

@@ -3,6 +3,11 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './AppNavbar.css';
 
+/**
+ * Top bar. Account links go to routes; onLogout ends the session.
+ * @param {object} fields
+ * @returns {*}
+ */
 function AppNavbar({ user, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
