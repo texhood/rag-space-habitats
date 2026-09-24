@@ -10,7 +10,8 @@ describe('migrations', () => {
       '002_projects.sql',
       '003_project_conversations.sql',
       '004_user_conversations.sql',
-      '005_session.sql'
+      '005_session.sql',
+      '006_stripe_events.sql'
     ]);
 
     const prefixes = new Set();

@@ -6,7 +6,7 @@ class Subscription {
    * Create a new subscription
    */
   static async create(userId, tierKey, stripeData = {}) {
-    const [result] = await pool.query(
+    const result = await pool.query(
       `INSERT INTO subscriptions 
        (user_id, tier_key, status, stripe_customer_id, stripe_subscription_id, stripe_price_id, current_period_start, current_period_end) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

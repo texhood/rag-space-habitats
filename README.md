@@ -27,4 +27,6 @@ cd frontend && npm install && npm run dev
 
 The API listens on port 5000. The client listens on port 3500 and reads `REACT_APP_API_URL` (default `http://localhost:5000`).
 
+The document crawler is a separate process, `npm run crawl` inside `backend-refactored`. Schedule that command outside the API (daily at 23:00 America/Chicago). The API process does not start a second copy.
+
 Copy the environment values you need into `backend-refactored/.env`: `DATABASE_URL`, `MONGODB_URI`, `SESSION_SECRET`, `XAI_API_KEY`, and optionally `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `HUGGINGFACE_API_KEY`.
