@@ -4,11 +4,8 @@ const MAX_HITS = 3;
 const hitsByIp = new Map();
 
 function clientIp(req) {
-  const forwarded = req.headers?.['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.ip || req.socket?.remoteAddress || 'unknown';
+  if (req.ip) return req.ip;
+  return req.socket?.remoteAddress || 'unknown';
 }
 
 function prune(now) {
@@ -55,8 +52,19 @@ function recordDemoHit(req, now = Date.now()) {
   return { remaining: Math.max(0, MAX_HITS - existing.count), resetAt: existing.resetAt };
 }
 
+function consumeDemoHit(req, now = Date.now()) {
+  const result = checkDemoRateLimit(req, now);
+  if (!result.allowed) return result;
+  const recorded = recordDemoHit(req, now);
+  return {
+    allowed: true,
+    remaining: recorded.remaining,
+    ip: result.ip
+  };
+}
+
 function demoRateLimitMiddleware(req, res, next) {
-  const result = checkDemoRateLimit(req);
+  const result = consumeDemoHit(req);
   if (!result.allowed) {
     const retryAfterSec = Math.ceil((result.retryAfterMs || WINDOW_MS) / 1000);
     res.set('Retry-After', String(retryAfterSec));
@@ -75,6 +83,7 @@ module.exports = {
   clientIp,
   checkDemoRateLimit,
   recordDemoHit,
+  consumeDemoHit,
   demoRateLimitMiddleware,
   _hitsByIp: hitsByIp
 };

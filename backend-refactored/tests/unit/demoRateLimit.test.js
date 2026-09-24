@@ -4,6 +4,8 @@ const {
   MAX_HITS,
   checkDemoRateLimit,
   recordDemoHit,
+  consumeDemoHit,
+  demoRateLimitMiddleware,
   _hitsByIp
 } = require('../../services/demoRateLimit');
 
@@ -33,6 +35,24 @@ describe('demoRateLimit', () => {
     const blocked = checkDemoRateLimit(req, now);
     assert.equal(blocked.allowed, false);
     assert.equal(blocked.remaining, 0);
+  });
+
+  it('counts a demo hit before the handler runs', () => {
+    const req = reqFor('203.0.113.13');
+    const res = {
+      statusCode: 200,
+      body: null,
+      headers: {},
+      status(code) { this.statusCode = code; return this; },
+      json(payload) { this.body = payload; return this; },
+      set(name, value) { this.headers[name] = value; }
+    };
+    let nextCalled = false;
+    demoRateLimitMiddleware(req, res, () => { nextCalled = true; });
+    assert.equal(nextCalled, true);
+    assert.equal(checkDemoRateLimit(req, Date.now()).remaining, MAX_HITS - 1);
+    const blockedAt = consumeDemoHit(req, Date.now());
+    assert.equal(blockedAt.allowed, true);
   });
 
   it('tracks IPs separately', () => {

@@ -146,6 +146,10 @@ app.use(cors({
   exposedHeaders: ['set-cookie']
 }));
 
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Body parsing (after webhook route)
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
