@@ -44,7 +44,7 @@ function AdminPanel({ onClose }) {
       fetchBetaMode();
     } else if (activeTab === 'pricing') {
       fetchPricing();
-    } else if (activeTab === 'crawler') {  // ADD THIS
+    } else if (activeTab === 'crawler') {
       fetchCrawlerStatus();
       fetchCrawlerSettings();
       fetchCrawlerHistory();
@@ -787,9 +787,6 @@ function AdminPanel({ onClose }) {
           </div>
         )}
 
-        {/* ===================== */}
-        {/* CRAWLER TAB - ADD THIS ENTIRE SECTION */}
-        {/* ===================== */}
         {activeTab === 'crawler' && (
           <div className="admin-section">
             <div className="tab-header">
@@ -1112,10 +1109,6 @@ function AdminPanel({ onClose }) {
             )}
           </div>
         )}
-        {/* ===================== */}
-        {/* END CRAWLER TAB */}
-        {/* ===================== */}
-
         {/* PRICING TAB */}
         {activeTab === 'pricing' && (
           <div className="admin-section pricing-management">

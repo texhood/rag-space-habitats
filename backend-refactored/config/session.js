@@ -12,7 +12,7 @@ const sessionConfig = {
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     domain: process.env.NODE_ENV === 'production' ? undefined : undefined  // Let browser handle it
   },
-  proxy: process.env.NODE_ENV === 'production'  // ADD THIS - trust Railway proxy
+  proxy: process.env.NODE_ENV === 'production'
 };
 
 module.exports = session(sessionConfig);

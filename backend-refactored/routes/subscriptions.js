@@ -187,10 +187,6 @@ router.post('/cancel', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============================================
-// UPDATED schedule-downgrade route with persistence
-// ============================================
-
 // POST /api/subscriptions/schedule-downgrade - Schedule downgrade at period end
 router.post('/schedule-downgrade', isAuthenticated, async (req, res) => {
   try {

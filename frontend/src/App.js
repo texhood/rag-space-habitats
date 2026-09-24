@@ -300,9 +300,6 @@ function Dashboard() {
     }
   };
 
-  // =====================
-  // UPDATED handleAsk WITH CONVERSATION HISTORY & PROJECT CONTEXT
-  // =====================
   const handleAsk = async (e) => {
     e.preventDefault();
     if (!question.trim() || projectLoading) return;
@@ -435,7 +432,6 @@ function Dashboard() {
 
   return (
     <div className="App">
-      {/* AppNavbar replaces the old header */}
       <AppNavbar 
         user={user}
         onLogout={handleLogout}
