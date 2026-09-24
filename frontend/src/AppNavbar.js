@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './AppNavbar.css';
 
-function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, onShowProfile, onShowLogin }) {
+function AppNavbar({ user, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -22,21 +22,8 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
     setMobileMenuOpen(false);
   };
 
-  const handleActionClick = (action) => {
-    setMobileMenuOpen(false);
-    setUserMenuOpen(false);
-    if (action) {
-      action(true);
-    }
-  };
-
   const openLogin = () => {
-    setMobileMenuOpen(false);
-    if (onShowLogin) {
-      onShowLogin(true);
-      return;
-    }
-    handleNavClick('/app?login=true');
+    handleNavClick('/login');
   };
 
   const isActive = (path) => location.pathname === path;
@@ -74,10 +61,10 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
             </button>
           )}
 
-          {user && onShowSubmit && (
+          {user && (
             <button
               className="nav-link"
-              onClick={() => handleActionClick(onShowSubmit)}
+              onClick={() => handleNavClick('/submit')}
             >
               <span className="nav-text">Submit</span>
             </button>
@@ -91,14 +78,12 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                 <span className="user-name">{user.username}</span>
                   <span className="user-tier">{user.subscription_tier?.toUpperCase() || 'FREE'}</span>
                 </div>
-                {onShowProfile && (
-                  <button
-                    className="nav-link"
-                    onClick={() => handleActionClick(onShowProfile)}
-                  >
-                    <span className="nav-text">My Account</span>
-                  </button>
-                )}
+                <button
+                  className="nav-link"
+                  onClick={() => handleNavClick('/profile')}
+                >
+                  <span className="nav-text">My Account</span>
+                </button>
                 {user && (
                   <button
                     className="nav-link"
@@ -107,10 +92,10 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
                     <span className="nav-text">Upgrade</span>
                   </button>
                 )}
-                {user.role === 'admin' && onShowAdmin && (
+                {user.role === 'admin' && (
                   <button
                     className="nav-link"
-                    onClick={() => handleActionClick(onShowAdmin)}
+                    onClick={() => handleNavClick('/admin')}
                   >
                     <span className="nav-text">Admin</span>
                   </button>
@@ -145,16 +130,14 @@ function AppNavbar({ user, onLogout, onShowAdmin, onShowSubmit, onShowPricing, o
 
               {userMenuOpen && (
                 <div className="user-dropdown">
-                  {onShowProfile && (
-                    <button onClick={() => { setUserMenuOpen(false); onShowProfile(true); }}>
-                      My Account
-                    </button>
-                  )}
+                  <button onClick={() => handleNavClick('/profile')}>
+                    My Account
+                  </button>
                   <button onClick={() => { setUserMenuOpen(false); handleNavClick('/pricing'); }}>
                       Upgrade
                     </button>
-                  {user.role === 'admin' && onShowAdmin && (
-                    <button onClick={() => { setUserMenuOpen(false); onShowAdmin(true); }}>
+                  {user.role === 'admin' && (
+                    <button onClick={() => handleNavClick('/admin')}>
                       Admin
                     </button>
                   )}
