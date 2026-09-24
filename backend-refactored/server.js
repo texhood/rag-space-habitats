@@ -3,7 +3,7 @@ require('dotenv').config();
 // server.js - Main application entry point
 const express = require('express');
 const cors = require('cors');
-const cron = require('node-cron');  // <-- ADD: for scheduled crawler
+const cron = require('node-cron');
 const passport = require('./config/passport');
 const sessionMiddleware = require('./config/session');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -183,9 +183,9 @@ const ragRoutes = require('./routes/rag');
 const adminRoutes = require('./routes/admin');
 const submissionRoutes = require('./routes/submissions');
 const subscriptionRoutes = require('./routes/subscriptions');
-const crawlerRoutes = require('./routes/crawler');  // <-- ADD: crawler routes
-const feedbackRoutes = require('./routes/feedback');  // <-- ADD: feedback routes
-const projectsRoutes = require('./routes/projects');  // <-- ADD: projects routes
+const crawlerRoutes = require('./routes/crawler');
+const feedbackRoutes = require('./routes/feedback');
+const projectsRoutes = require('./routes/projects');
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -193,9 +193,9 @@ app.use('/api/rag', ragRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api', subscriptionRoutes);
-app.use('/api/crawler', crawlerRoutes);  // <-- ADD: mount crawler routes
-app.use('/api/feedback', feedbackRoutes);  // <-- ADD: mount feedback routes
-app.use('/api/projects', projectsRoutes);  // <-- ADD: mount projects routes
+app.use('/api/crawler', crawlerRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/projects', projectsRoutes);
 app.use('/api/account', accountRoutes);
 
 // Legacy compatibility routes
@@ -268,10 +268,6 @@ async function startServer() {
           console.log('⚠️  Could not connect to embedding service:', err.message);
         });
 
-      // ======================
-      // CRAWLER SCHEDULER - ADD THIS SECTION
-      // ======================
-      
       // Schedule crawler to run at 23:00 CT (Central Time) daily
       const crawlerService = require('./services/crawlerService');
       
@@ -292,9 +288,6 @@ async function startServer() {
       });
 
       console.log('✅ Crawler scheduled for 23:00 CT daily');
-      // ======================
-      // END CRAWLER SCHEDULER
-      // ======================
     });
   } catch (err) {
     console.error('Failed to start server:', err);
@@ -307,7 +300,7 @@ startServer();
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
   if (crawlerScheduler) {
-    crawlerScheduler.stop();  // <-- ADD: stop scheduler on shutdown
+    crawlerScheduler.stop();
     console.log('Crawler scheduler stopped');
   }
   process.exit(0);
@@ -316,7 +309,7 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
   if (crawlerScheduler) {
-    crawlerScheduler.stop();  // <-- ADD: stop scheduler on shutdown
+    crawlerScheduler.stop();
     console.log('Crawler scheduler stopped');
   }
   process.exit(0);

@@ -82,7 +82,7 @@ class EmbeddingService {
   }
 
   /**
-   * Generate embedding via HuggingFace Router API (FINAL WORKING VERSION)
+   * Generate an embedding via the Hugging Face router API.
    */
   async generateEmbeddingViaAPI(text) {
     if (!this.huggingfaceApiKey) {

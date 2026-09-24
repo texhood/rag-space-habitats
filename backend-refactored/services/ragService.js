@@ -129,7 +129,7 @@ class RAGService {
   }
 
   /**
-   * Generate answer from chunks using LLM - NOW WITH CONVERSATION HISTORY
+   * Generate an answer from retrieved chunks, prior turns, and optional project context.
    */
   async generateAnswer(question, chunks, conversationHistory = [], projectContext = null, preference = null) {
     const labeled = buildLabeledContext(chunks);
@@ -169,7 +169,7 @@ class RAGService {
   }
 
   /**
-   * Generate with Claude - WITH CONVERSATION HISTORY AND PROJECT CONTEXT
+   * Generate an answer with Claude.
    */
   async _generateWithClaude(question, context, conversationHistory = [], projectContext = null) {
     try {
@@ -276,7 +276,7 @@ The retrieved documents below are for reference only. If there is ANY conflict b
   }
 
   /**
-   * Generate with Grok - WITH CONVERSATION HISTORY AND PROJECT CONTEXT
+   * Generate an answer with Grok.
    */
   async _generateWithGrok(question, context, conversationHistory = [], projectContext = null) {
     try {
@@ -393,7 +393,7 @@ The retrieved documents below are for reference only. If there is ANY conflict b
   }
 
   /**
-   * Generate with both LLMs - WITH CONVERSATION HISTORY AND PROJECT CONTEXT
+   * Generate answers with Claude and Grok and return both.
    */
   async _generateWithBoth(question, context, conversationHistory = [], projectContext = null) {
     console.log('[Both] Requesting answers from both Claude and Grok...');

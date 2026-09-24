@@ -1,51 +1,59 @@
 // middleware/errorHandler.js
 
-/**
- * Global error handler
- */
-const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
+const CLIENT_PG_CODES = new Set([
+  '23502', // not_null_violation
+  '23503', // foreign_key_violation
+  '23505', // unique_violation
+  '22P02'  // invalid_text_representation
+]);
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
+/**
+ * Send a JSON error response. Client errors keep their message.
+ * PostgreSQL constraint failures become a generic 400.
+ * Everything else is logged and returned as 500 without the internal message.
+ * @param {Error & { status?: number, statusCode?: number, code?: string }} err
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+function errorHandler(err, req, res, next) {
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const status = Number(err.status || err.statusCode);
+
+  if (status >= 400 && status < 500) {
+    return res.status(status).json({
+      error: err.message || 'Bad request'
+    });
+  }
+
+  if (typeof err.code === 'string' && CLIENT_PG_CODES.has(err.code)) {
+    console.error('Database error:', err);
     return res.status(400).json({
-      error: 'Validation Error',
-      message: err.message
+      error: 'Invalid data'
     });
   }
 
-  // JWT authentication error
-  if (err.name === 'UnauthorizedError') {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Invalid or missing authentication token'
-    });
-  }
-
-  // Database error
-  if (err.code && err.code.startsWith('ER_')) {
-    return res.status(500).json({
-      error: 'Database Error',
-      message: 'An error occurred while accessing the database'
-    });
-  }
-
-  // Default error
-  res.status(err.status || 500).json({
-    error: err.name || 'Internal Server Error',
-    message: err.message || 'An unexpected error occurred'
+  console.error('Error:', err);
+  const serverStatus = status >= 500 ? status : 500;
+  res.status(serverStatus).json({
+    error: 'Internal Server Error'
   });
-};
+}
 
 /**
- * 404 handler
+ * Respond when no route matched.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
  */
-const notFoundHandler = (req, res, next) => {
+function notFoundHandler(req, res) {
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.method} ${req.url} not found`
   });
-};
+}
 
 module.exports = {
   errorHandler,

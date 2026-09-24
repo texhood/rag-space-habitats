@@ -21,11 +21,4 @@ pool.query('SELECT NOW()')
     process.exit(1);
   });
 
-// Helper to make PostgreSQL results more MySQL-like for easier migration
-// This wrapper handles the common pattern of expecting [rows] from mysql2
-pool.queryRows = async function(text, params) {
-  const result = await this.query(text, params);
-  return [result.rows, result];
-};
-
 module.exports = pool;

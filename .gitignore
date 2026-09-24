@@ -10,6 +10,7 @@ rag-app-frontend/build/
 
 # Markdown files
 *.md
+!README.md
 
 # CAD models
 CAD_Models/
