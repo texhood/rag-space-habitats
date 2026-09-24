@@ -3,7 +3,7 @@ const QueryLog = require('../models/QueryLog');
 const UserConversation = require('../models/UserConversation');
 const { formatSourcesForClient, normalizeRetrievedChunk } = require('../services/citationFormat');
 const { getCorpusStats } = require('../services/corpusStats');
-const { recordDemoHit } = require('../services/demoRateLimit');
+const { checkQueryQuota, quotaErrorBody, recordQuery, historyForPrompt } = require('../services/queryAccess');
 const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
 
 const DEMO_MAX_QUESTION_LENGTH = 400;
@@ -15,15 +15,22 @@ function llmPreferenceFor(user) {
 class RAGController {
   static async ask(req, res, next) {
     try {
-      const { question, conversationHistory = [] } = req.body;
+      const { question } = req.body;
 
       if (!question || question.trim().length === 0) {
         return res.status(400).json({ error: 'Question is required' });
       }
 
+      const quota = await checkQueryQuota(req.user);
+      if (!quota.allowed) {
+        return res.status(429).json(quotaErrorBody(quota));
+      }
+
       const startTime = Date.now();
       const preference = llmPreferenceFor(req.user);
-      RAGService.setUserPreference(preference);
+      const active = await UserConversation.getActive(req.user.id);
+      const storedMessages = active ? await UserConversation.getMessages(active.id) : [];
+      const conversationHistory = historyForPrompt(storedMessages);
 
       const chunks = await RAGService.retrieveRelevantChunks(question);
       const sources = formatSourcesForClient(chunks);
@@ -55,6 +62,8 @@ class RAGController {
         } catch (persistErr) {
           console.error('[RAG] Failed to persist conversation:', persistErr.message);
         }
+
+        await recordQuery(req.user.id);
       }
 
       res.json({
@@ -86,11 +95,9 @@ class RAGController {
       }
 
       const startTime = Date.now();
-      RAGService.setUserPreference('grok');
       const chunks = await RAGService.retrieveRelevantChunks(question, 4);
       const sources = formatSourcesForClient(chunks);
       const answer = await RAGService.generateAnswer(question, chunks, [], null, 'grok');
-      recordDemoHit(req);
 
       res.json({
         answer,

@@ -27,12 +27,6 @@ class RAGService {
     if (this.useGrok) {
       console.log('✅ Grok API initialized');
     }
-
-    this.currentUserPreference = 'both';
-  }
-
-  setUserPreference(preference) {
-    this.currentUserPreference = preference;
   }
 
   /**
@@ -138,7 +132,7 @@ class RAGService {
     }
 
     const context = labeled.text + citationInstruction(labeled.sourceCount);
-    const userPreference = preference || this.currentUserPreference || 'both';
+    const userPreference = preference || 'grok';
 
     console.log(`[RAG] User preference: ${userPreference}, Available - Grok: ${this.useGrok}, Claude: ${this.useClaude}`);
     console.log(`[RAG] Conversation history: ${conversationHistory.length} messages`);

@@ -1,6 +1,20 @@
 // services/embeddingService.js
 const axios = require('axios');
 
+/**
+ * Reject a vector whose length does not match the pgvector column.
+ * @param {number[]|undefined} embedding
+ * @param {number} dimensions
+ * @returns {number[]}
+ */
+function assertEmbeddingLength(embedding, dimensions) {
+  const length = Array.isArray(embedding) ? embedding.length : 0;
+  if (length !== dimensions || typeof embedding[0] !== 'number') {
+    throw new Error(`Embedding length ${length} does not match required ${dimensions}`);
+  }
+  return embedding;
+}
+
 class EmbeddingService {
   constructor() {
     // Check if local embedding server is configured
@@ -30,8 +44,7 @@ class EmbeddingService {
         console.log('✅ Local embedding server healthy:', response.data);
         return true;
       } catch (err) {
-        console.warn('⚠️ Local embedding server not reachable, will use HuggingFace API');
-        this.useLocalServer = false; // Switch to API
+        console.warn('⚠️ Local embedding server not reachable, will try HuggingFace API for this check');
       }
     }
     
@@ -54,18 +67,17 @@ class EmbeddingService {
    * Generate embedding for text (tries local first, falls back to API)
    */
   async generateEmbedding(text) {
-    // Try local server first
     if (this.useLocalServer) {
       try {
-        return await this.generateEmbeddingViaLocalServer(text);
+        const local = await this.generateEmbeddingViaLocalServer(text);
+        return assertEmbeddingLength(local, this.dimensions);
       } catch (err) {
-        console.warn('⚠️ Local server failed, falling back to HuggingFace API:', err.message);
-        this.useLocalServer = false; // Switch to API for subsequent calls
+        console.warn('[Embedding] Local result rejected for this request:', err.message);
       }
     }
-    
-    // Use HuggingFace API
-    return await this.generateEmbeddingViaAPI(text);
+
+    const remote = await this.generateEmbeddingViaAPI(text);
+    return assertEmbeddingLength(remote, this.dimensions);
   }
 
   /**
@@ -263,3 +275,4 @@ class EmbeddingService {
 }
 
 module.exports = new EmbeddingService();
+module.exports.assertEmbeddingLength = assertEmbeddingLength;

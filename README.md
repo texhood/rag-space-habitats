@@ -5,9 +5,10 @@ A web app for asking questions about space habitats. Answers are generated from 
 ## Request path
 
 1. The Vite app in `frontend/` calls the Express API in `backend-refactored/`.
-2. Sign-in is a Passport session cookie. Authenticated questions go to `POST /api/rag/ask`. Project questions go to `POST /api/projects/:id/query`.
-3. `services/ragService.js` embeds the question, reads the nearest rows from `document_chunks`, and asks Grok or Claude for an answer.
-4. The embedding step uses the local Python server (`python-services/embedding_server.py`) or the Hugging Face API when that server is down.
+2. Sign-in is a Passport session cookie stored in the PostgreSQL `session` table. `SESSION_SECRET` is required. In production the app trusts one proxy hop so the cookie and client IP are correct.
+3. Authenticated questions go to `POST /api/rag/ask`. Project questions go to `POST /api/projects/:id/query`. The model sees turns loaded from the database. Daily query caps are checked before the model is called.
+4. `services/ragService.js` embeds the question, reads the nearest rows from `document_chunks`, and asks Grok or Claude for an answer. Embeddings must be 1024 numbers.
+5. The embedding step tries the local Python server (`python-services/embedding_server.py`) for that request, then the Hugging Face API. A short vector is rejected and does not change the process-wide mode.
 
 `GET /health` reports that the process is up. It does not check either database.
 

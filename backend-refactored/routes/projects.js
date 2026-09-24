@@ -8,6 +8,7 @@ const ProjectBookmark = require('../models/ProjectBookmark');
 const ProjectConversation = require('../models/ProjectConversation');
 const { isAuthenticated } = require('../middleware/auth');
 const { canCreateProject } = require('../services/usageLimits');
+const { checkQueryQuota, quotaErrorBody, recordQuery, historyForPrompt } = require('../services/queryAccess');
 const gridfsService = require('../services/gridfsService');
 const projectDocProcessor = require('../services/projectDocumentProcessor');
 const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
@@ -823,7 +824,7 @@ const QueryLog = require('../models/QueryLog');
 const { formatSourcesForClient } = require('../services/citationFormat');
 
   try {
-    const { question, conversationHistory = [] } = req.body;
+    const { question } = req.body;
     const projectId = req.params.id;
 
     if (!question || question.trim().length === 0) {
@@ -838,11 +839,16 @@ const { formatSourcesForClient } = require('../services/citationFormat');
 
     console.log(`[Project Query] Project ${projectId}: "${question.substring(0, 50)}..."`);
 
-    const startTime = Date.now();
+    const quota = await checkQueryQuota(req.user);
+    if (!quota.allowed) {
+      return res.status(429).json(quotaErrorBody(quota));
+    }
 
-    // Set user's LLM preference if available
+    const startTime = Date.now();
     const preference = req.user?.llm_preference || 'grok';
-    RAGService.setUserPreference(preference);
+    const active = await ProjectConversation.getActive(projectId, req.user.id);
+    const storedMessages = active ? await ProjectConversation.getMessages(active.id) : [];
+    const conversationHistory = historyForPrompt(storedMessages);
 
     const projectDocs = await ProjectDocument.getByProjectId(projectId, 100);
     console.log(`[Project Query] Found ${projectDocs.length} project documents`);
@@ -928,6 +934,8 @@ const { formatSourcesForClient } = require('../services/citationFormat');
       } catch (persistErr) {
         console.error('[Project Query] Failed to persist conversation:', persistErr.message);
       }
+
+      await recordQuery(req.user.id);
     }
 
     res.json({
