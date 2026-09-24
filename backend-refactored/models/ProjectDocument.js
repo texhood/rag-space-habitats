@@ -146,6 +146,78 @@ class ProjectDocument {
 
     return result.rows[0];
   }
+
+  /**
+   * Replace the searchable pieces of one upload.
+   * @param {number} docId
+   * @param {number} projectId
+   * @param {Array<{ index: number, content: string, embedding: string }>} chunks
+   * @returns {Promise<void>}
+   */
+  static async replaceChunks(docId, projectId, chunks) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM project_document_chunks WHERE document_id = $1', [docId]);
+      for (const chunk of chunks) {
+        await client.query(
+          `INSERT INTO project_document_chunks
+             (document_id, project_id, chunk_index, content, embedding)
+           VALUES ($1, $2, $3, $4, $5::vector)`,
+          [docId, projectId, chunk.index, chunk.content, chunk.embedding]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Nearest stored pieces in one project. Older uploads that only have a
+   * document-level vector contribute their first 1000 characters.
+   * @param {number} projectId
+   * @param {string} embeddingStr
+   * @param {number} minSimilarity
+   * @param {number} [limit]
+   * @returns {Promise<Array<{ content: string, similarity: number, kind: string, file_name: string }>>}
+   */
+  static async searchChunks(projectId, embeddingStr, minSimilarity, limit = 8) {
+    const chunks = await pool.query(
+      `SELECT c.content, c.chunk_index, d.file_name,
+              1 - (c.embedding <=> $1::vector) AS similarity
+       FROM project_document_chunks c
+       JOIN project_documents d ON d.id = c.document_id
+       WHERE c.project_id = $2
+         AND c.embedding IS NOT NULL
+         AND 1 - (c.embedding <=> $1::vector) >= $3
+       ORDER BY c.embedding <=> $1::vector
+       LIMIT $4`,
+      [embeddingStr, projectId, minSimilarity, limit]
+    );
+
+    const legacy = await pool.query(
+      `SELECT LEFT(d.content_text, 1000) AS content, d.file_name,
+              1 - (d.embedding <=> $1::vector) AS similarity
+       FROM project_documents d
+       WHERE d.project_id = $2
+         AND d.embedding IS NOT NULL
+         AND d.content_text IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM project_document_chunks c WHERE c.document_id = d.id
+         )
+         AND 1 - (d.embedding <=> $1::vector) >= $3
+       ORDER BY d.embedding <=> $1::vector
+       LIMIT $4`,
+      [embeddingStr, projectId, minSimilarity, limit]
+    );
+
+    return chunks.rows.map((row) => ({ ...row, kind: 'chunk', similarity: Number(row.similarity) }))
+      .concat(legacy.rows.map((row) => ({ ...row, kind: 'chunk', similarity: Number(row.similarity) })));
+  }
 }
 
 module.exports = ProjectDocument;
