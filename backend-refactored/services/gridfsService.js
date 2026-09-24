@@ -9,6 +9,8 @@ class GridFSService {
 
   /**
    * Initialize GridFS bucket for project uploads
+   *
+   * @returns {Promise<*>}
    */
   async initialize() {
     try {

@@ -1,6 +1,11 @@
 const pool = require('../config/database');
 const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('./submissionAccess');
 
+/**
+ * Short label for a corpus source key.
+ * @param {*} raw
+ * @returns {*}
+ */
 function labelSourceKey(raw) {
   const key = String(raw || 'unknown').toLowerCase();
   if (key === 'ntrs' || key.includes('nasa')) return 'ntrs';
@@ -10,6 +15,10 @@ function labelSourceKey(raw) {
   return key || 'unknown';
 }
 
+/**
+ * Counts of public PostgreSQL document chunks by source.
+ * @returns {Promise<*>}
+ */
 async function getCorpusStats() {
   const totals = await pool.query(`
     SELECT

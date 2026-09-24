@@ -6,6 +6,11 @@ const { validateRegistration } = require('../services/authValidation');
 class AuthController {
   /**
    * Register new user
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async register(req, res, next) {
     try {
@@ -54,6 +59,11 @@ class AuthController {
 
   /**
    * Login user
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {*}
    */
   static login(req, res, next) {
     passport.authenticate('local', (err, user, info) => {
@@ -88,6 +98,10 @@ class AuthController {
 
   /**
    * Logout user
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @returns {*}
    */
   static logout(req, res) {
     req.logout((err) => {
@@ -107,6 +121,10 @@ class AuthController {
 
   /**
    * Get current user
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @returns {Promise<*>}
    */
   static async getCurrentUser(req, res) {
     if (!req.isAuthenticated()) {
@@ -153,6 +171,11 @@ class AuthController {
 
   /**
    * Request password reset
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async requestPasswordReset(req, res, next) {
     try {
@@ -189,6 +212,11 @@ class AuthController {
 
   /**
    * Reset password with token
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async resetPassword(req, res, next) {
     try {
@@ -229,6 +257,11 @@ class AuthController {
 
   /**
    * Verify reset token
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
   static async verifyResetToken(req, res, next) {
     try {

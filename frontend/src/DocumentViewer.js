@@ -8,6 +8,11 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import './DocumentViewer.css';
 
+/**
+ * Read one library submission. onClose dismisses the viewer.
+ * @param {object} fields
+ * @returns {*}
+ */
 function DocumentViewer({ submissionId, onClose }) {
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);

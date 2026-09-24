@@ -1,6 +1,15 @@
 // FeedbackRating.js - Star Rating Component
 import React, { useState } from 'react';
 
+/**
+ * Star rating for one answer. onSubmit receives the score.
+ * @param {object} props
+ * @param {boolean} props.isExpanded
+ * @param {Function} props.onExpand
+ * @param {Function} props.onSubmit
+ * @param {boolean} props.isSubmitted
+ * @returns {import('react').ReactElement}
+ */
 function FeedbackRating({
   isExpanded,
   onExpand,

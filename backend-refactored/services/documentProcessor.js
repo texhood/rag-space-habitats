@@ -13,6 +13,9 @@ class DocumentProcessor {
 
   /**
    * Process an approved submission into chunks
+   *
+   * @param {number} submissionId
+   * @returns {Promise<*>}
    */
   async processSubmission(submissionId) {
     try {
@@ -140,6 +143,11 @@ class DocumentProcessor {
 
   /**
    * Split text into overlapping chunks
+   *
+   * @param {string} text
+   * @param {number} chunkSize
+   * @param {number} overlap
+   * @returns {*}
    */
   createChunks(text, chunkSize = this.chunkSize, overlap = this.chunkOverlap) {
     const chunks = [];
@@ -182,6 +190,8 @@ class DocumentProcessor {
 
   /**
    * Process all approved submissions
+   *
+   * @returns {Promise<*>}
    */
   async processAllApproved() {
     const submissions = getCollection('document_submissions');
@@ -209,6 +219,8 @@ class DocumentProcessor {
 
   /**
    * Get processing statistics
+   *
+   * @returns {Promise<*>}
    */
   async getStats() {
     const submissions = getCollection('document_submissions');

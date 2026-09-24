@@ -3,11 +3,21 @@ const MAX_HITS = 3;
 
 const hitsByIp = new Map();
 
+/**
+ * Client address from req.ip. Trust proxy must be set in production.
+ * @param {import('express').Request} req
+ * @returns {*}
+ */
 function clientIp(req) {
   if (req.ip) return req.ip;
   return req.socket?.remoteAddress || 'unknown';
 }
 
+/**
+ * Drop in-memory demo windows that have expired.
+ * @param {number} now
+ * @returns {*}
+ */
 function prune(now) {
   for (const [ip, entry] of hitsByIp.entries()) {
     if (entry.resetAt <= now) {
@@ -16,6 +26,12 @@ function prune(now) {
   }
 }
 
+/**
+ * Whether this IP may call the demo. Does not record a hit.
+ * @param {import('express').Request} req
+ * @param {number} now
+ * @returns {*}
+ */
 function checkDemoRateLimit(req, now = Date.now()) {
   prune(now);
   const ip = clientIp(req);
@@ -41,6 +57,12 @@ function checkDemoRateLimit(req, now = Date.now()) {
   };
 }
 
+/**
+ * Count one demo attempt for this IP in the current window.
+ * @param {import('express').Request} req
+ * @param {number} now
+ * @returns {*}
+ */
 function recordDemoHit(req, now = Date.now()) {
   const ip = clientIp(req);
   const existing = hitsByIp.get(ip);
@@ -52,6 +74,12 @@ function recordDemoHit(req, now = Date.now()) {
   return { remaining: Math.max(0, MAX_HITS - existing.count), resetAt: existing.resetAt };
 }
 
+/**
+ * Record a demo hit, then allow or reject the request.
+ * @param {import('express').Request} req
+ * @param {number} now
+ * @returns {*}
+ */
 function consumeDemoHit(req, now = Date.now()) {
   const result = checkDemoRateLimit(req, now);
   if (!result.allowed) return result;
@@ -63,6 +91,13 @@ function consumeDemoHit(req, now = Date.now()) {
   };
 }
 
+/**
+ * Express middleware. Sends 429 when the demo window is full.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ * @returns {*}
+ */
 function demoRateLimitMiddleware(req, res, next) {
   const result = consumeDemoHit(req);
   if (!result.allowed) {

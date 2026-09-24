@@ -7,6 +7,8 @@ import { useAuth } from './useAuth';
 
 /**
  * Admin tools. Signed-out visitors go to login. Other users return to Query.
+ *
+ * @returns {*}
  */
 export function AdminScreen() {
   const navigate = useNavigate();
@@ -19,6 +21,8 @@ export function AdminScreen() {
 
 /**
  * Submit a document to the library.
+ *
+ * @returns {*}
  */
 export function SubmitScreen() {
   const navigate = useNavigate();
@@ -30,6 +34,8 @@ export function SubmitScreen() {
 
 /**
  * Account page. Profile edits are written back onto the shared session user.
+ *
+ * @returns {*}
  */
 export function ProfileScreen() {
   const navigate = useNavigate();

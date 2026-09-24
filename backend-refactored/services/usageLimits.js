@@ -1,3 +1,9 @@
+/**
+ * Daily and monthly plan caps. A limit of -1 means unlimited.
+ * Query enforcement lives in services/queryAccess.js, called from
+ * controllers/ragController.js ask() and services/projectQueryService.js.
+ * Project creation enforcement lives in controllers/projectController.js createProject().
+ */
 const LIMITS = {
   free: {
     queries_per_day: 10,
@@ -40,10 +46,23 @@ const LIMITS = {
   }
 };
 
+/**
+ * Limits for a tier. Unknown tiers use the free plan.
+ * @param {string} tier
+ * @returns {object}
+ */
 function getLimits(tier) {
   return LIMITS[tier] || LIMITS.free;
 }
 
+/**
+ * Whether this tier can perform the action given current usage counts.
+ * Does not read the database. UsageService supplies the counts.
+ * @param {'query'|'upload'|'create_project'} action
+ * @param {string} tier
+ * @param {{ queries?: number, uploads?: number, projects?: number }} [usage]
+ * @returns {{ allowed: boolean, used?: number, limit?: number, remaining?: number }}
+ */
 function canPerformAction(action, tier, usage = {}) {
   const limits = getLimits(tier);
 
@@ -88,6 +107,12 @@ function canPerformAction(action, tier, usage = {}) {
   return { allowed: true };
 }
 
+/**
+ * Whether another project can be created.
+ * @param {string} tier
+ * @param {number} [currentCount]
+ * @returns {{ allowed: boolean, used?: number, limit?: number, remaining?: number }}
+ */
 function canCreateProject(tier, currentCount = 0) {
   return canPerformAction('create_project', tier, { projects: currentCount });
 }

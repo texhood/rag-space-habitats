@@ -48,6 +48,8 @@ const DEFAULT_SEARCH_TERMS = {
 class CrawlerSettings {
   /**
    * Get crawler configuration
+   *
+   * @returns {Promise<*>}
    */
   static async getConfig() {
     const config = await SystemSettings.get(CRAWLER_KEY);
@@ -64,6 +66,10 @@ class CrawlerSettings {
 
   /**
    * Update crawler configuration
+   *
+   * @param {object} updates
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async updateConfig(updates, updatedBy = null) {
     const current = await this.getConfig();
@@ -74,6 +80,9 @@ class CrawlerSettings {
 
   /**
    * Toggle crawler enabled/disabled
+   *
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async toggle(updatedBy = null) {
     const config = await this.getConfig();
@@ -83,6 +92,8 @@ class CrawlerSettings {
 
   /**
    * Check if crawler is enabled
+   *
+   * @returns {Promise<boolean>}
    */
   static async isEnabled() {
     const config = await this.getConfig();
@@ -91,6 +102,8 @@ class CrawlerSettings {
 
   /**
    * Get search terms configuration
+   *
+   * @returns {Promise<*>}
    */
   static async getSearchTermsConfig() {
     const terms = await SystemSettings.get(SEARCH_TERMS_KEY);
@@ -105,6 +118,8 @@ class CrawlerSettings {
 
   /**
    * Get all active search terms (seed + learned)
+   *
+   * @returns {Promise<*>}
    */
   static async getSearchTerms() {
     const config = await this.getSearchTermsConfig();
@@ -119,6 +134,10 @@ class CrawlerSettings {
 
   /**
    * Update learned terms from corpus
+   *
+   * @param {*} terms
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async updateLearnedTerms(terms, updatedBy = null) {
     const config = await this.getSearchTermsConfig();
@@ -130,6 +149,10 @@ class CrawlerSettings {
 
   /**
    * Add seed search terms
+   *
+   * @param {*} newTerms
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async addSeedTerms(newTerms, updatedBy = null) {
     const config = await this.getSearchTermsConfig();
@@ -149,6 +172,10 @@ class CrawlerSettings {
 
   /**
    * Remove a search term
+   *
+   * @param {*} term
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async removeSearchTerm(term, updatedBy = null) {
     const config = await this.getSearchTermsConfig();
@@ -163,6 +190,10 @@ class CrawlerSettings {
 
   /**
    * Increment documents processed today
+   *
+   * @param {number} count
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async incrementDocumentsToday(count = 1, updatedBy = null) {
     const config = await this.getConfig();
@@ -182,6 +213,8 @@ class CrawlerSettings {
 
   /**
    * Check if daily limit reached
+   *
+   * @returns {Promise<boolean>}
    */
   static async canCrawlMore() {
     const config = await this.getConfig();
@@ -197,6 +230,8 @@ class CrawlerSettings {
 
   /**
    * Get remaining documents allowed today
+   *
+   * @returns {Promise<*>}
    */
   static async getRemainingToday() {
     const config = await this.getConfig();
@@ -211,6 +246,12 @@ class CrawlerSettings {
 
   /**
    * Record crawler run result
+   *
+   * @param {string} status
+   * @param {*} documentsProcessed
+   * @param {*} error
+   * @param {*} updatedBy
+   * @returns {Promise<*>}
    */
   static async recordRun(status, documentsProcessed = 0, error = null, updatedBy = null) {
     const config = await this.getConfig();
@@ -226,6 +267,8 @@ class CrawlerSettings {
 
   /**
    * Get full status for API
+   *
+   * @returns {Promise<*>}
    */
   static async getStatus() {
     const config = await this.getConfig();

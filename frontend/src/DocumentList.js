@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './DocumentList.css';
 
+/**
+ * Files uploaded to one project. Refetches when refreshTrigger changes.
+ * @param {object} fields
+ * @returns {*}
+ */
 function DocumentList({ projectId, refreshTrigger }) {
   const [documents, setDocuments] = useState([]);
   const [stats, setStats] = useState(null);

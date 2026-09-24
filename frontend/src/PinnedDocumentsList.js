@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './PinnedDocumentsList.css';
 
+/**
+ * Library documents pinned to one project.
+ * @param {object} fields
+ * @returns {*}
+ */
 function PinnedDocumentsList({ projectId, refreshTrigger }) {
   const [pinnedDocs, setPinnedDocs] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,11 @@
 // EditProjectModal.js - Form to edit existing project
 import React, { useState } from 'react';
 
+/**
+ * Edit project fields and pass the saved row to onUpdate.
+ * @param {object} fields
+ * @returns {*}
+ */
 function EditProjectModal({ project, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
     name: project.name || '',

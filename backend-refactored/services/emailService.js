@@ -17,6 +17,11 @@ class EmailService {
 
   /**
    * Send password reset email
+   *
+   * @param {string} email
+   * @param {string} username
+   * @param {*} resetToken
+   * @returns {Promise<*>}
    */
   async sendPasswordReset(email, username, resetToken) {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
@@ -73,6 +78,8 @@ class EmailService {
 
   /**
    * Test email configuration
+   *
+   * @returns {Promise<*>}
    */
   async testConnection() {
     try {

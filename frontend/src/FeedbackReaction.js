@@ -1,6 +1,15 @@
 // FeedbackReaction.js - Thumbs Up/Down Reaction Component
 import React from 'react';
 
+/**
+ * Thumbs up or down for one answer. onSubmit receives the reaction.
+ * @param {object} props
+ * @param {boolean} props.isExpanded
+ * @param {Function} props.onExpand
+ * @param {Function} props.onSubmit
+ * @param {boolean} props.isSubmitted
+ * @returns {import('react').ReactElement}
+ */
 function FeedbackReaction({
   isExpanded,
   onExpand,

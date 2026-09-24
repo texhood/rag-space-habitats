@@ -4,6 +4,12 @@ const pool = require('../config/database');
 class QueryLog {
   /**
    * Log a query
+   *
+   * @param {number} userId
+   * @param {string} question
+   * @param {*} responseTimeMs
+   * @param {*} chunksRetrieved
+   * @returns {Promise<*>}
    */
   static async create(userId, question, responseTimeMs, chunksRetrieved = 0) {
     const result = await pool.query(
@@ -15,6 +21,9 @@ class QueryLog {
 
   /**
    * Get recent queries
+   *
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async getRecent(limit = 50) {
     const result = await pool.query(`
@@ -35,6 +44,9 @@ class QueryLog {
 
   /**
    * Get analytics for time period
+   *
+   * @param {number} days
+   * @returns {Promise<*>}
    */
   static async getAnalytics(days = 7) {
     // Get query stats
@@ -70,6 +82,10 @@ class QueryLog {
 
   /**
    * Get queries by user
+   *
+   * @param {number} userId
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async getByUser(userId, limit = 20) {
     const result = await pool.query(`

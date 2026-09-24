@@ -4,6 +4,10 @@ const pool = require('../config/database');
 class Feedback {
   /**
    * Create feedback record
+   *
+   * @param {number} userId
+   * @param {object} feedbackData
+   * @returns {Promise<*>}
    */
   static async create(userId, feedbackData) {
     const { queryId, feedbackType, reaction, rating, documentRelevance, comment } = feedbackData;
@@ -36,6 +40,9 @@ class Feedback {
 
   /**
    * Get feedback by ID
+   *
+   * @param {number} feedbackId
+   * @returns {Promise<*>}
    */
   static async getById(feedbackId) {
     const result = await pool.query(
@@ -63,6 +70,9 @@ class Feedback {
 
   /**
    * Get all feedback for a query
+   *
+   * @param {number} queryId
+   * @returns {Promise<*>}
    */
   static async getByQuery(queryId) {
     const result = await pool.query(
@@ -88,6 +98,10 @@ class Feedback {
 
   /**
    * Get user's feedback
+   *
+   * @param {number} userId
+   * @param {number} limit
+   * @returns {Promise<*>}
    */
   static async getByUser(userId, limit = 20) {
     const result = await pool.query(
@@ -114,6 +128,10 @@ class Feedback {
 
   /**
    * Get recent feedback for admin dashboard
+   *
+   * @param {number} limit
+   * @param {*} feedbackType
+   * @returns {Promise<*>}
    */
   static async getRecent(limit = 50, feedbackType = null) {
     let query = `
@@ -153,6 +171,10 @@ class Feedback {
 
   /**
    * Update feedback
+   *
+   * @param {number} feedbackId
+   * @param {object} updateData
+   * @returns {Promise<*>}
    */
   static async update(feedbackId, updateData) {
     const { comment, reaction, rating, documentRelevance } = updateData;
@@ -174,6 +196,9 @@ class Feedback {
 
   /**
    * Delete feedback
+   *
+   * @param {number} feedbackId
+   * @returns {Promise<*>}
    */
   static async delete(feedbackId) {
     const result = await pool.query(
@@ -186,6 +211,9 @@ class Feedback {
 
   /**
    * Get feedback analytics
+   *
+   * @param {number} days
+   * @returns {Promise<*>}
    */
   static async getAnalytics(days = 7) {
     const result = await pool.query(`
@@ -249,6 +277,9 @@ class Feedback {
 
   /**
    * Get sentiment from feedback (positive/negative/neutral)
+   *
+   * @param {number} days
+   * @returns {Promise<*>}
    */
   static async getSentimentSummary(days = 7) {
     const result = await pool.query(`

@@ -11,6 +11,10 @@ import PinnedDocumentsList from './PinnedDocumentsList';
 import EditProjectModal from './EditProjectModal';
 import './ProjectWorkspace.css';
 
+/**
+ * One project: documents, pins, and saved conversations.
+ * @returns {*}
+ */
 function ProjectWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();

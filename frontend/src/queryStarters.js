@@ -19,6 +19,11 @@ export const STARTER_QUESTIONS = [
 
 export const DEMO_QUESTION = STARTER_QUESTIONS[0].text;
 
+/**
+ * Short corpus count for the welcome screen.
+ * @param {*} stats
+ * @returns {*}
+ */
 export function formatCorpusLabel(stats) {
   if (!stats || !stats.documents) return '';
   const parts = [`${stats.documents} documents`];

@@ -16,6 +16,8 @@ import { STARTER_QUESTIONS, formatCorpusLabel } from './queryStarters';
 // Main dashboard component (the existing app functionality)
 /**
  * Signed-in query screen, including a project thread opened with ?project=.
+ *
+ * @returns {*}
  */
 export default function QueryScreen() {
   const navigate = useNavigate();

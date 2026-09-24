@@ -1,3 +1,6 @@
+/**
+ * Shape retrieved PostgreSQL chunks for the model prompt and the answer panel.
+ */
 const SOURCE_LABELS = {
   ntrs: 'NASA NTRS',
   arxiv: 'arXiv',
@@ -6,6 +9,11 @@ const SOURCE_LABELS = {
   submission: 'Library'
 };
 
+/**
+ * Object form of chunk metadata. Invalid JSON becomes an empty object.
+ * @param {*} raw
+ * @returns {*}
+ */
 function parseMetadata(raw) {
   if (!raw) return {};
   if (typeof raw === 'object') return raw;
@@ -16,10 +24,20 @@ function parseMetadata(raw) {
   }
 }
 
+/**
+ * Whether a source string is a file name rather than a publisher.
+ * @param {*} value
+ * @returns {*}
+ */
 function looksLikeFilename(value) {
   return typeof value === 'string' && /\.(pdf|docx?|txt)$/i.test(value);
 }
 
+/**
+ * Display name for a corpus source key.
+ * @param {*} source
+ * @returns {*}
+ */
 function sourceLabel(source) {
   if (!source) return '';
   const key = String(source).toLowerCase();
@@ -30,12 +48,22 @@ function sourceLabel(source) {
   return source;
 }
 
+/**
+ * Passage text from a chunk row or a plain string.
+ * @param {*} chunk
+ * @returns {*}
+ */
 function chunkText(chunk) {
   if (!chunk) return '';
   if (typeof chunk === 'string') return chunk;
   return chunk.content || '';
 }
 
+/**
+ * Chunk row shaped for prompts and the client source list.
+ * @param {*} row
+ * @returns {*}
+ */
 function normalizeRetrievedChunk(row) {
   if (!row) return null;
   if (typeof row === 'string') {
@@ -71,11 +99,21 @@ function normalizeRetrievedChunk(row) {
   };
 }
 
+/**
+ * Browse route for a library document id.
+ * @param {number} sourceId
+ * @returns {*}
+ */
 function libraryHref(sourceId) {
   if (!sourceId) return null;
   return `/browse?doc=${encodeURIComponent(String(sourceId))}`;
 }
 
+/**
+ * Numbered unique sources for the answer panel.
+ * @param {Array} chunks
+ * @returns {*}
+ */
 function formatSourcesForClient(chunks) {
   const sources = [];
   const seen = new Set();
@@ -107,6 +145,11 @@ function formatSourcesForClient(chunks) {
   return sources;
 }
 
+/**
+ * Prompt text with numbered source headings.
+ * @param {Array} chunks
+ * @returns {*}
+ */
 function buildLabeledContext(chunks) {
   const parts = [];
   let sourceNum = 0;
@@ -141,6 +184,11 @@ function buildLabeledContext(chunks) {
   };
 }
 
+/**
+ * Instruction telling the model to cite those source numbers.
+ * @param {number} sourceCount
+ * @returns {*}
+ */
 function citationInstruction(sourceCount) {
   if (!sourceCount) return '';
   return `\n\nCITE YOUR SOURCES: When you use a retrieved passage, add an inline citation like [1] that matches the numbered sources above. Do not invent source numbers. If the retrieved context is insufficient, say so.`;

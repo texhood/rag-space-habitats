@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './UserProfile.css';
 
+/**
+ * Account, password, and billing. onUserUpdate receives the saved user.
+ * @param {object} fields
+ * @returns {*}
+ */
 function UserProfile({ user, onClose, onUserUpdate }) {
   const [activeSection, setActiveSection] = useState('profile');
   const [loading, setLoading] = useState(true);

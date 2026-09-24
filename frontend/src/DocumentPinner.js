@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './DocumentPinner.css';
 
+/**
+ * Search the library and pin a document onto the project.
+ * @param {object} fields
+ * @returns {*}
+ */
 function DocumentPinner({ projectId, onPin, maxPinned = 20, currentPinnedCount = 0 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);

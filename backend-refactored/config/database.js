@@ -1,4 +1,8 @@
-// config/database.js
+/**
+ * PostgreSQL pool for users, document chunks, projects, conversations,
+ * subscriptions, usage, and Express sessions. Vectors are pgvector columns
+ * of 1024 dimensions. Connects on load using DATABASE_URL.
+ */
 const { Pool } = require('pg');
 
 const pool = new Pool({

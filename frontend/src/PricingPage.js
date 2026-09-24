@@ -4,6 +4,11 @@ import axios from 'axios';
 import API_URL from './config';
 import './PricingPage.css';
 
+/**
+ * Plan list and Stripe checkout. onClose leaves the page.
+ * @param {object} fields
+ * @returns {*}
+ */
 function PricingPage({ user, onClose }) {
   const [tiers, setTiers] = useState([]);
   const [betaMode, setBetaMode] = useState(null);

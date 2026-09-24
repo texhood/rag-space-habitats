@@ -6,6 +6,11 @@ const {
 } = require('../services/projectConversationFormat');
 
 class UserConversation {
+  /**
+   * Conversations for the signed-in user.
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async list(userId) {
     const result = await pool.query(
       `SELECT c.*,
@@ -19,6 +24,11 @@ class UserConversation {
     return result.rows.map((row) => toClientConversation({ ...row, user_id: row.user_id }));
   }
 
+  /**
+   * Stored turns for one user conversation.
+   * @param {number} conversationId
+   * @returns {Promise<*>}
+   */
   static async getMessages(conversationId) {
     const result = await pool.query(
       `SELECT * FROM user_conversation_messages
@@ -29,6 +39,11 @@ class UserConversation {
     return result.rows.map(toClientMessage);
   }
 
+  /**
+   * The user conversation marked active, if any.
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async getActive(userId) {
     const result = await pool.query(
       `SELECT c.*,
@@ -42,6 +57,11 @@ class UserConversation {
     return result.rows[0] ? toClientConversation(result.rows[0]) : null;
   }
 
+  /**
+   * Active user conversation, creating one when none exists.
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async getOrCreateActive(userId) {
     const existing = await this.getActive(userId);
     if (existing) {
@@ -59,6 +79,12 @@ class UserConversation {
     return { conversation, messages: [] };
   }
 
+  /**
+   * Persist a question and answer on the active user conversation.
+   * @param {number} userId
+   * @param {object} fields
+   * @returns {Promise<*>}
+   */
   static async appendExchange(userId, { question, answer, queryId = null, sources = null }) {
     const { conversation } = await this.getOrCreateActive(userId);
     const client = await pool.connect();
@@ -94,6 +120,11 @@ class UserConversation {
     }
   }
 
+  /**
+   * Close the active user conversation and open an empty one.
+   * @param {number} userId
+   * @returns {Promise<*>}
+   */
   static async startNew(userId) {
     const client = await pool.connect();
     try {

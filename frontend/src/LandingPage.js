@@ -6,6 +6,10 @@ import SourceRail from './SourceRail';
 import { DEMO_QUESTION } from './queryStarters';
 import './LandingPage.css';
 
+/**
+ * Marketing page. Links into the demo, library, and account routes.
+ * @returns {*}
+ */
 function LandingPage() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);

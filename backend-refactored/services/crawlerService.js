@@ -20,6 +20,8 @@ class CrawlerService {
 
   /**
    * Main entry point - run the crawler
+   *
+   * @returns {Promise<*>}
    */
   async run() {
     if (this.isRunning) {
@@ -142,6 +144,8 @@ class CrawlerService {
 
   /**
    * Get search terms from settings + corpus extraction
+   *
+   * @returns {Promise<*>}
    */
   async getSearchTerms() {
     const termsConfig = await CrawlerSettings.getSearchTermsConfig();
@@ -166,6 +170,8 @@ class CrawlerService {
 
   /**
    * Extract common terms from existing corpus
+   *
+   * @returns {Promise<*>}
    */
   async extractCorpusTerms() {
     try {
@@ -219,6 +225,9 @@ class CrawlerService {
 
   /**
    * Check for duplicate documents
+   *
+   * @param {*} documents
+   * @returns {Promise<*>}
    */
   async deduplicateDocuments(documents) {
     const submissions = getCollection('document_submissions');
@@ -243,6 +252,9 @@ class CrawlerService {
 
   /**
    * Process a single document - store and embed
+   *
+   * @param {*} doc
+   * @returns {Promise<*>}
    */
   async processDocument(doc) {
     const submissions = getCollection('document_submissions');
@@ -329,6 +341,9 @@ class CrawlerService {
 
   /**
    * Split content into overlapping chunks
+   *
+   * @param {string} text
+   * @returns {*}
    */
   createChunks(text) {
     const chunks = [];
@@ -356,6 +371,9 @@ class CrawlerService {
 
   /**
    * Shuffle array (Fisher-Yates)
+   *
+   * @param {*} array
+   * @returns {*}
    */
   shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -367,6 +385,8 @@ class CrawlerService {
 
   /**
    * Manual trigger for testing
+   *
+   * @returns {Promise<*>}
    */
   async runManual() {
     console.log('[Crawler] Manual run triggered');
@@ -375,6 +395,8 @@ class CrawlerService {
 
   /**
    * Get crawler status
+   *
+   * @returns {Promise<*>}
    */
   async getStatus() {
     return CrawlerSettings.getStatus();

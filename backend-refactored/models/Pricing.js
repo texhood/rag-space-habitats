@@ -4,6 +4,9 @@ const pool = require('../config/database');
 class Pricing {
   /**
    * Get tier info with pricing and features
+   *
+   * @param {string} tierKey
+   * @returns {Promise<*>}
    */
   static async getByTierKey(tierKey) {
     const tierResult = await pool.query(`
@@ -49,6 +52,8 @@ class Pricing {
 
   /**
    * Get all active tiers with pricing
+   *
+   * @returns {Promise<*>}
    */
   static async getAllTiers() {
     const tierResult = await pool.query(`
@@ -93,6 +98,11 @@ class Pricing {
 
   /**
    * Update pricing for a tier
+   *
+   * @param {string} tierKey
+   * @param {*} price
+   * @param {number} stripeId
+   * @returns {Promise<*>}
    */
   static async updatePrice(tierKey, price, stripeId = null) {
     await pool.query(`
@@ -107,6 +117,11 @@ class Pricing {
 
   /**
    * Update a feature for a tier
+   *
+   * @param {string} tierKey
+   * @param {string} featureKey
+   * @param {*} featureValue
+   * @returns {Promise<*>}
    */
   static async updateFeature(tierKey, featureKey, featureValue) {
     const valueStr = typeof featureValue === 'object' 
@@ -125,6 +140,9 @@ class Pricing {
 
   /**
    * Get limits in UsageService format (for backward compatibility)
+   *
+   * @param {string} tierKey
+   * @returns {Promise<*>}
    */
   static async getLimits(tierKey) {
     const tier = await this.getByTierKey(tierKey);

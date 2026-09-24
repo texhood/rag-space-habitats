@@ -1,4 +1,7 @@
-// config/mongodb.js
+/**
+ * MongoDB client for document_submissions and GridFS bytes of project uploads.
+ * Extracted text and embeddings are copied into PostgreSQL.
+ */
 const { MongoClient } = require('mongodb');
 
 // Connection URI
@@ -9,7 +12,8 @@ let client;
 let db;
 
 /**
- * Connect to MongoDB
+ * Open the Mongo connection named by MONGODB_URI and MONGODB_DB.
+ * @returns {Promise<import('mongodb').Db>}
  */
 async function connect() {
   try {
@@ -37,6 +41,10 @@ async function connect() {
 /**
  * Get database instance
  */
+/**
+ * Database handle. Throws if connect() has not finished.
+ * @returns {import('mongodb').Db}
+ */
 function getDB() {
   if (!db) {
     throw new Error('Database not initialized. Call connect() first.');
@@ -45,14 +53,17 @@ function getDB() {
 }
 
 /**
- * Get collection
+ * A collection in the connected database. document_submissions is the library inbox.
+ * @param {string} collectionName
+ * @returns {import('mongodb').Collection}
  */
 function getCollection(collectionName) {
   return getDB().collection(collectionName);
 }
 
 /**
- * Close connection
+ * Close the Mongo client.
+ * @returns {Promise<void>}
  */
 async function close() {
   if (client) {

@@ -1,6 +1,11 @@
 // CreateProjectModal.js - Form to create new project
 import React, { useState } from 'react';
 
+/**
+ * Form that creates a project and reports it through onCreate.
+ * @param {object} fields
+ * @returns {*}
+ */
 function CreateProjectModal({ onClose, onCreate }) {
   const [formData, setFormData] = useState({
     name: '',

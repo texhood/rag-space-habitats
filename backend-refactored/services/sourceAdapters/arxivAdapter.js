@@ -24,6 +24,10 @@ class ArxivAdapter {
 
   /**
    * Generate document hash for deduplication
+   *
+   * @param {*} title
+   * @param {*} attribution
+   * @returns {*}
    */
   generateHash(title, attribution) {
     const normalized = `${title.toLowerCase().trim()}|${attribution.toLowerCase().trim()}`;
@@ -83,6 +87,9 @@ class ArxivAdapter {
   /**
    * Check if document is eligible for ingestion
    * arXiv papers are generally CC-BY or similar open licenses
+   *
+   * @param {*} doc
+   * @returns {boolean}
    */
   isEligible(doc) {
     // Check for summary/abstract
@@ -107,6 +114,9 @@ class ArxivAdapter {
 
   /**
    * Extract categories from arXiv entry
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   extractCategories(doc) {
     if (!doc.category) return [];
@@ -117,6 +127,9 @@ class ArxivAdapter {
 
   /**
    * Normalize arXiv document to common format
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   normalizeDocument(doc) {
     // Extract authors
@@ -163,6 +176,9 @@ class ArxivAdapter {
   /**
    * Get license information
    * arXiv papers use various licenses
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   getLicense(doc) {
     // Check for explicit license link
@@ -183,6 +199,9 @@ class ArxivAdapter {
 
   /**
    * Get PDF URL
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   getPdfUrl(doc) {
     if (doc.link) {
@@ -197,6 +216,9 @@ class ArxivAdapter {
 
   /**
    * Determine category based on document content
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   categorize(doc) {
     const text = `${doc.title || ''} ${doc.summary || ''}`.toLowerCase();
@@ -221,6 +243,9 @@ class ArxivAdapter {
 
   /**
    * Extract relevant tags from document
+   *
+   * @param {*} doc
+   * @returns {*}
    */
   extractTags(doc) {
     const tags = new Set();
@@ -247,6 +272,8 @@ class ArxivAdapter {
 
   /**
    * Rate-limited delay
+   *
+   * @returns {Promise<*>}
    */
   async delay() {
     return new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));

@@ -1,6 +1,16 @@
 // FeedbackForm.js - General Feedback Text Input Component
 import React, { useState } from 'react';
 
+/**
+ * Free-text note for one answer. onSubmit receives the comment.
+ * @param {object} props
+ * @param {boolean} props.isExpanded
+ * @param {Function} props.onExpand
+ * @param {Function} props.onSubmit
+ * @param {boolean} props.isSubmitted
+ * @param {boolean} props.isLoading
+ * @returns {import('react').ReactElement}
+ */
 function FeedbackForm({
   isExpanded,
   onExpand,

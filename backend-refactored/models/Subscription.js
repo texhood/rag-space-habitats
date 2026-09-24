@@ -4,6 +4,11 @@ const pool = require('../config/database');
 class Subscription {
   /**
    * Create a new subscription
+   *
+   * @param {number} userId
+   * @param {string} tierKey
+   * @param {object} stripeData
+   * @returns {Promise<*>}
    */
   static async create(userId, tierKey, stripeData = {}) {
     const result = await pool.query(
@@ -27,6 +32,9 @@ class Subscription {
 
   /**
    * Get subscription by user ID
+   *
+   * @param {number} userId
+   * @returns {Promise<*>}
    */
   static async getByUserId(userId) {
     const result = await pool.query(
@@ -38,6 +46,9 @@ class Subscription {
 
   /**
    * Get subscription by Stripe subscription ID
+   *
+   * @param {number} stripeSubscriptionId
+   * @returns {Promise<*>}
    */
   static async getByStripeSubscriptionId(stripeSubscriptionId) {
     const result = await pool.query(
@@ -49,6 +60,10 @@ class Subscription {
 
   /**
    * Update subscription
+   *
+   * @param {number} id
+   * @param {object} updates
+   * @returns {Promise<*>}
    */
   static async update(id, updates) {
     const fields = [];
@@ -79,6 +94,10 @@ class Subscription {
 
   /**
    * Update subscription by Stripe subscription ID
+   *
+   * @param {number} stripeSubscriptionId
+   * @param {object} updates
+   * @returns {Promise<*>}
    */
   static async updateByStripeId(stripeSubscriptionId, updates) {
     const fields = [];
@@ -109,6 +128,11 @@ class Subscription {
 
   /**
    * Update user's subscription tier
+   *
+   * @param {number} userId
+   * @param {string} tierKey
+   * @param {string} status
+   * @returns {Promise<*>}
    */
   static async updateUserTier(userId, tierKey, status = 'active') {
     await pool.query(
@@ -119,6 +143,9 @@ class Subscription {
 
   /**
    * Delete subscription
+   *
+   * @param {number} id
+   * @returns {Promise<*>}
    */
   static async delete(id) {
     await pool.query('DELETE FROM subscriptions WHERE id = $1', [id]);
