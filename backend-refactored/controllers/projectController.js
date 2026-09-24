@@ -6,6 +6,8 @@ const { canCreateProject } = require('../services/usageLimits');
 const { runProjectQuery } = require('../services/projectQueryService');
 const gridfsService = require('../services/gridfsService');
 const projectDocProcessor = require('../services/projectDocumentProcessor');
+const embeddingService = require('../services/embeddingService');
+const { splitText } = require('../services/projectRetrieval');
 const { CORPUS_EXCLUDES_PRIVATE_SQL } = require('../services/submissionAccess');
 
 const PROJECT_LIMITS = {
@@ -831,17 +833,20 @@ async function processDocumentAsync(docId, projectId, fileBuffer, mimeType, file
     await ProjectDocument.updateStatus(docId, 'processing');
 
     // Extract text and generate embedding
-    const { text, embedding } = await projectDocProcessor.processDocument(
-      fileBuffer,
-      mimeType,
-      filename
-    );
+    const text = await projectDocProcessor.extractText(fileBuffer, mimeType, filename);
+    const pieces = splitText(text);
+    const chunks = [];
+    for (let index = 0; index < pieces.length; index += 1) {
+      const embedding = await embeddingService.generateEmbedding(pieces[index]);
+      chunks.push({
+        index,
+        content: pieces[index],
+        embedding: `[${embedding.join(',')}]`
+      });
+    }
 
-    // Convert embedding to pgvector format
-    const embeddingStr = `[${embedding.join(',')}]`;
-
-    // Update document with content and embedding
-    await ProjectDocument.updateContent(docId, text, embeddingStr);
+    await ProjectDocument.replaceChunks(docId, projectId, chunks);
+    await ProjectDocument.updateContent(docId, text, null);
 
     // Update status to 'completed'
     await ProjectDocument.updateStatus(docId, 'completed');

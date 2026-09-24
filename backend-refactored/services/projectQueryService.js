@@ -5,6 +5,8 @@ const ProjectDocument = require('../models/ProjectDocument');
 const ProjectConversation = require('../models/ProjectConversation');
 const { formatSourcesForClient } = require('./citationFormat');
 const { checkQueryQuota, quotaErrorBody, recordQuery, historyForPrompt } = require('./queryAccess');
+const embeddingService = require('./embeddingService');
+const { MIN_SIMILARITY, rankProjectPieces, projectPromptPieces } = require('./projectRetrieval');
 
 /**
  * Answer a question inside a project using stored turns, project text, and corpus chunks.
@@ -34,10 +36,10 @@ async function runProjectQuery(user, projectId, question) {
   const storedMessages = active ? await ProjectConversation.getMessages(active.id) : [];
   const conversationHistory = historyForPrompt(storedMessages);
 
-  const projectDocs = await ProjectDocument.getByProjectId(projectId, 100);
+  const projectHits = await retrieveProjectHits(projectId, question);
   const corpusChunks = await RAGService.retrieveRelevantChunks(question);
   const sources = formatSourcesForClient(corpusChunks);
-  const enhancedChunks = buildProjectChunks(project, projectDocs).concat(corpusChunks);
+  const enhancedChunks = projectPromptPieces(project, projectHits).concat(corpusChunks);
 
   const answer = await RAGService.generateAnswer(
     question,
@@ -83,7 +85,7 @@ async function runProjectQuery(user, projectId, question) {
       metadata: {
         project_name: project.name,
         chunks_used: enhancedChunks.length,
-        project_documents: projectDocs.length,
+        project_documents: projectHits.length,
         response_time: responseTime,
         conversation_length: conversationHistory.length + 2
       }
@@ -92,28 +94,19 @@ async function runProjectQuery(user, projectId, question) {
 }
 
 /**
- * Project objectives and uploaded document text, in prompt order.
- * @param {{ objectives?: string, constraints?: string }} project
- * @param {Array<{ content_text?: string, file_name?: string }>} projectDocs
- * @returns {string[]}
+ * Embed the question and keep the closest stored pieces of this project's uploads.
+ * @param {string|number} projectId
+ * @param {string} question
+ * @returns {Promise<Array<{ content: string, similarity: number, kind: string, file_name: string }>>}
  */
-function buildProjectChunks(project, projectDocs) {
-  const chunks = [];
-  if (project.objectives || project.constraints) {
-    let projectContext = '[PROJECT CONTEXT]\n';
-    if (project.objectives) projectContext += `Objectives: ${project.objectives}\n`;
-    if (project.constraints) projectContext += `Constraints: ${project.constraints}\n`;
-    chunks.push(projectContext);
-  }
-  projectDocs.forEach((doc, idx) => {
-    if (doc.content_text) {
-      chunks.push(`[Project Document ${idx + 1}: ${doc.file_name}]\n${doc.content_text}`);
-    }
-  });
-  return chunks;
+async function retrieveProjectHits(projectId, question) {
+  const embedding = await embeddingService.generateEmbedding(question);
+  if (!embedding) return [];
+  const embeddingStr = `[${embedding.join(',')}]`;
+  const hits = await ProjectDocument.searchChunks(projectId, embeddingStr, MIN_SIMILARITY);
+  return rankProjectPieces(hits);
 }
 
 module.exports = {
-  runProjectQuery,
-  buildProjectChunks
+  runProjectQuery
 };

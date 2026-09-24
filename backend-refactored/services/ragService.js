@@ -10,6 +10,7 @@ const {
   citationInstruction,
   chunkText
 } = require('./citationFormat');
+const { MIN_SIMILARITY } = require('./projectRetrieval');
 
 class RAGService {
   constructor() {
@@ -70,9 +71,10 @@ class RAGService {
         FROM document_chunks
         WHERE embedding IS NOT NULL
           AND ${CORPUS_EXCLUDES_PRIVATE_SQL}
+          AND 1 - (embedding <=> $1::vector) >= $3
         ORDER BY embedding <=> $1::vector
         LIMIT $2
-      `, [embeddingStr, limit]);
+      `, [embeddingStr, limit, MIN_SIMILARITY]);
 
       console.log(`[RAG] Vector search found ${result.rows.length} chunks`);
       
@@ -94,24 +96,14 @@ class RAGService {
    */
   async keywordSearch(question, limit = 5) {
     try {
-      const keywords = question.toLowerCase()
-        .split(/\s+/)
-        .filter(w => w.length > 3)
-        .slice(0, 5);
-      
-      if (keywords.length === 0) {
-        return [];
-      }
-
-      const searchPattern = keywords.join(' | ');
-      
       const result = await pool.query(`
         SELECT content, metadata, source_id, source_type, chunk_index
         FROM document_chunks
-        WHERE to_tsvector('english', content) @@ to_tsquery('english', $1)
+        WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $1)
           AND ${CORPUS_EXCLUDES_PRIVATE_SQL}
+        ORDER BY ts_rank(to_tsvector('english', content), plainto_tsquery('english', $1)) DESC
         LIMIT $2
-      `, [searchPattern, limit]);
+      `, [question, limit]);
 
       console.log(`[RAG] Keyword search found ${result.rows.length} chunks`);
       return result.rows.map(normalizeRetrievedChunk);

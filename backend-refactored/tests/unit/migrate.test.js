@@ -11,7 +11,8 @@ describe('migrations', () => {
       '003_project_conversations.sql',
       '004_user_conversations.sql',
       '005_session.sql',
-      '006_stripe_events.sql'
+      '006_stripe_events.sql',
+      '007_project_document_chunks.sql'
     ]);
 
     const prefixes = new Set();
